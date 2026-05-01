@@ -81,7 +81,7 @@ export default function Dashboard() {
   const weeks = useMemo(() => getWeeksInMonth(selectedYear, selectedMonth), [selectedYear, selectedMonth]);
   const weeklyData = useMemo(() => weeks.map(w => {
     const wPayments = data.payments.filter(p => {
-      const d = new Date(p.date);
+      const d = new Date(p.date + "T12:00:00"); // midday-safe timezone fix
       return d >= w.start && d <= w.end;
     });
     const newRev = wPayments.filter(p => p.paymentType === "New Client").reduce((s, p) => s + p.amount, 0);
@@ -99,7 +99,8 @@ export default function Dashboard() {
   const todayExisting = todayPayments.filter(p => p.paymentType === "Existing Client").reduce((s, p) => s + p.amount, 0);
   const todayTotal = todayNew + todayExisting;
   const todayLeads = data.leads.filter(l => l.date === todayStr).length;
-  const todayConverted = data.leads.filter(l => l.date === todayStr && l.stage === "Retained").length;
+  // Use convertedDate for today's conversion count so same-day converts show immediately
+  const todayConverted = data.leads.filter(l => l.stage === "Retained" && (l.convertedDate === todayStr || (!l.convertedDate && l.date === todayStr))).length;
 
   const prevMonth = () => {
     if (selectedMonth === 1) { setSelectedMonth(12); setSelectedYear(y => y - 1); }

@@ -274,21 +274,21 @@ export function closeDayRecord(data: CRMData, date: string): CRMData {
 
 export function getMonthPayments(data: CRMData, year: number, month: number): Payment[] {
   return data.payments.filter(p => {
-    const d = new Date(p.date);
+    const d = new Date(p.date + "T12:00:00"); // midday-safe: prevents UTC midnight rolling to previous day
     return d.getFullYear() === year && d.getMonth() + 1 === month;
   });
 }
 
 export function getMonthLeads(data: CRMData, year: number, month: number): Lead[] {
   return data.leads.filter(l => {
-    const d = new Date(l.date);
+    const d = new Date(l.date + "T12:00:00"); // midday-safe: prevents UTC midnight rolling to previous day
     return d.getFullYear() === year && d.getMonth() + 1 === month;
   });
 }
 
 export function getWeekPayments(data: CRMData, weekStart: Date, weekEnd: Date): Payment[] {
   return data.payments.filter(p => {
-    const d = new Date(p.date);
+    const d = new Date(p.date + "T12:00:00"); // midday-safe
     return d >= weekStart && d <= weekEnd;
   });
 }
