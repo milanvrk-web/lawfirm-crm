@@ -44,17 +44,34 @@ const MONTHS = ["January","February","March","April","May","June","July","August
 export default function Dashboard() {
   const { data } = useCRM();
   const now = new Date();
-  const [selectedYear, setSelectedYear] = useState(2026);
-  const [selectedMonth, setSelectedMonth] = useState(4); // April
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1); // current month
 
   const monthLeads = useMemo(() => getMonthLeads(data, selectedYear, selectedMonth), [data, selectedYear, selectedMonth]);
   const monthPayments = useMemo(() => getMonthPayments(data, selectedYear, selectedMonth), [data, selectedYear, selectedMonth]);
 
   // Stats
   const totalLeads = monthLeads.length;
-  const converted = monthLeads.filter(l => l.stage === "Retained").length;
+  // Converted: leads that were converted in this month (by convertedDate or date)
+  const converted = useMemo(() => {
+    return data.leads.filter(l => {
+      if (l.stage !== "Retained") return false;
+      const dateToCheck = l.convertedDate || l.date;
+      const d = new Date(dateToCheck + "T12:00:00");
+      return d.getFullYear() === selectedYear && d.getMonth() + 1 === selectedMonth;
+    }).length;
+  }, [data.leads, selectedYear, selectedMonth]);
   const convRate = totalLeads > 0 ? Math.round((converted / totalLeads) * 100) : 0;
-  const revenueBooked = monthLeads.filter(l => l.stage === "Retained").reduce((s, l) => s + l.retainerBooked, 0);
+  // Revenue Booked: sum retainerBooked for leads converted in the selected month
+  // Use convertedDate if available, otherwise fall back to lead intake date
+  const revenueBooked = useMemo(() => {
+    return data.leads.filter(l => {
+      if (l.stage !== "Retained") return false;
+      const dateToCheck = l.convertedDate || l.date;
+      const d = new Date(dateToCheck + "T12:00:00");
+      return d.getFullYear() === selectedYear && d.getMonth() + 1 === selectedMonth;
+    }).reduce((s, l) => s + l.retainerBooked, 0);
+  }, [data.leads, selectedYear, selectedMonth]);
   const newClientRev = monthPayments.filter(p => p.paymentType === "New Client").reduce((s, p) => s + p.amount, 0);
   const existingClientRev = monthPayments.filter(p => p.paymentType === "Existing Client").reduce((s, p) => s + p.amount, 0);
   const totalReceived = newClientRev + existingClientRev;
