@@ -1,39 +1,50 @@
+/* ============================================================
+   Law Firm CRM — App Entry
+   Design: Dark Luxury Legal — Navy + Gold
+   Layout: Fixed left sidebar + main content area
+   ============================================================ */
+
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import Home from "./pages/Home";
-
+import { CRMProvider } from "./contexts/CRMContext";
+import Layout from "./components/Layout";
+import Dashboard from "./pages/Dashboard";
+import Leads from "./pages/Leads";
+import Payments from "./pages/Payments";
+import Clients from "./pages/Clients";
+import CloseDay from "./pages/CloseDay";
+import AllData from "./pages/AllData";
+import NotFound from "./pages/NotFound";
 
 function Router() {
   return (
-    <Switch>
-      <Route path={"/"} component={Home} />
-      <Route path={"/404"} component={NotFound} />
-      {/* Final fallback route */}
-      <Route component={NotFound} />
-    </Switch>
+    <Layout>
+      <Switch>
+        <Route path="/" component={Dashboard} />
+        <Route path="/leads" component={Leads} />
+        <Route path="/payments" component={Payments} />
+        <Route path="/clients" component={Clients} />
+        <Route path="/close-day" component={CloseDay} />
+        <Route path="/all-data" component={AllData} />
+        <Route component={NotFound} />
+      </Switch>
+    </Layout>
   );
 }
-
-// NOTE: About Theme
-// - First choose a default theme according to your design style (dark or light bg), than change color palette in index.css
-//   to keep consistent foreground/background color across components
-// - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
 
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider
-        defaultTheme="light"
-        // switchable
-      >
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
+      <ThemeProvider defaultTheme="dark">
+        <CRMProvider>
+          <TooltipProvider>
+            <Toaster richColors position="top-right" />
+            <Router />
+          </TooltipProvider>
+        </CRMProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );
