@@ -22,6 +22,7 @@ import {
   updateFollowUp,
   deleteFollowUp,
   addFollowUpComment,
+  addLeadNote,
 } from "@/lib/store";
 
 interface CRMContextValue {
@@ -43,6 +44,8 @@ interface CRMContextValue {
   updateFollowUp: (id: string, updates: Partial<FollowUp>) => void;
   deleteFollowUp: (id: string) => void;
   addFollowUpComment: (followUpId: string, initial: string, text: string) => void;
+  // Lead Notes
+  addLeadNote: (leadId: string, text: string) => void;
 }
 
 const CRMContext = createContext<CRMContextValue | null>(null);
@@ -96,6 +99,9 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
   const handleAddFollowUpComment = useCallback((followUpId: string, initial: string, text: string) => {
     setData(d => addFollowUpComment(d, followUpId, initial, text));
   }, []);
+  const handleAddLeadNote = useCallback((leadId: string, text: string) => {
+    setData(d => addLeadNote(d, leadId, text));
+  }, []);
 
   return (
     <CRMContext.Provider value={{
@@ -113,6 +119,7 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
       updateFollowUp: handleUpdateFollowUp,
       deleteFollowUp: handleDeleteFollowUp,
       addFollowUpComment: handleAddFollowUpComment,
+      addLeadNote: handleAddLeadNote,
     }}>
       {children}
     </CRMContext.Provider>

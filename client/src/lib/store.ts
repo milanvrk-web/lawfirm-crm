@@ -30,6 +30,12 @@ export interface FollowUp {
 export type CaseType = "DA" | "SIJS" | "AOS" | "AO" | "K1/K2" | "U-Visa" | "Green Card" | "BIA" | "Other";
 export type PaymentType = "New Client" | "Existing Client";
 
+export interface LeadNote {
+  id: string;
+  text: string;      // full note e.g. "M: called, no answer"
+  timestamp: string; // ISO string
+}
+
 export interface Lead {
   id: string;
   name: string;
@@ -46,6 +52,7 @@ export interface Lead {
   quotedAmount: number;   // initial quote
   referredBy: string;
   convertedDate?: string;
+  leadLog?: LeadNote[];   // inline timestamped notes
 }
 
 export interface Payment {
@@ -265,6 +272,15 @@ export function addLead(data: CRMData, lead: Omit<Lead, "id">): CRMData {
 
 export function updateLead(data: CRMData, id: string, updates: Partial<Lead>): CRMData {
   return { ...data, leads: data.leads.map(l => l.id === id ? { ...l, ...updates } : l) };
+}
+export function addLeadNote(data: CRMData, leadId: string, text: string): CRMData {
+  const note: LeadNote = { id: nanoid(), text, timestamp: new Date().toISOString() };
+  return {
+    ...data,
+    leads: data.leads.map(l =>
+      l.id === leadId ? { ...l, leadLog: [...(l.leadLog || []), note] } : l
+    ),
+  };
 }
 
 export function deleteLead(data: CRMData, id: string): CRMData {

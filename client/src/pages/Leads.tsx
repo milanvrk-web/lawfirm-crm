@@ -10,7 +10,7 @@ import { type Lead, type LeadStage, type CaseType, formatCurrency, formatDate, g
 import { toast } from "sonner";
 import {
   Users, Plus, X, ChevronDown, ChevronUp, Phone, Mail,
-  Edit2, Trash2, CheckCircle, Search, Filter, Bell, Clock
+  Edit2, Trash2, CheckCircle, Search, Filter, Bell, Clock, MessageSquare
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -43,7 +43,7 @@ const emptyLead: Omit<Lead, "id"> = {
 };
 
 export default function Leads() {
-  const { data, addLead, updateLead, deleteLead, addPayment, addFollowUp } = useCRM();
+  const { data, addLead, updateLead, deleteLead, addPayment, addFollowUp, addLeadNote } = useCRM();
   const [showAdd, setShowAdd] = useState(false);
   const [editLead, setEditLead] = useState<Lead | null>(null);
   const [convertLead, setConvertLead] = useState<Lead | null>(null);
@@ -56,6 +56,17 @@ export default function Leads() {
   const [quickFULeadId, setQuickFULeadId] = useState<string | null>(null);
   const [quickFUTitle, setQuickFUTitle] = useState("Call back");
   const [quickFUDate, setQuickFUDate] = useState(new Date().toISOString().split("T")[0]);
+  // Quick inline note state
+  const [quickNoteLeadId, setQuickNoteLeadId] = useState<string | null>(null);
+  const [quickNoteText, setQuickNoteText] = useState("");
+
+  const handleSaveQuickNote = (leadId: string) => {
+    if (!quickNoteText.trim()) return;
+    addLeadNote(leadId, quickNoteText.trim());
+    setQuickNoteText("");
+    setQuickNoteLeadId(null);
+    toast.success("Note added");
+  };
 
   const filtered = useMemo(() => {
     return data.leads.filter(l => {
@@ -216,6 +227,12 @@ export default function Leads() {
                   onQuickFUTitleChange={setQuickFUTitle}
                   onQuickFUDateChange={setQuickFUDate}
                   onSaveQuickFU={() => handleQuickFollowUp(lead.id)}
+                  noteOpen={quickNoteLeadId === lead.id}
+                  noteText={quickNoteLeadId === lead.id ? quickNoteText : ""}
+                  onOpenNote={() => { setQuickNoteLeadId(lead.id); setQuickNoteText(""); }}
+                  onCloseNote={() => { setQuickNoteLeadId(null); setQuickNoteText(""); }}
+                  onNoteTextChange={setQuickNoteText}
+                  onSaveNote={() => handleSaveQuickNote(lead.id)}
                 />
               ))}
             </div>
@@ -375,7 +392,8 @@ export default function Leads() {
 
 function LeadCard({ lead, data, expanded, onToggle, onEdit, onDelete, onConvert,
   quickFUOpen, quickFUTitle, quickFUDate,
-  onOpenQuickFU, onCloseQuickFU, onQuickFUTitleChange, onQuickFUDateChange, onSaveQuickFU
+  onOpenQuickFU, onCloseQuickFU, onQuickFUTitleChange, onQuickFUDateChange, onSaveQuickFU,
+  noteOpen, noteText, onOpenNote, onCloseNote, onNoteTextChange, onSaveNote
 }: {
   lead: Lead;
   data: any;
@@ -392,6 +410,13 @@ function LeadCard({ lead, data, expanded, onToggle, onEdit, onDelete, onConvert,
   onQuickFUTitleChange: (v: string) => void;
   onQuickFUDateChange: (v: string) => void;
   onSaveQuickFU: () => void;
+  // Inline note
+  noteOpen: boolean;
+  noteText: string;
+  onOpenNote: () => void;
+  onCloseNote: () => void;
+  onNoteTextChange: (v: string) => void;
+  onSaveNote: () => void;
 }) {
   const totalReceived = getLeadTotalReceived(data, lead.id);
   const outstanding = lead.retainerBooked > 0 ? lead.retainerBooked - totalReceived : 0;
@@ -484,6 +509,19 @@ function LeadCard({ lead, data, expanded, onToggle, onEdit, onDelete, onConvert,
         >
           <Bell className="w-3 h-3" /> Follow-Up
         </button>
+        {/* Quick Note button */}
+        <button
+          onClick={noteOpen ? onCloseNote : onOpenNote}
+          className="flex items-center gap-1 text-xs px-2 py-1 rounded font-medium transition-colors"
+          style={{
+            background: noteOpen ? "oklch(0.55 0.18 250 / 20%)" : "oklch(0.55 0.18 250 / 8%)",
+            color: "oklch(0.65 0.12 250)",
+            border: `1px solid oklch(0.55 0.18 250 / ${noteOpen ? "50%" : "25%"})`,
+          }}
+          title="Add inline note"
+        >
+          <MessageSquare className="w-3 h-3" /> Note
+        </button>
         <button onClick={onEdit} className="p-1.5 rounded transition-colors hover:bg-white/5" style={{ color: "oklch(0.55 0.01 250)" }}>
           <Edit2 className="w-3.5 h-3.5" />
         </button>
@@ -527,6 +565,48 @@ function LeadCard({ lead, data, expanded, onToggle, onEdit, onDelete, onConvert,
             </button>
             <button
               onClick={onCloseQuickFU}
+              className="text-xs px-3 py-1.5 rounded transition-all hover:bg-white/5"
+              style={{ color: "oklch(0.55 0.01 250)", border: "1px solid oklch(1 0 0 / 10%)" }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+      {/* Inline Quick Note */}
+      {noteOpen && (
+        <div className="mt-3 pt-3 border-t space-y-2" style={{ borderColor: "oklch(0.55 0.18 250 / 25%)" }}>
+          <div className="flex items-center gap-1.5 mb-2">
+            <MessageSquare className="w-3 h-3" style={{ color: "oklch(0.65 0.12 250)" }} />
+            <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "oklch(0.65 0.12 250)" }}>Quick Note</span>
+          </div>
+          {/* Existing log */}
+          {(lead.leadLog || []).slice(-3).reverse().map(n => (
+            <div key={n.id} className="text-xs px-2 py-1.5 rounded" style={{ background: "oklch(0.20 0.025 250)", color: "oklch(0.75 0.01 250)", borderLeft: "2px solid oklch(0.55 0.18 250 / 40%)" }}>
+              <span style={{ color: "oklch(0.55 0.01 250)" }}>{new Date(n.timestamp).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })} · </span>
+              {n.text}
+            </div>
+          ))}
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={noteText}
+              onChange={e => onNoteTextChange(e.target.value)}
+              placeholder='e.g. M: called, no answer'
+              className="flex-1 px-2.5 py-1.5 rounded text-xs outline-none"
+              style={{ background: "oklch(0.22 0.025 250)", border: "1px solid oklch(0.55 0.18 250 / 30%)", color: "oklch(0.90 0.005 250)" }}
+              onKeyDown={e => { if (e.key === "Enter") onSaveNote(); if (e.key === "Escape") onCloseNote(); }}
+              autoFocus
+            />
+            <button
+              onClick={onSaveNote}
+              className="text-xs px-3 py-1.5 rounded font-medium transition-all hover:opacity-90"
+              style={{ background: "oklch(0.55 0.18 250)", color: "oklch(0.98 0 0)" }}
+            >
+              Save
+            </button>
+            <button
+              onClick={onCloseNote}
               className="text-xs px-3 py-1.5 rounded transition-all hover:bg-white/5"
               style={{ color: "oklch(0.55 0.01 250)", border: "1px solid oklch(1 0 0 / 10%)" }}
             >
