@@ -36,10 +36,32 @@ import {
   ChevronLeft,
   ChevronRight,
   CalendarCheck,
+  Download,
 } from "lucide-react";
 import { Link } from "wouter";
 
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+// ─── CSV Export Helper ────────────────────────────────────────
+function escapeCSV(val: string | number | undefined): string {
+  if (val === undefined || val === null) return "";
+  const str = String(val);
+  if (str.includes(",") || str.includes('"') || str.includes("\n")) {
+    return '"' + str.replace(/"/g, '""') + '"';
+  }
+  return str;
+}
+
+function downloadCSV(filename: string, rows: string[][]): void {
+  const csv = rows.map(r => r.map(escapeCSV).join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 export default function Dashboard() {
   const { data } = useCRM();
@@ -111,6 +133,76 @@ export default function Dashboard() {
     else setSelectedMonth(m => m + 1);
   };
 
+  // ─── Export CSV ──────────────────────────────────────────
+  const handleExport = () => {
+    const monthLabel = `${MONTHS[selectedMonth - 1]}_${selectedYear}`;
+
+    // Section 1: Summary
+    const summaryRows: string[][] = [
+      ["LAW FIRM CRM — MONTHLY REPORT"],
+      [`Month: ${MONTHS[selectedMonth - 1]} ${selectedYear}`],
+      [`Exported: ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}`],
+      [],
+      ["SUMMARY"],
+      ["Metric", "Value"],
+      ["Leads In", String(totalLeads)],
+      ["Converted", String(converted)],
+      ["Conversion Rate", `${convRate}%`],
+      ["Revenue Booked", String(revenueBooked)],
+      ["New Client Revenue Received", String(newClientRev)],
+      ["Existing Client Revenue Received", String(existingClientRev)],
+      ["Total Revenue Received", String(totalReceived)],
+      ["% of Booked Collected", `${pctOfBooked}%`],
+      [],
+    ];
+
+    // Section 2: Payments
+    const paymentRows: string[][] = [
+      ["PAYMENTS"],
+      ["Date", "Client Name", "Case Type", "Case Number", "Payment Type", "Amount", "Received For", "Notes"],
+      ...monthPayments
+        .sort((a, b) => a.date.localeCompare(b.date))
+        .map(p => [
+          p.date,
+          p.clientName,
+          p.caseType,
+          p.caseNumber || "",
+          p.paymentType,
+          String(p.amount),
+          p.receivedFor,
+          p.notes || "",
+        ]),
+      [],
+    ];
+
+    // Section 3: Leads
+    const leadRows: string[][] = [
+      ["LEADS"],
+      ["Date", "Name", "Phone", "Email", "Case Type", "Case Number", "Stage", "Source", "Retainer Booked", "Downpayment", "Converted Date", "Notes"],
+      ...monthLeads
+        .sort((a, b) => a.date.localeCompare(b.date))
+        .map(l => [
+          l.date,
+          l.name,
+          l.phone || "",
+          l.email || "",
+          l.caseType,
+          l.caseNumber || "",
+          l.stage,
+          l.source || "",
+          String(l.retainerBooked || 0),
+          String(l.downpayment || 0),
+          l.convertedDate || "",
+          l.notes || "",
+        ]),
+    ];
+
+    downloadCSV(
+      `LawFirmCRM_${monthLabel}_Report.csv`,
+      [...summaryRows, ...paymentRows, ...leadRows]
+    );
+  };
+
   const statusColors = {
     green: { bg: "oklch(0.55 0.18 145 / 15%)", border: "oklch(0.55 0.18 145 / 40%)", text: "oklch(0.70 0.18 145)", label: "ON TARGET" },
     yellow: { bg: "oklch(0.72 0.15 80 / 15%)", border: "oklch(0.72 0.15 80 / 40%)", text: "oklch(0.80 0.15 80)", label: "APPROACHING" },
@@ -131,8 +223,21 @@ export default function Dashboard() {
             {MONTHS[selectedMonth - 1]} {selectedYear} · Law Firm CRM
           </p>
         </div>
-        {/* Month selector */}
-        <div className="flex items-center gap-2">
+        {/* Right controls: Export + Month selector */}
+        <div className="flex items-center gap-3">
+          {/* Export CSV button */}
+          <button
+            onClick={handleExport}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all hover:opacity-90 active:scale-95"
+            style={{ background: "oklch(0.22 0.025 250)", border: "1px solid oklch(0.72 0.12 75 / 40%)", color: "oklch(0.72 0.12 75)" }}
+            title={`Download ${MONTHS[selectedMonth - 1]} ${selectedYear} report as CSV`}
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Export CSV</span>
+          </button>
+
+          {/* Month selector */}
+          <div className="flex items-center gap-2">
           <button onClick={prevMonth} className="p-1.5 rounded-lg transition-colors hover:bg-white/5" style={{ color: "oklch(0.55 0.01 250)" }}>
             <ChevronLeft className="w-4 h-4" />
           </button>
@@ -142,6 +247,7 @@ export default function Dashboard() {
           <button onClick={nextMonth} className="p-1.5 rounded-lg transition-colors hover:bg-white/5" style={{ color: "oklch(0.55 0.01 250)" }}>
             <ChevronRight className="w-4 h-4" />
           </button>
+        </div>
         </div>
       </div>
 
