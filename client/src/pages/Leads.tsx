@@ -5,23 +5,22 @@
      - Kanban pipeline (New Lead / Consultation / Retained / Lost)
      - Add / Edit / Delete leads
      - Convert lead → Retained with retainer + downpayment
-     - Retainer progress bar per retained lead
-     - Follow-up strip on card: next due date, one-tap Done/Snooze
+     - Lead Detail slide-over: all follow-ups, notes, retainer info in one panel
+     - Follow-up strip on card: next due date, one-tap Done/Snooze/Reschedule
      - Overdue red border highlight
-     - Combined Activity panel: Note tab + Follow-Up tab
-     - Pending follow-up count badge on activity button
    ============================================================ */
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useCRM } from "@/contexts/CRMContext";
 import {
-  type Lead, type LeadStage, type CaseType, type FollowUp,
+  type Lead, type LeadStage, type CaseType, type FollowUp, type FollowUpStatus,
   formatCurrency, formatDate, getLeadTotalReceived, getLeadFollowUps
 } from "@/lib/store";
 import { toast } from "sonner";
 import {
   Plus, ChevronDown, ChevronUp, Phone, Mail,
   Edit2, Trash2, CheckCircle, Search, Filter, Bell, Clock,
-  MessageSquare, CheckCheck, AlarmClock, AlertCircle, X, FileText
+  MessageSquare, CheckCheck, AlarmClock, AlertCircle, X, FileText,
+  CalendarClock, Circle, CheckCircle2, User, DollarSign
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -62,9 +61,15 @@ function dueDateLabel(dueDate: string): { label: string; color: string; isOverdu
   return { label: `Due in ${days}d`, color: "oklch(0.55 0.01 250)", isOverdue: false };
 }
 
+function formatTimestamp(iso: string) {
+  const d = new Date(iso);
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) +
+    " " + d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+}
+
 // ── Main Component ─────────────────────────────────────────
 export default function Leads() {
-  const { data, addLead, updateLead, deleteLead, addPayment, addFollowUp, updateFollowUp, addLeadNote } = useCRM();
+  const { data, addLead, updateLead, deleteLead, addPayment, addFollowUp, updateFollowUp, deleteFollowUp, addFollowUpComment, addLeadNote } = useCRM();
   const [showAdd, setShowAdd] = useState(false);
   const [editLead, setEditLead] = useState<Lead | null>(null);
   const [convertLead, setConvertLead] = useState<Lead | null>(null);
@@ -72,14 +77,20 @@ export default function Leads() {
   const [convertForm, setConvertForm] = useState({ retainerBooked: "", downpayment: "", caseNumber: "", notes: "" });
   const [search, setSearch] = useState("");
   const [filterStage, setFilterStage] = useState<LeadStage | "All">("All");
-  const [expandedLeads, setExpandedLeads] = useState<Set<string>>(new Set());
 
-  // Activity panel — one open at a time, tracks which lead + which tab
-  const [activityLeadId, setActivityLeadId] = useState<string | null>(null);
-  const [activityTab, setActivityTab] = useState<"note" | "followup" | "log">("note");
-  const [noteText, setNoteText] = useState("");
+  // ── Lead Detail Slide-Over ─────────────────────────────────
+  const [detailLeadId, setDetailLeadId] = useState<string | null>(null);
+  const [detailTab, setDetailTab] = useState<"followups" | "notes" | "info">("followups");
+  // Follow-up form inside panel
   const [fuTitle, setFuTitle] = useState("Call back");
   const [fuDate, setFuDate] = useState(new Date().toISOString().split("T")[0]);
+  const [showFuForm, setShowFuForm] = useState(false);
+  // Note form inside panel
+  const [noteText, setNoteText] = useState("");
+  // Comment inputs per follow-up
+  const [commentText, setCommentText] = useState<Record<string, string>>({});
+  // Inline due date editing per follow-up
+  const [editingDueDateId, setEditingDueDateId] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     return data.leads.filter(l => {
@@ -95,6 +106,23 @@ export default function Leads() {
     filtered.forEach(l => map[l.stage].push(l));
     return map;
   }, [filtered]);
+
+  const detailLead = useMemo(() =>
+    detailLeadId ? data.leads.find(l => l.id === detailLeadId) ?? null : null,
+    [detailLeadId, data.leads]
+  );
+  const detailFollowUps = useMemo(() =>
+    detailLead ? getLeadFollowUps(data, detailLead.id).sort((a, b) => {
+      if (a.status === "Done" && b.status !== "Done") return 1;
+      if (b.status === "Done" && a.status !== "Done") return -1;
+      return a.dueDate.localeCompare(b.dueDate);
+    }) : [],
+    [detailLead, data]
+  );
+  const detailPayments = useMemo(() =>
+    detailLead ? data.payments.filter(p => p.leadId === detailLead.id) : [],
+    [detailLead, data.payments]
+  );
 
   const handleSave = () => {
     if (!form.name.trim()) { toast.error("Name is required"); return; }
@@ -147,49 +175,49 @@ export default function Leads() {
     setShowAdd(true);
   };
 
-  const toggleExpand = (id: string) => {
-    setExpandedLeads(prev => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  };
-
-  const openActivity = (leadId: string, tab: "note" | "followup" | "log") => {
-    if (activityLeadId === leadId && activityTab === tab) {
-      setActivityLeadId(null);
-    } else {
-      setActivityLeadId(leadId);
-      setActivityTab(tab);
-      setNoteText("");
-      setFuTitle("Call back");
-      setFuDate(new Date().toISOString().split("T")[0]);
-    }
-  };
-
-  const handleSaveNote = (leadId: string) => {
-    if (!noteText.trim()) return;
-    addLeadNote(leadId, noteText.trim());
-    setNoteText("");
-    setActivityLeadId(null);
-    toast.success("Note saved");
-  };
-
-  const handleSaveFollowUp = (leadId: string) => {
-    if (!fuTitle.trim()) { toast.error("Enter a task title"); return; }
-    if (!fuDate) { toast.error("Select a due date"); return; }
-    addFollowUp({ leadId, dueDate: fuDate, status: "Pending", title: fuTitle.trim() });
-    setActivityLeadId(null);
+  const openDetail = (lead: Lead) => {
+    setDetailLeadId(lead.id);
+    setDetailTab("followups");
+    setShowFuForm(false);
     setFuTitle("Call back");
     setFuDate(new Date().toISOString().split("T")[0]);
+    setNoteText("");
+    setCommentText({});
+    setEditingDueDateId(null);
+  };
+
+  const handleSaveFollowUp = () => {
+    if (!detailLeadId) return;
+    if (!fuTitle.trim()) { toast.error("Enter a task title"); return; }
+    if (!fuDate) { toast.error("Select a due date"); return; }
+    addFollowUp({ leadId: detailLeadId, dueDate: fuDate, status: "Pending", title: fuTitle.trim() });
+    setFuTitle("Call back");
+    setFuDate(new Date().toISOString().split("T")[0]);
+    setShowFuForm(false);
     toast.success("Follow-up added");
   };
 
-  const handleMarkDone = (fu: FollowUp) => {
-    updateFollowUp(fu.id, { status: "Done" });
-    toast.success("Marked as done");
+  const handleSaveNote = () => {
+    if (!detailLeadId || !noteText.trim()) return;
+    addLeadNote(detailLeadId, noteText.trim());
+    setNoteText("");
+    toast.success("Note saved");
   };
 
+  const handleAddComment = (fuId: string) => {
+    const text = (commentText[fuId] || "").trim();
+    if (!text) return;
+    addFollowUpComment(fuId, "", text);
+    setCommentText(prev => ({ ...prev, [fuId]: "" }));
+    toast.success("Comment added");
+  };
+
+  const handleStatusCycle = (fu: FollowUp) => {
+    const next: Record<FollowUpStatus, FollowUpStatus> = { Pending: "Done", Done: "Snoozed", Snoozed: "Pending" };
+    updateFollowUp(fu.id, { status: next[fu.status] });
+  };
+
+  const handleMarkDone = (fu: FollowUp) => { updateFollowUp(fu.id, { status: "Done" }); toast.success("Marked as done"); };
   const handleSnooze = (fu: FollowUp) => {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -200,6 +228,8 @@ export default function Leads() {
     updateFollowUp(fu.id, { dueDate: newDate });
     toast.success("Due date updated");
   };
+
+  const today = new Date().toISOString().split("T")[0];
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
@@ -257,24 +287,10 @@ export default function Leads() {
                   key={lead.id}
                   lead={lead}
                   data={data}
-                  expanded={expandedLeads.has(lead.id)}
-                  onToggle={() => toggleExpand(lead.id)}
+                  onOpenDetail={() => openDetail(lead)}
                   onEdit={() => openEdit(lead)}
                   onDelete={() => { deleteLead(lead.id); toast.success("Lead deleted"); }}
                   onConvert={() => setConvertLead(lead)}
-                  activityOpen={activityLeadId === lead.id}
-                  activityTab={activityTab}
-                  noteText={activityLeadId === lead.id ? noteText : ""}
-                  fuTitle={activityLeadId === lead.id ? fuTitle : "Call back"}
-                  fuDate={activityLeadId === lead.id ? fuDate : new Date().toISOString().split("T")[0]}
-                  onOpenActivity={(tab) => openActivity(lead.id, tab)}
-                  onSwitchTab={setActivityTab}
-                  onCloseActivity={() => setActivityLeadId(null)}
-                  onNoteTextChange={setNoteText}
-                  onFuTitleChange={setFuTitle}
-                  onFuDateChange={setFuDate}
-                  onSaveNote={() => handleSaveNote(lead.id)}
-                  onSaveFollowUp={() => handleSaveFollowUp(lead.id)}
                   onMarkDone={handleMarkDone}
                   onSnooze={handleSnooze}
                   onReschedule={handleReschedule}
@@ -284,6 +300,394 @@ export default function Leads() {
           </div>
         ))}
       </div>
+
+      {/* ── Lead Detail Slide-Over ──────────────────────────── */}
+      {detailLead && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
+            onClick={() => setDetailLeadId(null)}
+          />
+          {/* Panel */}
+          <div
+            className="fixed right-0 top-0 bottom-0 z-50 flex flex-col shadow-2xl"
+            style={{
+              width: "min(480px, 100vw)",
+              background: "oklch(0.15 0.025 250)",
+              borderLeft: "1px solid oklch(0.72 0.12 75 / 25%)",
+            }}
+          >
+            {/* Panel Header */}
+            <div className="flex items-start justify-between px-5 py-4 border-b flex-shrink-0" style={{ borderColor: "oklch(1 0 0 / 10%)" }}>
+              <div className="flex-1 min-w-0 pr-3">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-lg font-bold truncate" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.93 0.005 250)" }}>
+                    {detailLead.name}
+                  </h2>
+                  <span className="text-xs px-2 py-0.5 rounded font-medium flex-shrink-0" style={{ background: `${stageColor[detailLead.stage]}20`, color: stageColor[detailLead.stage] }}>
+                    {detailLead.stage}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                  <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: "oklch(0.72 0.12 75 / 15%)", color: "oklch(0.72 0.12 75)" }}>{detailLead.caseType}</span>
+                  {detailLead.caseNumber && <span className="text-xs" style={{ color: "oklch(0.50 0.01 250)" }}>#{detailLead.caseNumber}</span>}
+                  {detailLead.phone && (
+                    <a href={`tel:${detailLead.phone}`} className="flex items-center gap-1 text-xs hover:underline" style={{ color: "oklch(0.65 0.01 250)" }}>
+                      <Phone className="w-3 h-3" />{detailLead.phone}
+                    </a>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <button onClick={() => openEdit(detailLead)} className="p-1.5 rounded hover:bg-white/8 transition-colors" title="Edit lead" style={{ color: "oklch(0.72 0.12 75)" }}>
+                  <Edit2 className="w-4 h-4" />
+                </button>
+                {detailLead.stage !== "Retained" && detailLead.stage !== "Lost" && (
+                  <button onClick={() => setConvertLead(detailLead)} className="flex items-center gap-1 text-xs px-2 py-1 rounded font-medium transition-colors" style={{ background: "oklch(0.55 0.18 145 / 15%)", color: "oklch(0.55 0.18 145)", border: "1px solid oklch(0.55 0.18 145 / 30%)" }}>
+                    <CheckCircle className="w-3 h-3" /> Convert
+                  </button>
+                )}
+                <button onClick={() => setDetailLeadId(null)} className="p-1.5 rounded hover:bg-white/8 transition-colors" style={{ color: "oklch(0.55 0.01 250)" }}>
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Retainer bar (if retained) */}
+            {detailLead.stage === "Retained" && detailLead.retainerBooked > 0 && (() => {
+              const rcvd = detailPayments.reduce((s, p) => s + p.amount, 0);
+              const pct = Math.min(100, (rcvd / detailLead.retainerBooked) * 100);
+              const outstanding = detailLead.retainerBooked - rcvd;
+              return (
+                <div className="px-5 py-3 border-b flex-shrink-0" style={{ borderColor: "oklch(1 0 0 / 8%)", background: "oklch(0.17 0.025 250)" }}>
+                  <div className="flex justify-between text-xs mb-1.5">
+                    <span style={{ color: "oklch(0.55 0.01 250)" }}>Retainer: <strong style={{ color: "oklch(0.72 0.12 75)" }}>{formatCurrency(detailLead.retainerBooked)}</strong></span>
+                    <span style={{ color: "oklch(0.55 0.01 250)" }}>Rcvd: <strong style={{ color: "oklch(0.65 0.18 145)" }}>{formatCurrency(rcvd)}</strong></span>
+                    <span style={{ color: "oklch(0.55 0.01 250)" }}>
+                      {outstanding <= 0
+                        ? <strong style={{ color: "oklch(0.65 0.18 145)" }}>PAID ✓</strong>
+                        : <strong style={{ color: "oklch(0.70 0.22 25)" }}>Owed: {formatCurrency(outstanding)}</strong>
+                      }
+                    </span>
+                  </div>
+                  <div className="h-2 rounded-full overflow-hidden" style={{ background: "oklch(0.22 0.025 250)" }}>
+                    <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: outstanding <= 0 ? "oklch(0.55 0.18 145)" : "oklch(0.72 0.12 75)" }} />
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Tab bar */}
+            <div className="flex border-b flex-shrink-0" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
+              {([
+                { id: "followups", label: "Follow-Ups", icon: Bell, count: detailFollowUps.filter(f => f.status === "Pending").length },
+                { id: "notes", label: "Notes", icon: MessageSquare, count: (detailLead.leadLog || []).length },
+                { id: "info", label: "Info", icon: FileText, count: 0 },
+              ] as const).map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setDetailTab(tab.id)}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-semibold transition-all border-b-2"
+                  style={{
+                    borderBottomColor: detailTab === tab.id ? "oklch(0.72 0.12 75)" : "transparent",
+                    color: detailTab === tab.id ? "oklch(0.72 0.12 75)" : "oklch(0.50 0.01 250)",
+                    background: detailTab === tab.id ? "oklch(0.72 0.12 75 / 5%)" : "transparent",
+                  }}
+                >
+                  <tab.icon className="w-3.5 h-3.5" />
+                  {tab.label}
+                  {tab.count > 0 && (
+                    <span className="text-xs px-1.5 py-0 rounded-full font-bold" style={{
+                      background: tab.id === "followups" && detailFollowUps.some(f => f.status === "Pending" && f.dueDate <= today)
+                        ? "oklch(0.65 0.22 25)"
+                        : "oklch(0.72 0.12 75 / 25%)",
+                      color: tab.id === "followups" && detailFollowUps.some(f => f.status === "Pending" && f.dueDate <= today)
+                        ? "oklch(0.98 0 0)"
+                        : "oklch(0.72 0.12 75)",
+                      lineHeight: "16px",
+                    }}>
+                      {tab.count}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            {/* Panel Body */}
+            <div className="flex-1 overflow-y-auto">
+
+              {/* ── Follow-Ups Tab ── */}
+              {detailTab === "followups" && (
+                <div className="p-4 space-y-3">
+                  {/* Add follow-up button / form */}
+                  {!showFuForm ? (
+                    <button
+                      onClick={() => setShowFuForm(true)}
+                      className="w-full flex items-center gap-2 px-4 py-2.5 rounded-lg border border-dashed text-sm font-medium transition-all hover:border-solid hover:bg-white/5"
+                      style={{ borderColor: "oklch(0.72 0.12 75 / 40%)", color: "oklch(0.72 0.12 75)" }}
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add Follow-Up Task
+                    </button>
+                  ) : (
+                    <div className="rounded-lg border p-3 space-y-2" style={{ background: "oklch(0.18 0.025 250)", borderColor: "oklch(0.72 0.12 75 / 35%)" }}>
+                      <input
+                        type="text"
+                        value={fuTitle}
+                        onChange={e => setFuTitle(e.target.value)}
+                        placeholder="Task title (e.g. Call back)"
+                        autoFocus
+                        className="w-full px-3 py-2 rounded text-sm outline-none"
+                        style={{ background: "oklch(0.22 0.025 250)", border: "1px solid oklch(0.72 0.12 75 / 30%)", color: "oklch(0.90 0.005 250)" }}
+                        onKeyDown={e => { if (e.key === "Enter") handleSaveFollowUp(); if (e.key === "Escape") setShowFuForm(false); }}
+                      />
+                      <div className="flex gap-2 items-center">
+                        <div className="flex items-center gap-1.5 flex-1">
+                          <CalendarClock className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "oklch(0.55 0.01 250)" }} />
+                          <input
+                            type="date"
+                            value={fuDate}
+                            onChange={e => setFuDate(e.target.value)}
+                            className="flex-1 px-2 py-1.5 rounded text-xs outline-none"
+                            style={{ background: "oklch(0.22 0.025 250)", border: "1px solid oklch(0.72 0.12 75 / 30%)", color: "oklch(0.90 0.005 250)", colorScheme: "dark" }}
+                          />
+                        </div>
+                        <button onClick={handleSaveFollowUp} className="px-3 py-1.5 rounded text-xs font-semibold hover:opacity-90 transition-opacity" style={{ background: "oklch(0.72 0.12 75)", color: "oklch(0.13 0.025 250)" }}>
+                          Add
+                        </button>
+                        <button onClick={() => setShowFuForm(false)} className="p-1.5 rounded hover:bg-white/8" style={{ color: "oklch(0.50 0.01 250)" }}>
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Follow-up list */}
+                  {detailFollowUps.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Bell className="w-8 h-8 mx-auto mb-2" style={{ color: "oklch(0.30 0.01 250)" }} />
+                      <p className="text-sm" style={{ color: "oklch(0.45 0.01 250)" }}>No follow-ups yet.</p>
+                      <p className="text-xs mt-1" style={{ color: "oklch(0.35 0.01 250)" }}>Click "Add Follow-Up Task" above.</p>
+                    </div>
+                  ) : (
+                    detailFollowUps.map(fu => {
+                      const dueInfo = dueDateLabel(fu.dueDate);
+                      const isOverdue = fu.status === "Pending" && fu.dueDate < today;
+                      const isDueToday = fu.status === "Pending" && fu.dueDate === today;
+                      const myComment = commentText[fu.id] || "";
+
+                      return (
+                        <div
+                          key={fu.id}
+                          className="rounded-lg border overflow-hidden"
+                          style={{
+                            background: "oklch(0.18 0.025 250)",
+                            borderColor: isOverdue ? "oklch(0.60 0.22 25 / 40%)" : isDueToday ? "oklch(0.72 0.12 75 / 30%)" : "oklch(1 0 0 / 8%)",
+                            borderLeftWidth: "3px",
+                            borderLeftColor: isOverdue ? "oklch(0.65 0.22 25)" : isDueToday ? "oklch(0.72 0.12 75)" : fu.status === "Done" ? "oklch(0.55 0.18 145)" : "oklch(0.55 0.01 250 / 30%)",
+                          }}
+                        >
+                          {/* Task row */}
+                          <div className="flex items-start gap-2.5 p-3">
+                            {/* Status circle */}
+                            <button
+                              onClick={() => handleStatusCycle(fu)}
+                              className="mt-0.5 flex-shrink-0 transition-transform hover:scale-110"
+                              title={`${fu.status} — click to cycle`}
+                            >
+                              {fu.status === "Done"
+                                ? <CheckCircle2 className="w-4.5 h-4.5" style={{ color: "oklch(0.70 0.18 145)", width: "18px", height: "18px" }} />
+                                : fu.status === "Snoozed"
+                                ? <Clock className="w-4.5 h-4.5" style={{ color: "oklch(0.65 0.01 250)", width: "18px", height: "18px" }} />
+                                : <Circle className="w-4.5 h-4.5" style={{ color: "oklch(0.72 0.12 75)", width: "18px", height: "18px" }} />
+                              }
+                            </button>
+
+                            {/* Content */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-sm font-medium" style={{
+                                  color: fu.status === "Done" ? "oklch(0.45 0.01 250)" : "oklch(0.90 0.005 250)",
+                                  textDecoration: fu.status === "Done" ? "line-through" : "none",
+                                }}>
+                                  {fu.title}
+                                </span>
+                                {isOverdue && <span className="text-xs font-bold px-1.5 py-0 rounded" style={{ background: "oklch(0.65 0.22 25 / 15%)", color: "oklch(0.70 0.22 25)" }}>OVERDUE</span>}
+                                {isDueToday && <span className="text-xs font-bold px-1.5 py-0 rounded" style={{ background: "oklch(0.72 0.12 75 / 15%)", color: "oklch(0.72 0.12 75)" }}>TODAY</span>}
+                              </div>
+
+                              {/* Due date — clickable to reschedule */}
+                              <div className="flex items-center gap-2 mt-1">
+                                <CalendarClock className="w-3 h-3 flex-shrink-0" style={{ color: "oklch(0.45 0.01 250)" }} />
+                                {editingDueDateId === fu.id ? (
+                                  <input
+                                    type="date"
+                                    defaultValue={fu.dueDate}
+                                    autoFocus
+                                    className="text-xs px-1.5 py-0.5 rounded outline-none"
+                                    style={{ background: "oklch(0.22 0.025 250)", border: "1px solid oklch(0.72 0.12 75 / 60%)", color: "oklch(0.90 0.005 250)", colorScheme: "dark" }}
+                                    onChange={e => { if (e.target.value) { handleReschedule(fu, e.target.value); setEditingDueDateId(null); } }}
+                                    onBlur={() => setEditingDueDateId(null)}
+                                    onKeyDown={e => { if (e.key === "Escape") setEditingDueDateId(null); }}
+                                  />
+                                ) : (
+                                  <button
+                                    className="text-xs flex items-center gap-1 px-1 py-0.5 rounded hover:bg-white/8 group transition-colors"
+                                    style={{ color: dueInfo.color }}
+                                    onClick={() => setEditingDueDateId(fu.id)}
+                                    title="Click to change due date"
+                                  >
+                                    {formatDate(fu.dueDate)} · {dueInfo.label}
+                                    <span className="opacity-0 group-hover:opacity-60 transition-opacity" style={{ fontSize: "10px" }}>✎</span>
+                                  </button>
+                                )}
+                              </div>
+
+                              {/* Comments */}
+                              {fu.comments.length > 0 && (
+                                <div className="mt-2 space-y-1">
+                                  {fu.comments.map(c => (
+                                    <div key={c.id} className="text-xs px-2 py-1 rounded" style={{ background: "oklch(0.20 0.025 250)", borderLeft: "2px solid oklch(0.72 0.12 75 / 30%)" }}>
+                                      <span style={{ color: "oklch(0.80 0.005 250)" }}>{c.text}</span>
+                                      <span className="ml-2" style={{ color: "oklch(0.38 0.01 250)" }}>{formatTimestamp(c.timestamp)}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* Add comment input */}
+                              <div className="flex gap-1.5 mt-2">
+                                <input
+                                  type="text"
+                                  placeholder="Add a note (e.g. M: called, no answer)"
+                                  value={myComment}
+                                  onChange={e => setCommentText(prev => ({ ...prev, [fu.id]: e.target.value }))}
+                                  onKeyDown={e => { if (e.key === "Enter" && myComment.trim()) handleAddComment(fu.id); }}
+                                  className="flex-1 px-2 py-1 rounded text-xs outline-none"
+                                  style={{ background: "oklch(0.20 0.025 250)", border: "1px solid oklch(1 0 0 / 10%)", color: "oklch(0.85 0.005 250)" }}
+                                />
+                                {myComment.trim() && (
+                                  <button onClick={() => handleAddComment(fu.id)} className="px-2 py-1 rounded text-xs font-medium transition-all hover:opacity-90" style={{ background: "oklch(0.72 0.12 75 / 20%)", color: "oklch(0.72 0.12 75)", border: "1px solid oklch(0.72 0.12 75 / 30%)" }}>
+                                    Add
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Quick actions */}
+                            <div className="flex flex-col gap-1 flex-shrink-0">
+                              {fu.status !== "Done" && (
+                                <button onClick={() => handleMarkDone(fu)} title="Mark done" className="p-1 rounded hover:bg-white/8 transition-colors" style={{ color: "oklch(0.55 0.18 145)" }}>
+                                  <CheckCheck className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                              {fu.status === "Pending" && (
+                                <button onClick={() => handleSnooze(fu)} title="Snooze to tomorrow" className="p-1 rounded hover:bg-white/8 transition-colors" style={{ color: "oklch(0.65 0.12 250)" }}>
+                                  <AlarmClock className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                              <button onClick={() => { deleteFollowUp(fu.id); toast.success("Task deleted"); }} title="Delete task" className="p-1 rounded hover:bg-red-500/15 transition-colors" style={{ color: "oklch(0.55 0.01 250)" }}>
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              )}
+
+              {/* ── Notes Tab ── */}
+              {detailTab === "notes" && (
+                <div className="p-4 space-y-3">
+                  {/* Add note */}
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={noteText}
+                      onChange={e => setNoteText(e.target.value)}
+                      placeholder="e.g. M: called, no answer — left voicemail"
+                      className="flex-1 px-3 py-2 rounded-lg text-sm outline-none"
+                      style={{ background: "oklch(0.20 0.025 250)", border: "1px solid oklch(0.55 0.18 250 / 30%)", color: "oklch(0.90 0.005 250)" }}
+                      onKeyDown={e => { if (e.key === "Enter") handleSaveNote(); }}
+                    />
+                    <button onClick={handleSaveNote} className="px-3 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity" style={{ background: "oklch(0.55 0.18 250)", color: "oklch(0.98 0 0)" }}>
+                      Save
+                    </button>
+                  </div>
+
+                  {/* Notes list */}
+                  {(detailLead.leadLog || []).length === 0 ? (
+                    <div className="text-center py-8">
+                      <MessageSquare className="w-8 h-8 mx-auto mb-2" style={{ color: "oklch(0.30 0.01 250)" }} />
+                      <p className="text-sm" style={{ color: "oklch(0.45 0.01 250)" }}>No notes yet.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {[...(detailLead.leadLog || [])].reverse().map(n => (
+                        <div key={n.id} className="px-3 py-2.5 rounded-lg text-sm" style={{ background: "oklch(0.18 0.025 250)", borderLeft: "2px solid oklch(0.55 0.18 250 / 50%)" }}>
+                          <div className="text-xs mb-1" style={{ color: "oklch(0.40 0.01 250)" }}>
+                            {formatTimestamp(n.timestamp)}
+                          </div>
+                          <div style={{ color: "oklch(0.82 0.005 250)" }}>{n.text}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ── Info Tab ── */}
+              {detailTab === "info" && (
+                <div className="p-4 space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    {[
+                      { label: "Case Type", value: detailLead.caseType },
+                      { label: "Case Number", value: detailLead.caseNumber || "—" },
+                      { label: "Date Added", value: formatDate(detailLead.date) },
+                      { label: "Stage", value: detailLead.stage },
+                      { label: "Source", value: detailLead.source || "—" },
+                      { label: "Referred By", value: detailLead.referredBy || "—" },
+                      { label: "Quoted", value: detailLead.quotedAmount > 0 ? formatCurrency(detailLead.quotedAmount) : "—" },
+                      { label: "Email", value: detailLead.email || "—" },
+                    ].map(({ label, value }) => (
+                      <div key={label} className="rounded-lg p-3" style={{ background: "oklch(0.18 0.025 250)" }}>
+                        <div className="text-xs mb-0.5" style={{ color: "oklch(0.45 0.01 250)" }}>{label}</div>
+                        <div className="text-sm font-medium" style={{ color: "oklch(0.82 0.005 250)" }}>{value}</div>
+                      </div>
+                    ))}
+                  </div>
+                  {detailLead.notes && (
+                    <div className="rounded-lg p-3" style={{ background: "oklch(0.18 0.025 250)" }}>
+                      <div className="text-xs mb-1" style={{ color: "oklch(0.45 0.01 250)" }}>Notes</div>
+                      <div className="text-sm leading-relaxed" style={{ color: "oklch(0.75 0.01 250)" }}>{detailLead.notes}</div>
+                    </div>
+                  )}
+                  {/* Payment history */}
+                  {detailPayments.length > 0 && (
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "oklch(0.45 0.01 250)" }}>Payment History</div>
+                      <div className="space-y-1.5">
+                        {detailPayments.sort((a, b) => b.date.localeCompare(a.date)).map(p => (
+                          <div key={p.id} className="flex items-center justify-between text-xs px-3 py-2 rounded" style={{ background: "oklch(0.18 0.025 250)" }}>
+                            <div>
+                              <span style={{ color: "oklch(0.65 0.01 250)" }}>{formatDate(p.date)}</span>
+                              <span className="ml-2" style={{ color: "oklch(0.75 0.01 250)" }}>{p.receivedFor}</span>
+                            </div>
+                            <span className="font-bold" style={{ color: "oklch(0.72 0.12 75)" }}>{formatCurrency(p.amount)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
 
       {/* ── Add/Edit Lead Modal ─────────────────────────────── */}
       <Dialog open={showAdd} onOpenChange={open => { if (!open) { setShowAdd(false); setEditLead(null); setForm(emptyLead); } }}>
@@ -419,34 +823,16 @@ export default function Leads() {
   );
 }
 
-// ── LeadCard Component ──────────────────────────────────────
+// ── LeadCard Component (compact — click name to open detail panel) ──
 function LeadCard({
-  lead, data, expanded, onToggle, onEdit, onDelete, onConvert,
-  activityOpen, activityTab, noteText, fuTitle, fuDate,
-  onOpenActivity, onSwitchTab, onCloseActivity,
-  onNoteTextChange, onFuTitleChange, onFuDateChange,
-  onSaveNote, onSaveFollowUp, onMarkDone, onSnooze, onReschedule,
+  lead, data, onOpenDetail, onEdit, onDelete, onConvert, onMarkDone, onSnooze, onReschedule,
 }: {
   lead: Lead;
   data: any;
-  expanded: boolean;
-  onToggle: () => void;
+  onOpenDetail: () => void;
   onEdit: () => void;
   onDelete: () => void;
   onConvert: () => void;
-  activityOpen: boolean;
-  activityTab: "note" | "followup" | "log";
-  noteText: string;
-  fuTitle: string;
-  fuDate: string;
-  onOpenActivity: (tab: "note" | "followup" | "log") => void;
-  onSwitchTab: (tab: "note" | "followup" | "log") => void;
-  onCloseActivity: () => void;
-  onNoteTextChange: (v: string) => void;
-  onFuTitleChange: (v: string) => void;
-  onFuDateChange: (v: string) => void;
-  onSaveNote: () => void;
-  onSaveFollowUp: () => void;
   onMarkDone: (fu: FollowUp) => void;
   onSnooze: (fu: FollowUp) => void;
   onReschedule: (fu: FollowUp, newDate: string) => void;
@@ -460,7 +846,7 @@ function LeadCard({
   const nextFU = getNextFollowUp(leadFollowUps);
   const pendingCount = leadFollowUps.filter(f => f.status === "Pending").length;
   const dueInfo = nextFU ? dueDateLabel(nextFU.dueDate) : null;
-  const isOverdue = dueInfo?.isOverdue ?? false;;
+  const isOverdue = dueInfo?.isOverdue ?? false;
 
   return (
     <div
@@ -476,7 +862,15 @@ function LeadCard({
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-medium text-sm" style={{ color: "oklch(0.93 0.005 250)" }}>{lead.name}</span>
+            {/* Clickable name opens detail panel */}
+            <button
+              onClick={onOpenDetail}
+              className="font-medium text-sm hover:underline text-left transition-colors"
+              style={{ color: "oklch(0.93 0.005 250)" }}
+              title="Open lead detail"
+            >
+              {lead.name}
+            </button>
             {lead.phone && (
               <a href={`tel:${lead.phone}`} className="flex items-center gap-1 text-xs hover:underline" style={{ color: "oklch(0.65 0.01 250)" }} onClick={e => e.stopPropagation()}>
                 <Phone className="w-3 h-3" />{lead.phone}
@@ -489,8 +883,17 @@ function LeadCard({
             <span className="text-xs" style={{ color: "oklch(0.45 0.01 250)" }}>{formatDate(lead.date)}</span>
           </div>
         </div>
-        <button onClick={onToggle} style={{ color: "oklch(0.50 0.01 250)" }}>
-          {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        {/* Open detail panel button */}
+        <button
+          onClick={onOpenDetail}
+          className="flex items-center gap-1 text-xs px-2 py-1 rounded transition-colors hover:bg-white/8 relative flex-shrink-0"
+          style={{ color: "oklch(0.72 0.12 75)", border: "1px solid oklch(0.72 0.12 75 / 25%)" }}
+          title="Open detail panel"
+        >
+          <Bell className="w-3 h-3" />
+          {pendingCount > 0 && (
+            <span className="font-bold" style={{ fontSize: "10px" }}>{pendingCount}</span>
+          )}
         </button>
       </div>
 
@@ -516,12 +919,7 @@ function LeadCard({
                 autoFocus
                 className="text-xs px-1 py-0.5 rounded outline-none flex-shrink-0"
                 style={{ background: "oklch(0.26 0.03 250)", border: "1px solid oklch(0.72 0.12 75 / 60%)", color: "oklch(0.90 0.005 250)", colorScheme: "dark", maxWidth: "120px" }}
-                onChange={e => {
-                  if (e.target.value) {
-                    onReschedule(nextFU, e.target.value);
-                    setEditingDueDate(false);
-                  }
-                }}
+                onChange={e => { if (e.target.value) { onReschedule(nextFU, e.target.value); setEditingDueDate(false); } }}
                 onBlur={() => setEditingDueDate(false)}
                 onKeyDown={e => { if (e.key === "Escape") setEditingDueDate(false); }}
               />
@@ -574,230 +972,21 @@ function LeadCard({
         </div>
       )}
 
-      {/* Expanded details */}
-      {expanded && (
-        <div className="mt-3 pt-3 border-t space-y-2" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
-          {lead.email && (
-            <div className="flex items-center gap-2 text-xs" style={{ color: "oklch(0.65 0.01 250)" }}>
-              <Mail className="w-3 h-3" /> {lead.email}
-            </div>
-          )}
-          {lead.source && <div className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>Source: {lead.source}</div>}
-          {lead.referredBy && <div className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>Referred by: {lead.referredBy}</div>}
-          {lead.quotedAmount > 0 && <div className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>Quote: {formatCurrency(lead.quotedAmount)}</div>}
-          {lead.notes && (
-            <div className="text-xs p-2 rounded" style={{ background: "oklch(0.22 0.025 250)", color: "oklch(0.65 0.01 250)" }}>
-              {lead.notes}
-            </div>
-          )}
-          {/* Activity log */}
-          {(lead.leadLog || []).length > 0 && (
-            <div className="space-y-1 pt-1">
-              <div className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: "oklch(0.45 0.01 250)" }}>Activity Log</div>
-              {(lead.leadLog || []).slice(-5).reverse().map(n => (
-                <div key={n.id} className="text-xs px-2 py-1.5 rounded" style={{ background: "oklch(0.20 0.025 250)", color: "oklch(0.75 0.01 250)", borderLeft: "2px solid oklch(0.55 0.18 250 / 40%)" }}>
-                  <span style={{ color: "oklch(0.45 0.01 250)" }}>{new Date(n.timestamp).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })} · </span>
-                  {n.text}
-                </div>
-              ))}
-            </div>
-          )}
-          {/* All follow-ups for this lead */}
-          {leadFollowUps.length > 0 && (
-            <div className="space-y-1 pt-1">
-              <div className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: "oklch(0.45 0.01 250)" }}>Follow-Ups</div>
-              {leadFollowUps.map(fu => {
-                const info = dueDateLabel(fu.dueDate);
-                return (
-                  <div key={fu.id} className="text-xs px-2 py-1.5 rounded flex items-center justify-between gap-2"
-                    style={{ background: "oklch(0.20 0.025 250)", borderLeft: `2px solid ${fu.status === "Done" ? "oklch(0.55 0.18 145)" : info.color}` }}>
-                    <span style={{ color: fu.status === "Done" ? "oklch(0.45 0.01 250)" : "oklch(0.80 0.005 250)", textDecoration: fu.status === "Done" ? "line-through" : "none" }}>
-                      {fu.title}
-                    </span>
-                    <span className="flex-shrink-0 font-medium" style={{ color: fu.status === "Done" ? "oklch(0.55 0.18 145)" : info.color }}>
-                      {fu.status === "Done" ? "Done ✓" : info.label}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── Action Row ── */}
-      <div className="flex items-center gap-2 mt-3 flex-wrap">
+      {/* Action row */}
+      <div className="flex items-center gap-2 mt-2.5">
         {lead.stage !== "Retained" && lead.stage !== "Lost" && (
           <button onClick={onConvert} className="flex items-center gap-1 text-xs px-2 py-1 rounded font-medium transition-colors"
             style={{ background: "oklch(0.55 0.18 145 / 15%)", color: "oklch(0.55 0.18 145)", border: "1px solid oklch(0.55 0.18 145 / 30%)" }}>
             <CheckCircle className="w-3 h-3" /> Convert
           </button>
         )}
-
-        {/* Activity button — opens combined Note + Follow-Up panel */}
-        <button
-          onClick={() => onOpenActivity(activityOpen ? "note" : "note")}
-          className="flex items-center gap-1 text-xs px-2 py-1 rounded transition-colors relative"
-          style={{
-            background: activityOpen ? "oklch(0.72 0.12 75 / 20%)" : "oklch(0.72 0.12 75 / 8%)",
-            color: "oklch(0.72 0.12 75)",
-            border: `1px solid oklch(0.72 0.12 75 / ${activityOpen ? "50%" : "25%"})`,
-          }}
-          title="Add note or follow-up"
-        >
-          <MessageSquare className="w-3 h-3" />
-          Activity
-          {pendingCount > 0 && (
-            <span className="ml-0.5 font-bold px-1 py-0 rounded-full" style={{ background: "oklch(0.65 0.22 25)", color: "oklch(0.98 0 0)", fontSize: "10px", lineHeight: "14px" }}>
-              {pendingCount}
-            </span>
-          )}
-        </button>
-
-        <button onClick={onEdit} className="p-1.5 rounded transition-colors hover:bg-white/5" style={{ color: "oklch(0.55 0.01 250)" }}>
+        <button onClick={onEdit} className="p-1.5 rounded transition-colors hover:bg-white/8" title="Edit lead" style={{ color: "oklch(0.72 0.12 75)" }}>
           <Edit2 className="w-3.5 h-3.5" />
         </button>
-        <button onClick={onDelete} className="p-1.5 rounded transition-colors hover:bg-red-500/10" style={{ color: "oklch(0.55 0.01 250)" }}>
+        <button onClick={onDelete} className="p-1.5 rounded transition-colors hover:bg-red-500/10" title="Delete lead" style={{ color: "oklch(0.65 0.18 25)" }}>
           <Trash2 className="w-3.5 h-3.5" />
         </button>
       </div>
-
-      {/* ── Combined Activity Panel ── */}
-      {activityOpen && (
-        <div className="mt-3 pt-3 border-t" style={{ borderColor: "oklch(0.72 0.12 75 / 20%)" }}>
-          {/* Tab switcher */}
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex gap-1">
-              <button
-                onClick={() => onSwitchTab("note")}
-                className="flex items-center gap-1 text-xs px-2.5 py-1 rounded font-medium transition-all"
-                style={{
-                  background: activityTab === "note" ? "oklch(0.55 0.18 250 / 25%)" : "transparent",
-                  color: activityTab === "note" ? "oklch(0.65 0.12 250)" : "oklch(0.50 0.01 250)",
-                  border: `1px solid ${activityTab === "note" ? "oklch(0.55 0.18 250 / 40%)" : "transparent"}`,
-                }}
-              >
-                <MessageSquare className="w-3 h-3" /> Note
-              </button>
-              <button
-                onClick={() => onSwitchTab("followup")}
-                className="flex items-center gap-1 text-xs px-2.5 py-1 rounded font-medium transition-all"
-                style={{
-                  background: activityTab === "followup" ? "oklch(0.72 0.12 75 / 20%)" : "transparent",
-                  color: activityTab === "followup" ? "oklch(0.72 0.12 75)" : "oklch(0.50 0.01 250)",
-                  border: `1px solid ${activityTab === "followup" ? "oklch(0.72 0.12 75 / 40%)" : "transparent"}`,
-                }}
-              >
-                <Bell className="w-3 h-3" /> Follow-Up
-              </button>
-              <button
-                onClick={() => onSwitchTab("log")}
-                className="flex items-center gap-1 text-xs px-2.5 py-1 rounded font-medium transition-all"
-                style={{
-                  background: activityTab === "log" ? "oklch(0.55 0.12 145 / 20%)" : "transparent",
-                  color: activityTab === "log" ? "oklch(0.65 0.15 145)" : "oklch(0.50 0.01 250)",
-                  border: `1px solid ${activityTab === "log" ? "oklch(0.55 0.12 145 / 40%)" : "transparent"}`,
-                }}
-              >
-                <FileText className="w-3 h-3" /> Log
-              </button>
-            </div>
-            <button onClick={onCloseActivity} style={{ color: "oklch(0.45 0.01 250)" }}>
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          {/* Note tab */}
-          {activityTab === "note" && (
-            <div className="space-y-2">
-              {(lead.leadLog || []).length > 0 && (
-                <div className="space-y-1 mb-2">
-                  {(lead.leadLog || []).slice(-3).reverse().map(n => (
-                    <div key={n.id} className="text-xs px-2 py-1.5 rounded" style={{ background: "oklch(0.20 0.025 250)", color: "oklch(0.75 0.01 250)", borderLeft: "2px solid oklch(0.55 0.18 250 / 40%)" }}>
-                      <span style={{ color: "oklch(0.45 0.01 250)" }}>{new Date(n.timestamp).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })} · </span>
-                      {n.text}
-                    </div>
-                  ))}
-                </div>
-              )}
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={noteText}
-                  onChange={e => onNoteTextChange(e.target.value)}
-                  placeholder="e.g. M: called, no answer"
-                  className="flex-1 px-2.5 py-1.5 rounded text-xs outline-none"
-                  style={{ background: "oklch(0.22 0.025 250)", border: "1px solid oklch(0.55 0.18 250 / 30%)", color: "oklch(0.90 0.005 250)" }}
-                  onKeyDown={e => { if (e.key === "Enter") onSaveNote(); if (e.key === "Escape") onCloseActivity(); }}
-                  autoFocus
-                />
-                <button onClick={onSaveNote} className="text-xs px-3 py-1.5 rounded font-medium transition-all hover:opacity-90"
-                  style={{ background: "oklch(0.55 0.18 250)", color: "oklch(0.98 0 0)" }}>
-                  Save
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Log tab — combined chronological activity feed */}
-          {activityTab === "log" && (() => {
-            type FeedItem = { id: string; timestamp: string; text: string; kind: "note" | "comment"; fuTitle?: string };
-            const feed: FeedItem[] = [
-              ...(lead.leadLog || []).map(n => ({ id: n.id, timestamp: n.timestamp, text: n.text, kind: "note" as const })),
-              ...leadFollowUps.flatMap(fu =>
-                (fu.comments || []).map(c => ({ id: c.id, timestamp: c.timestamp, text: c.text, kind: "comment" as const, fuTitle: fu.title }))
-              ),
-            ].sort((a, b) => b.timestamp.localeCompare(a.timestamp));
-            return (
-              <div className="space-y-1.5 max-h-52 overflow-y-auto pr-1">
-                {feed.length === 0 ? (
-                  <p className="text-xs text-center py-4" style={{ color: "oklch(0.40 0.01 250)" }}>No activity logged yet. Add a note or follow-up comment.</p>
-                ) : feed.map(item => (
-                  <div key={item.id} className="text-xs px-2.5 py-2 rounded" style={{ background: "oklch(0.20 0.025 250)", borderLeft: `2px solid ${item.kind === "note" ? "oklch(0.55 0.18 250 / 50%)" : "oklch(0.72 0.12 75 / 50%)"}` }}>
-                    <div className="flex items-center gap-1.5 mb-0.5">
-                      <span className="font-semibold" style={{ color: item.kind === "note" ? "oklch(0.65 0.12 250)" : "oklch(0.72 0.12 75)", fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                        {item.kind === "note" ? "Note" : `FU: ${item.fuTitle}`}
-                      </span>
-                      <span style={{ color: "oklch(0.35 0.01 250)" }}>·</span>
-                      <span style={{ color: "oklch(0.40 0.01 250)" }}>{new Date(item.timestamp).toLocaleDateString("en-US", { month: "short", day: "numeric" })} {new Date(item.timestamp).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</span>
-                    </div>
-                    <div style={{ color: "oklch(0.82 0.005 250)" }}>{item.text}</div>
-                  </div>
-                ))}
-              </div>
-            );
-          })()}
-
-          {/* Follow-Up tab */}
-          {activityTab === "followup" && (
-            <div className="space-y-2">
-              <div className="flex gap-2 flex-wrap">
-                <input
-                  type="text"
-                  value={fuTitle}
-                  onChange={e => onFuTitleChange(e.target.value)}
-                  placeholder="Task (e.g. Call back)"
-                  className="flex-1 min-w-32 px-2.5 py-1.5 rounded text-xs outline-none"
-                  style={{ background: "oklch(0.22 0.025 250)", border: "1px solid oklch(0.72 0.12 75 / 30%)", color: "oklch(0.90 0.005 250)" }}
-                  onKeyDown={e => { if (e.key === "Enter") onSaveFollowUp(); if (e.key === "Escape") onCloseActivity(); }}
-                  autoFocus
-                />
-                <input
-                  type="date"
-                  value={fuDate}
-                  onChange={e => onFuDateChange(e.target.value)}
-                  className="px-2.5 py-1.5 rounded text-xs outline-none"
-                  style={{ background: "oklch(0.22 0.025 250)", border: "1px solid oklch(0.72 0.12 75 / 30%)", color: "oklch(0.90 0.005 250)" }}
-                />
-              </div>
-              <button onClick={onSaveFollowUp} className="text-xs px-3 py-1.5 rounded font-medium transition-all hover:opacity-90"
-                style={{ background: "oklch(0.72 0.12 75)", color: "oklch(0.13 0.025 250)" }}>
-                Add Follow-Up
-              </button>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }
