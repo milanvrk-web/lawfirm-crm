@@ -196,6 +196,10 @@ export default function Leads() {
     updateFollowUp(fu.id, { status: "Pending", dueDate: tomorrow.toISOString().split("T")[0] });
     toast.success("Snoozed to tomorrow");
   };
+  const handleReschedule = (fu: FollowUp, newDate: string) => {
+    updateFollowUp(fu.id, { dueDate: newDate });
+    toast.success("Due date updated");
+  };
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
@@ -273,6 +277,7 @@ export default function Leads() {
                   onSaveFollowUp={() => handleSaveFollowUp(lead.id)}
                   onMarkDone={handleMarkDone}
                   onSnooze={handleSnooze}
+                  onReschedule={handleReschedule}
                 />
               ))}
             </div>
@@ -420,7 +425,7 @@ function LeadCard({
   activityOpen, activityTab, noteText, fuTitle, fuDate,
   onOpenActivity, onSwitchTab, onCloseActivity,
   onNoteTextChange, onFuTitleChange, onFuDateChange,
-  onSaveNote, onSaveFollowUp, onMarkDone, onSnooze,
+  onSaveNote, onSaveFollowUp, onMarkDone, onSnooze, onReschedule,
 }: {
   lead: Lead;
   data: any;
@@ -444,17 +449,18 @@ function LeadCard({
   onSaveFollowUp: () => void;
   onMarkDone: (fu: FollowUp) => void;
   onSnooze: (fu: FollowUp) => void;
+  onReschedule: (fu: FollowUp, newDate: string) => void;
 }) {
+  const [editingDueDate, setEditingDueDate] = useState(false);
   const totalReceived = getLeadTotalReceived(data, lead.id);
   const outstanding = lead.retainerBooked > 0 ? lead.retainerBooked - totalReceived : 0;
   const pct = lead.retainerBooked > 0 ? Math.min(100, (totalReceived / lead.retainerBooked) * 100) : 0;
   const paidFull = lead.retainerBooked > 0 && totalReceived >= lead.retainerBooked;
-
   const leadFollowUps = getLeadFollowUps(data, lead.id);
   const nextFU = getNextFollowUp(leadFollowUps);
   const pendingCount = leadFollowUps.filter(f => f.status === "Pending").length;
   const dueInfo = nextFU ? dueDateLabel(nextFU.dueDate) : null;
-  const isOverdue = dueInfo?.isOverdue ?? false;
+  const isOverdue = dueInfo?.isOverdue ?? false;;
 
   return (
     <div
@@ -503,7 +509,33 @@ function LeadCard({
               : <Clock className="w-3 h-3 flex-shrink-0" style={{ color: dueInfo!.color }} />
             }
             <span className="text-xs truncate" style={{ color: "oklch(0.80 0.005 250)" }}>{nextFU.title}</span>
-            <span className="text-xs flex-shrink-0 font-medium" style={{ color: dueInfo!.color }}>{dueInfo!.label}</span>
+            {editingDueDate ? (
+              <input
+                type="date"
+                defaultValue={nextFU.dueDate}
+                autoFocus
+                className="text-xs px-1 py-0.5 rounded outline-none flex-shrink-0"
+                style={{ background: "oklch(0.26 0.03 250)", border: "1px solid oklch(0.72 0.12 75 / 60%)", color: "oklch(0.90 0.005 250)", colorScheme: "dark", maxWidth: "120px" }}
+                onChange={e => {
+                  if (e.target.value) {
+                    onReschedule(nextFU, e.target.value);
+                    setEditingDueDate(false);
+                  }
+                }}
+                onBlur={() => setEditingDueDate(false)}
+                onKeyDown={e => { if (e.key === "Escape") setEditingDueDate(false); }}
+              />
+            ) : (
+              <button
+                className="text-xs flex-shrink-0 font-medium flex items-center gap-0.5 px-1 py-0.5 rounded hover:bg-white/10 group transition-colors"
+                style={{ color: dueInfo!.color }}
+                onClick={() => setEditingDueDate(true)}
+                title="Click to change due date"
+              >
+                {dueInfo!.label}
+                <span className="opacity-0 group-hover:opacity-60 transition-opacity" style={{ fontSize: "9px" }}>✎</span>
+              </button>
+            )}
           </div>
           {/* One-tap Done / Snooze */}
           <div className="flex items-center gap-1 flex-shrink-0">

@@ -65,6 +65,9 @@ export default function FollowUps() {
   // ── Comment form per follow-up ───────────────────────────
   const [commentText, setCommentText] = useState<Record<string, string>>({});
 
+  // ── Inline due date editing (MS To Do style) ─────────────
+  const [editingDueDateId, setEditingDueDateId] = useState<string | null>(null);
+
   const today = new Date().toISOString().split("T")[0];
 
   // ── Derived data ─────────────────────────────────────────
@@ -399,9 +402,34 @@ export default function FollowUps() {
                     <div className="flex items-center gap-3 mt-1.5">
                       <div className="flex items-center gap-1">
                         <CalendarClock className="w-3 h-3" style={{ color: "oklch(0.55 0.01 250)" }} />
-                        <span className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>
-                          Due {formatDate(fu.dueDate)}
-                        </span>
+                        {editingDueDateId === fu.id ? (
+                          <input
+                            type="date"
+                            defaultValue={fu.dueDate}
+                            autoFocus
+                            className="text-xs px-1.5 py-0.5 rounded outline-none"
+                            style={{ background: "oklch(0.22 0.025 250)", border: "1px solid oklch(0.72 0.12 75 / 60%)", color: "oklch(0.90 0.005 250)", colorScheme: "dark" }}
+                            onChange={e => {
+                              if (e.target.value) {
+                                updateFollowUp(fu.id, { dueDate: e.target.value });
+                                setEditingDueDateId(null);
+                                toast.success("Due date updated");
+                              }
+                            }}
+                            onBlur={() => setEditingDueDateId(null)}
+                            onKeyDown={e => { if (e.key === "Escape") setEditingDueDateId(null); }}
+                          />
+                        ) : (
+                          <button
+                            className="text-xs flex items-center gap-1 px-1.5 py-0.5 rounded transition-all hover:bg-white/8 group"
+                            style={{ color: fu.dueDate < today && fu.status === "Pending" ? "oklch(0.70 0.22 25)" : fu.dueDate === today && fu.status === "Pending" ? "oklch(0.72 0.12 75)" : "oklch(0.55 0.01 250)" }}
+                            onClick={() => setEditingDueDateId(fu.id)}
+                            title="Click to change due date"
+                          >
+                            Due {formatDate(fu.dueDate)}
+                            <span className="opacity-0 group-hover:opacity-60 text-xs transition-opacity" style={{ fontSize: "10px" }}>✎</span>
+                          </button>
+                        )}
                       </div>
                       {fu.comments.length > 0 && (
                         <div className="flex items-center gap-1">

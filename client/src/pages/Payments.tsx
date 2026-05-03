@@ -1,7 +1,7 @@
 /* ============================================================
    Law Firm CRM — Payments Page
    Features: Log payment (New/Existing toggle), live client search,
-             payment list with filters
+             payment list with filters, delete confirmation dialog
    ============================================================ */
 
 import { useState, useMemo } from "react";
@@ -10,6 +10,7 @@ import { type Payment, type CaseType, type PaymentType, formatCurrency, formatDa
 import { toast } from "sonner";
 import { DollarSign, Plus, Search, Filter, Edit2, Trash2, X, Users, Building } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -34,6 +35,7 @@ export default function Payments() {
   const { data, addPayment, updatePayment, deletePayment } = useCRM();
   const [showAdd, setShowAdd] = useState(false);
   const [editPayment, setEditPayment] = useState<Payment | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<Payment | null>(null);
   const [form, setForm] = useState<Omit<Payment, "id">>(emptyPayment);
   const [clientSearch, setClientSearch] = useState("");
   const [showClientDropdown, setShowClientDropdown] = useState(false);
@@ -187,10 +189,20 @@ export default function Payments() {
                   <td className="px-4 py-3 text-xs max-w-48 truncate" style={{ color: "oklch(0.65 0.01 250)" }}>{p.receivedFor}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
-                      <button onClick={() => openEdit(p)} className="p-1.5 rounded hover:bg-white/5" style={{ color: "oklch(0.55 0.01 250)" }}>
+                      <button
+                        onClick={() => openEdit(p)}
+                        title="Edit payment"
+                        className="p-1.5 rounded hover:bg-white/10 transition-colors"
+                        style={{ color: "oklch(0.72 0.12 75)" }}
+                      >
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={() => { deletePayment(p.id); toast.success("Payment deleted"); }} className="p-1.5 rounded hover:bg-red-500/10" style={{ color: "oklch(0.55 0.01 250)" }}>
+                      <button
+                        onClick={() => setConfirmDelete(p)}
+                        title="Delete payment"
+                        className="p-1.5 rounded hover:bg-red-500/15 transition-colors"
+                        style={{ color: "oklch(0.65 0.18 25)" }}
+                      >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
@@ -201,6 +213,47 @@ export default function Payments() {
           </table>
         </div>
       </div>
+
+      {/* ── Delete Confirmation ──────────────────────────────── */}
+      <AlertDialog open={!!confirmDelete} onOpenChange={open => { if (!open) setConfirmDelete(null); }}>
+        <AlertDialogContent style={{ background: "oklch(0.18 0.025 250)", borderColor: "oklch(1 0 0 / 12%)" }}>
+          <AlertDialogHeader>
+            <AlertDialogTitle style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.93 0.005 250)" }}>
+              Delete Payment?
+            </AlertDialogTitle>
+            <AlertDialogDescription style={{ color: "oklch(0.55 0.01 250)" }}>
+              {confirmDelete && (
+                <span>
+                  Permanently delete the{" "}
+                  <strong style={{ color: "oklch(0.72 0.12 75)" }}>{formatCurrency(confirmDelete.amount)}</strong>{" "}
+                  payment from{" "}
+                  <strong style={{ color: "oklch(0.93 0.005 250)" }}>{confirmDelete.clientName}</strong>{" "}
+                  on {formatDate(confirmDelete.date)}? This cannot be undone.
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 15%)", color: "oklch(0.65 0.01 250)" }}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (confirmDelete) {
+                  deletePayment(confirmDelete.id);
+                  toast.success("Payment deleted");
+                  setConfirmDelete(null);
+                }
+              }}
+              style={{ background: "oklch(0.55 0.22 25)", color: "oklch(0.98 0 0)" }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* ── Add/Edit Payment Modal ──────────────────────────── */}
       <Dialog open={showAdd} onOpenChange={open => { if (!open) { setShowAdd(false); setEditPayment(null); setForm(emptyPayment); setClientSearch(""); } }}>
