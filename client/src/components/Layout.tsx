@@ -1,10 +1,10 @@
 /* ============================================================
    Law Firm CRM — Layout Component
    Design: Dark Luxury Legal — Fixed left sidebar, gold accents
-   Nav: Dashboard | Leads | Payments | Clients | Close Day | All Data
+   Nav: Dashboard | Leads | Payments | Clients | Follow-Ups | Close Day | All Data
    ============================================================ */
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard,
@@ -17,14 +17,18 @@ import {
   Menu,
   X,
   ChevronRight,
+  Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useCRM } from "@/contexts/CRMContext";
+import { getDueTodayFollowUps, getOverdueFollowUps } from "@/lib/store";
 
-const navItems = [
+const BASE_NAV = [
   { path: "/", icon: LayoutDashboard, label: "Dashboard" },
   { path: "/leads", icon: Users, label: "Leads" },
   { path: "/payments", icon: DollarSign, label: "Payments" },
   { path: "/clients", icon: BookOpen, label: "Clients" },
+  { path: "/follow-ups", icon: Bell, label: "Follow-Ups" },
   { path: "/close-day", icon: CalendarCheck, label: "Close Day" },
   { path: "/all-data", icon: Database, label: "All Data" },
 ];
@@ -32,6 +36,11 @@ const navItems = [
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { data } = useCRM();
+
+  const urgentCount = useMemo(() => {
+    return getDueTodayFollowUps(data).length + getOverdueFollowUps(data).length;
+  }, [data]);
 
   return (
     <div className="flex min-h-screen" style={{ background: "oklch(0.13 0.025 250)" }}>
@@ -72,7 +81,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          {navItems.map(({ path, icon: Icon, label }) => {
+          {BASE_NAV.map(({ path, icon: Icon, label }) => {
             const active = location === path;
             return (
               <Link key={path} href={path}>
@@ -89,8 +98,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   onClick={() => setMobileOpen(false)}
                 >
                   <Icon className="w-4 h-4 flex-shrink-0" />
-                  <span>{label}</span>
-                  {active && <ChevronRight className="w-3 h-3 ml-auto opacity-60" />}
+                  <span className="flex-1">{label}</span>
+                  {/* Urgent badge on Follow-Ups */}
+                  {path === "/follow-ups" && urgentCount > 0 && (
+                    <span
+                      className="text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center"
+                      style={{ background: "oklch(0.70 0.22 25)", color: "white", fontSize: "10px" }}
+                    >
+                      {urgentCount}
+                    </span>
+                  )}
+                  {active && <ChevronRight className="w-3 h-3 opacity-60" />}
                 </div>
               </Link>
             );

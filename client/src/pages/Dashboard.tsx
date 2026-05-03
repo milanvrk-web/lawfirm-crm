@@ -13,6 +13,8 @@ import {
   getWeeksInMonth,
   TARGETS,
   getTargetStatus,
+  getDueTodayFollowUps,
+  getOverdueFollowUps,
 } from "@/lib/store";
 import {
   BarChart,
@@ -37,6 +39,8 @@ import {
   ChevronRight,
   CalendarCheck,
   Download,
+  Bell,
+  AlertCircle,
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -277,7 +281,54 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ── 7 Stat Cards ────────────────────────────────────── */}
+      {/* -- Follow-Up Alert Strip */}
+      {(() => {
+        const dueTodayFUs = getDueTodayFollowUps(data);
+        const overdueFUs = getOverdueFollowUps(data);
+        if (dueTodayFUs.length === 0 && overdueFUs.length === 0) return null;
+        return (
+          <div className="rounded-lg p-4 border flex items-start gap-4 flex-wrap" style={{ background: "oklch(0.70 0.22 25 / 8%)", borderColor: "oklch(0.70 0.22 25 / 35%)" }}>
+            <div className="flex items-center gap-2">
+              <Bell className="w-4 h-4" style={{ color: "oklch(0.72 0.12 75)" }} />
+              <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "oklch(0.72 0.12 75)" }}>Follow-Up Alerts</span>
+            </div>
+            <div className="flex items-center gap-4 flex-wrap flex-1">
+              {overdueFUs.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-3.5 h-3.5" style={{ color: "oklch(0.70 0.22 25)" }} />
+                  <span className="text-sm font-semibold" style={{ color: "oklch(0.70 0.22 25)" }}>{overdueFUs.length} overdue</span>
+                  <span className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>
+                    {overdueFUs.slice(0, 2).map(f => {
+                      const lead = data.leads.find(l => l.id === f.leadId);
+                      return lead?.name || "Unknown";
+                    }).join(", ")}{overdueFUs.length > 2 ? ` +${overdueFUs.length - 2} more` : ""}
+                  </span>
+                </div>
+              )}
+              {dueTodayFUs.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <CalendarCheck className="w-3.5 h-3.5" style={{ color: "oklch(0.72 0.12 75)" }} />
+                  <span className="text-sm font-semibold" style={{ color: "oklch(0.72 0.12 75)" }}>{dueTodayFUs.length} due today</span>
+                  <span className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>
+                    {dueTodayFUs.slice(0, 2).map(f => {
+                      const lead = data.leads.find(l => l.id === f.leadId);
+                      return lead?.name || "Unknown";
+                    }).join(", ")}{dueTodayFUs.length > 2 ? ` +${dueTodayFUs.length - 2} more` : ""}
+                  </span>
+                </div>
+              )}
+            </div>
+            <Link href="/follow-ups">
+              <span className="text-xs font-medium px-3 py-1.5 rounded-lg transition-all hover:opacity-90 cursor-pointer"
+                style={{ background: "oklch(0.72 0.12 75 / 15%)", color: "oklch(0.72 0.12 75)", border: "1px solid oklch(0.72 0.12 75 / 35%)" }}>
+                View All
+              </span>
+            </Link>
+          </div>
+        );
+      })()}
+
+            {/* ── 7 Stat Cards ────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
         <StatCard icon={<Users className="w-4 h-4" />} label="Leads In" value={totalLeads} sub="this month" />
         <StatCard icon={<UserCheck className="w-4 h-4" />} label="Converted" value={converted} sub={`${convRate}% conv. rate`} />

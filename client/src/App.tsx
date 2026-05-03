@@ -17,6 +17,7 @@ import Payments from "./pages/Payments";
 import Clients from "./pages/Clients";
 import CloseDay from "./pages/CloseDay";
 import AllData from "./pages/AllData";
+import FollowUps from "./pages/FollowUps";
 import NotFound from "./pages/NotFound";
 
 function Router() {
@@ -29,6 +30,7 @@ function Router() {
         <Route path="/clients" component={Clients} />
         <Route path="/close-day" component={CloseDay} />
         <Route path="/all-data" component={AllData} />
+        <Route path="/follow-ups" component={FollowUps} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

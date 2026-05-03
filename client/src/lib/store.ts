@@ -9,6 +9,24 @@ import { nanoid } from "nanoid";
 // ─── Types ──────────────────────────────────────────────────
 
 export type LeadStage = "New Lead" | "Consultation" | "Retained" | "Lost";
+export type FollowUpStatus = "Pending" | "Done" | "Snoozed";
+
+export interface FollowUpComment {
+  id: string;
+  initial: string;    // e.g. "M", "S", "J"
+  text: string;
+  timestamp: string;  // ISO string
+}
+
+export interface FollowUp {
+  id: string;
+  leadId: string;
+  dueDate: string;    // YYYY-MM-DD
+  status: FollowUpStatus;
+  title: string;      // short task title e.g. "Call back"
+  comments: FollowUpComment[];
+  createdAt: string;  // ISO string
+}
 export type CaseType = "DA" | "SIJS" | "AOS" | "AO" | "K1/K2" | "U-Visa" | "Green Card" | "BIA" | "Other";
 export type PaymentType = "New Client" | "Existing Client";
 
@@ -55,6 +73,7 @@ export interface CRMData {
   leads: Lead[];
   payments: Payment[];
   dayCloses: DayClose[];
+  followUps: FollowUp[];
 }
 
 // ─── Keys ────────────────────────────────────────────────────
@@ -66,7 +85,12 @@ const STORAGE_KEY = "lawfirm_crm_v2";
 export function loadData(): CRMData {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as CRMData;
+    if (raw) {
+      const parsed = JSON.parse(raw) as CRMData;
+      // Migrate older data that lacks followUps
+      if (!parsed.followUps) parsed.followUps = [];
+      return parsed;
+    }
   } catch {}
   return getInitialData();
 }
@@ -227,9 +251,9 @@ function getInitialData(): CRMData {
     { id: "pay-065", date: "2026-04-30", clientName: "Baldev Singh 030", leadId: undefined, caseType: "DA", caseNumber: "410", paymentType: "Existing Client", amount: 1250, receivedFor: "For I-589 updates and declaration", notes: "" },
   ];
 
-  const dayCloses: DayClose[] = [];
-
-  return { leads, payments, dayCloses };
+   const dayCloses: DayClose[] = [];
+  const followUps: FollowUp[] = [];
+  return { leads, payments, dayCloses, followUps };
 }
 
 // ─── CRUD Operations ──────────────────────────────────────────
@@ -258,6 +282,41 @@ export function updatePayment(data: CRMData, id: string, updates: Partial<Paymen
 
 export function deletePayment(data: CRMData, id: string): CRMData {
   return { ...data, payments: data.payments.filter(p => p.id !== id) };
+}
+
+// ─── Follow-Up CRUD ───────────────────────────────────────────
+export function addFollowUp(data: CRMData, fu: Omit<FollowUp, "id" | "createdAt" | "comments">): CRMData {
+  const newFU: FollowUp = { ...fu, id: nanoid(), createdAt: new Date().toISOString(), comments: [] };
+  return { ...data, followUps: [newFU, ...data.followUps] };
+}
+export function updateFollowUp(data: CRMData, id: string, updates: Partial<FollowUp>): CRMData {
+  return { ...data, followUps: data.followUps.map(f => f.id === id ? { ...f, ...updates } : f) };
+}
+export function deleteFollowUp(data: CRMData, id: string): CRMData {
+  return { ...data, followUps: data.followUps.filter(f => f.id !== id) };
+}
+export function addFollowUpComment(data: CRMData, followUpId: string, initial: string, text: string): CRMData {
+  const comment: FollowUpComment = { id: nanoid(), initial, text, timestamp: new Date().toISOString() };
+  return {
+    ...data,
+    followUps: data.followUps.map(f =>
+      f.id === followUpId ? { ...f, comments: [...f.comments, comment] } : f
+    ),
+  };
+}
+export function getLeadFollowUps(data: CRMData, leadId: string): FollowUp[] {
+  return data.followUps.filter(f => f.leadId === leadId);
+}
+export function getPendingFollowUps(data: CRMData): FollowUp[] {
+  return data.followUps.filter(f => f.status === "Pending");
+}
+export function getDueTodayFollowUps(data: CRMData): FollowUp[] {
+  const today = new Date().toISOString().split("T")[0];
+  return data.followUps.filter(f => f.status === "Pending" && f.dueDate === today);
+}
+export function getOverdueFollowUps(data: CRMData): FollowUp[] {
+  const today = new Date().toISOString().split("T")[0];
+  return data.followUps.filter(f => f.status === "Pending" && f.dueDate < today);
 }
 
 export function closeDayRecord(data: CRMData, date: string): CRMData {

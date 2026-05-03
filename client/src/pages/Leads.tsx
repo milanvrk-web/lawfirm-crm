@@ -6,7 +6,7 @@
 
 import { useState, useMemo } from "react";
 import { useCRM } from "@/contexts/CRMContext";
-import { type Lead, type LeadStage, type CaseType, formatCurrency, formatDate, getLeadTotalReceived } from "@/lib/store";
+import { type Lead, type LeadStage, type CaseType, formatCurrency, formatDate, getLeadTotalReceived, getLeadFollowUps } from "@/lib/store";
 import { toast } from "sonner";
 import {
   Users, Plus, X, ChevronDown, ChevronUp, Phone, Mail,
@@ -369,7 +369,14 @@ function LeadCard({ lead, data, expanded, onToggle, onEdit, onDelete, onConvert 
     <div className="rounded-lg border p-3 transition-all" style={{ background: "oklch(0.19 0.025 250)", borderColor: "oklch(1 0 0 / 8%)" }}>
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
-          <div className="font-medium text-sm truncate" style={{ color: "oklch(0.93 0.005 250)" }}>{lead.name}</div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-medium text-sm" style={{ color: "oklch(0.93 0.005 250)" }}>{lead.name}</span>
+            {lead.phone && (
+              <a href={`tel:${lead.phone}`} className="flex items-center gap-1 text-xs hover:underline" style={{ color: "oklch(0.65 0.01 250)" }} onClick={e => e.stopPropagation()}>
+                <Phone className="w-3 h-3" />{lead.phone}
+              </a>
+            )}
+          </div>
           <div className="flex items-center gap-2 mt-1 flex-wrap">
             <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: "oklch(0.72 0.12 75 / 15%)", color: "oklch(0.72 0.12 75)" }}>{lead.caseType}</span>
             {lead.caseNumber && <span className="text-xs" style={{ color: "oklch(0.50 0.01 250)" }}>#{lead.caseNumber}</span>}
