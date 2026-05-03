@@ -39,7 +39,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-const TEAM_INITIALS = ["M", "S", "J", "A", "R", "P", "K"];
 const STATUS_COLORS: Record<FollowUpStatus, { bg: string; border: string; text: string; label: string }> = {
   Pending: { bg: "oklch(0.72 0.12 75 / 10%)", border: "oklch(0.72 0.12 75 / 35%)", text: "oklch(0.72 0.12 75)", label: "Pending" },
   Done:    { bg: "oklch(0.55 0.18 145 / 10%)", border: "oklch(0.55 0.18 145 / 35%)", text: "oklch(0.70 0.18 145)", label: "Done" },
@@ -65,7 +64,6 @@ export default function FollowUps() {
 
   // ── Comment form per follow-up ───────────────────────────
   const [commentText, setCommentText] = useState<Record<string, string>>({});
-  const [commentInitial, setCommentInitial] = useState<Record<string, string>>({});
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -123,10 +121,8 @@ export default function FollowUps() {
 
   const handleAddComment = (fuId: string) => {
     const text = (commentText[fuId] || "").trim();
-    const initial = commentInitial[fuId] || "";
-    if (!initial) { toast.error("Select your initial first"); return; }
     if (!text) { toast.error("Type a comment first"); return; }
-    addFollowUpComment(fuId, initial, text);
+    addFollowUpComment(fuId, "", text);
     setCommentText(prev => ({ ...prev, [fuId]: "" }));
     toast.success("Comment added");
   };
@@ -313,7 +309,6 @@ export default function FollowUps() {
             const badge = getDueBadge(fu);
             const sc = STATUS_COLORS[fu.status];
             const isExpanded = expandedId === fu.id;
-            const myInitial = commentInitial[fu.id] || "";
             const myText = commentText[fu.id] || "";
 
             return (
@@ -447,20 +442,10 @@ export default function FollowUps() {
                     {fu.comments.length > 0 ? (
                       <div className="space-y-2">
                         {fu.comments.map(c => (
-                          <div key={c.id} className="flex items-start gap-2.5">
-                            {/* Avatar */}
-                            <div
-                              className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5"
-                              style={{ background: "oklch(0.72 0.12 75 / 20%)", color: "oklch(0.72 0.12 75)" }}
-                            >
-                              {c.initial}
-                            </div>
+                          <div key={c.id} className="flex items-start gap-2">
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-baseline gap-2">
-                                <span className="text-xs font-semibold" style={{ color: "oklch(0.72 0.12 75)" }}>{c.initial}:</span>
-                                <span className="text-xs" style={{ color: "oklch(0.80 0.005 250)" }}>{c.text}</span>
-                              </div>
-                              <span className="text-xs" style={{ color: "oklch(0.40 0.01 250)" }}>{formatTimestamp(c.timestamp)}</span>
+                              <span className="text-xs" style={{ color: "oklch(0.85 0.005 250)" }}>{c.text}</span>
+                              <span className="text-xs ml-2" style={{ color: "oklch(0.40 0.01 250)" }}>{formatTimestamp(c.timestamp)}</span>
                             </div>
                           </div>
                         ))}
@@ -471,40 +456,12 @@ export default function FollowUps() {
 
                     {/* Add comment */}
                     <div className="space-y-2">
-                      {/* Initial quick-select */}
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>Your initial:</span>
-                        {TEAM_INITIALS.map(i => (
-                          <button
-                            key={i}
-                            onClick={() => setCommentInitial(prev => ({ ...prev, [fu.id]: i }))}
-                            className="w-7 h-7 rounded-full text-xs font-bold transition-all hover:scale-110"
-                            style={{
-                              background: myInitial === i ? "oklch(0.72 0.12 75)" : "oklch(0.22 0.025 250)",
-                              color: myInitial === i ? "oklch(0.13 0.025 250)" : "oklch(0.65 0.01 250)",
-                              border: `1px solid ${myInitial === i ? "oklch(0.72 0.12 75)" : "oklch(1 0 0 / 10%)"}`,
-                            }}
-                          >
-                            {i}
-                          </button>
-                        ))}
-                        {/* Custom initial input */}
-                        <input
-                          type="text"
-                          maxLength={2}
-                          placeholder="?"
-                          value={TEAM_INITIALS.includes(myInitial) ? "" : myInitial}
-                          onChange={e => setCommentInitial(prev => ({ ...prev, [fu.id]: e.target.value.toUpperCase() }))}
-                          className="w-10 h-7 text-center rounded-full text-xs font-bold outline-none"
-                          style={{ background: "oklch(0.22 0.025 250)", border: "1px solid oklch(1 0 0 / 10%)", color: "oklch(0.65 0.01 250)" }}
-                          title="Type a custom initial"
-                        />
-                      </div>
+
                       {/* Comment input row */}
                       <div className="flex gap-2">
                         <input
                           type="text"
-                          placeholder={`${myInitial || "M"}: called lead, no answer...`}
+                          placeholder="e.g. M: called lead, no answer..."
                           value={myText}
                           onChange={e => setCommentText(prev => ({ ...prev, [fu.id]: e.target.value }))}
                           onKeyDown={e => { if (e.key === "Enter") handleAddComment(fu.id); }}

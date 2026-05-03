@@ -21,7 +21,7 @@ import { toast } from "sonner";
 import {
   Plus, ChevronDown, ChevronUp, Phone, Mail,
   Edit2, Trash2, CheckCircle, Search, Filter, Bell, Clock,
-  MessageSquare, CheckCheck, AlarmClock, AlertCircle, X
+  MessageSquare, CheckCheck, AlarmClock, AlertCircle, X, FileText
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -76,7 +76,7 @@ export default function Leads() {
 
   // Activity panel — one open at a time, tracks which lead + which tab
   const [activityLeadId, setActivityLeadId] = useState<string | null>(null);
-  const [activityTab, setActivityTab] = useState<"note" | "followup">("note");
+  const [activityTab, setActivityTab] = useState<"note" | "followup" | "log">("note");
   const [noteText, setNoteText] = useState("");
   const [fuTitle, setFuTitle] = useState("Call back");
   const [fuDate, setFuDate] = useState(new Date().toISOString().split("T")[0]);
@@ -155,7 +155,7 @@ export default function Leads() {
     });
   };
 
-  const openActivity = (leadId: string, tab: "note" | "followup") => {
+  const openActivity = (leadId: string, tab: "note" | "followup" | "log") => {
     if (activityLeadId === leadId && activityTab === tab) {
       setActivityLeadId(null);
     } else {
@@ -430,12 +430,12 @@ function LeadCard({
   onDelete: () => void;
   onConvert: () => void;
   activityOpen: boolean;
-  activityTab: "note" | "followup";
+  activityTab: "note" | "followup" | "log";
   noteText: string;
   fuTitle: string;
   fuDate: string;
-  onOpenActivity: (tab: "note" | "followup") => void;
-  onSwitchTab: (tab: "note" | "followup") => void;
+  onOpenActivity: (tab: "note" | "followup" | "log") => void;
+  onSwitchTab: (tab: "note" | "followup" | "log") => void;
   onCloseActivity: () => void;
   onNoteTextChange: (v: string) => void;
   onFuTitleChange: (v: string) => void;
@@ -658,6 +658,17 @@ function LeadCard({
               >
                 <Bell className="w-3 h-3" /> Follow-Up
               </button>
+              <button
+                onClick={() => onSwitchTab("log")}
+                className="flex items-center gap-1 text-xs px-2.5 py-1 rounded font-medium transition-all"
+                style={{
+                  background: activityTab === "log" ? "oklch(0.55 0.12 145 / 20%)" : "transparent",
+                  color: activityTab === "log" ? "oklch(0.65 0.15 145)" : "oklch(0.50 0.01 250)",
+                  border: `1px solid ${activityTab === "log" ? "oklch(0.55 0.12 145 / 40%)" : "transparent"}`,
+                }}
+              >
+                <FileText className="w-3 h-3" /> Log
+              </button>
             </div>
             <button onClick={onCloseActivity} style={{ color: "oklch(0.45 0.01 250)" }}>
               <X className="w-3.5 h-3.5" />
@@ -695,6 +706,35 @@ function LeadCard({
               </div>
             </div>
           )}
+
+          {/* Log tab — combined chronological activity feed */}
+          {activityTab === "log" && (() => {
+            type FeedItem = { id: string; timestamp: string; text: string; kind: "note" | "comment"; fuTitle?: string };
+            const feed: FeedItem[] = [
+              ...(lead.leadLog || []).map(n => ({ id: n.id, timestamp: n.timestamp, text: n.text, kind: "note" as const })),
+              ...leadFollowUps.flatMap(fu =>
+                (fu.comments || []).map(c => ({ id: c.id, timestamp: c.timestamp, text: c.text, kind: "comment" as const, fuTitle: fu.title }))
+              ),
+            ].sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+            return (
+              <div className="space-y-1.5 max-h-52 overflow-y-auto pr-1">
+                {feed.length === 0 ? (
+                  <p className="text-xs text-center py-4" style={{ color: "oklch(0.40 0.01 250)" }}>No activity logged yet. Add a note or follow-up comment.</p>
+                ) : feed.map(item => (
+                  <div key={item.id} className="text-xs px-2.5 py-2 rounded" style={{ background: "oklch(0.20 0.025 250)", borderLeft: `2px solid ${item.kind === "note" ? "oklch(0.55 0.18 250 / 50%)" : "oklch(0.72 0.12 75 / 50%)"}` }}>
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className="font-semibold" style={{ color: item.kind === "note" ? "oklch(0.65 0.12 250)" : "oklch(0.72 0.12 75)", fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                        {item.kind === "note" ? "Note" : `FU: ${item.fuTitle}`}
+                      </span>
+                      <span style={{ color: "oklch(0.35 0.01 250)" }}>·</span>
+                      <span style={{ color: "oklch(0.40 0.01 250)" }}>{new Date(item.timestamp).toLocaleDateString("en-US", { month: "short", day: "numeric" })} {new Date(item.timestamp).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</span>
+                    </div>
+                    <div style={{ color: "oklch(0.82 0.005 250)" }}>{item.text}</div>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
 
           {/* Follow-Up tab */}
           {activityTab === "followup" && (
