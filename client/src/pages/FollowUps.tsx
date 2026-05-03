@@ -12,6 +12,7 @@ import {
   getOverdueFollowUps,
   getPendingFollowUps,
   formatDate,
+  formatCurrency,
   type FollowUp,
   type FollowUpStatus,
 } from "@/lib/store";
@@ -30,6 +31,11 @@ import {
   Phone,
   User,
   Filter,
+  X,
+  FileText,
+  Briefcase,
+  MapPin,
+  DollarSign,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -51,6 +57,7 @@ export default function FollowUps() {
 
   // ── Add Follow-Up form ───────────────────────────────────
   const [showAddForm, setShowAddForm] = useState(false);
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [addLeadSearch, setAddLeadSearch] = useState("");
   const [addLeadId, setAddLeadId] = useState("");
   const [addTitle, setAddTitle] = useState("Call back");
@@ -366,7 +373,14 @@ export default function FollowUps() {
                       <div className="flex items-center gap-3 mt-1.5 flex-wrap">
                         <div className="flex items-center gap-1.5">
                           <User className="w-3 h-3" style={{ color: "oklch(0.55 0.01 250)" }} />
-                          <span className="text-xs font-medium" style={{ color: "oklch(0.72 0.12 75)" }}>{lead.name}</span>
+                          <button
+                            className="text-xs font-medium hover:underline transition-colors"
+                            style={{ color: "oklch(0.72 0.12 75)" }}
+                            onClick={(e) => { e.stopPropagation(); setSelectedLeadId(lead.id); }}
+                            title="View lead details"
+                          >
+                            {lead.name}
+                          </button>
                         </div>
                         {lead.phone && (
                           <div className="flex items-center gap-1">
@@ -532,6 +546,175 @@ export default function FollowUps() {
           })}
         </div>
       )}
+      {/* ── Lead Detail Drawer ──────────────────────────────── */}
+      {selectedLeadId && (() => {
+        const lead = data.leads.find(l => l.id === selectedLeadId);
+        if (!lead) return null;
+        const leadPayments = data.payments.filter(p => p.leadId === lead.id);
+        const totalRcvd = leadPayments.reduce((s, p) => s + p.amount, 0);
+        const outstanding = lead.retainerBooked > 0 ? lead.retainerBooked - totalRcvd : 0;
+        const leadFollowUps = data.followUps.filter(f => f.leadId === lead.id);
+        return (
+          <>
+            {/* Backdrop */}
+            <div
+              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+              onClick={() => setSelectedLeadId(null)}
+            />
+            {/* Drawer */}
+            <div
+              className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-lg flex flex-col shadow-2xl overflow-hidden"
+              style={{ background: "oklch(0.16 0.025 250)", borderLeft: "1px solid oklch(0.72 0.12 75 / 25%)" }}
+            >
+              {/* Header */}
+              <div className="flex items-start justify-between px-6 py-4 border-b flex-shrink-0" style={{ borderColor: "oklch(1 0 0 / 10%)" }}>
+                <div>
+                  <h2 className="text-lg font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.93 0.005 250)" }}>
+                    {lead.name}
+                  </h2>
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    <span className="text-xs px-2 py-0.5 rounded font-medium" style={{ background: "oklch(0.72 0.12 75 / 15%)", color: "oklch(0.72 0.12 75)" }}>
+                      {lead.caseType}
+                    </span>
+                    {lead.caseNumber && (
+                      <span className="text-xs" style={{ color: "oklch(0.50 0.01 250)" }}>#{lead.caseNumber}</span>
+                    )}
+                    <span className="text-xs px-2 py-0.5 rounded font-medium" style={{
+                      background: lead.stage === "Retained" ? "oklch(0.55 0.18 145 / 12%)" : lead.stage === "Lost" ? "oklch(0.60 0.22 25 / 12%)" : "oklch(0.60 0.15 250 / 12%)",
+                      color: lead.stage === "Retained" ? "oklch(0.65 0.18 145)" : lead.stage === "Lost" ? "oklch(0.70 0.22 25)" : "oklch(0.65 0.15 250)",
+                    }}>
+                      {lead.stage}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedLeadId(null)}
+                  className="p-2 rounded-lg transition-colors hover:bg-white/5 flex-shrink-0"
+                  style={{ color: "oklch(0.55 0.01 250)" }}
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              {/* Body */}
+              <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+                {/* Contact */}
+                <div className="space-y-2">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "oklch(0.55 0.01 250)" }}>Contact</h3>
+                  {lead.phone ? (
+                    <a href={`tel:${lead.phone}`} className="flex items-center gap-2 text-sm hover:underline" style={{ color: "oklch(0.72 0.12 75)" }}>
+                      <Phone className="w-4 h-4" />
+                      {lead.phone}
+                    </a>
+                  ) : (
+                    <p className="text-sm" style={{ color: "oklch(0.45 0.01 250)" }}>No phone on file</p>
+                  )}
+                </div>
+                {/* Case Info */}
+                <div className="rounded-lg p-4 border space-y-3" style={{ background: "oklch(0.19 0.025 250)", borderColor: "oklch(1 0 0 / 8%)" }}>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "oklch(0.55 0.01 250)" }}>Case Details</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <div className="text-xs mb-0.5" style={{ color: "oklch(0.45 0.01 250)" }}>Case Type</div>
+                      <div className="text-sm font-medium" style={{ color: "oklch(0.85 0.005 250)" }}>{lead.caseType}</div>
+                    </div>
+                    {lead.caseNumber && (
+                      <div>
+                        <div className="text-xs mb-0.5" style={{ color: "oklch(0.45 0.01 250)" }}>Case Number</div>
+                        <div className="text-sm font-medium" style={{ color: "oklch(0.85 0.005 250)" }}>{lead.caseNumber}</div>
+                      </div>
+                    )}
+                    {lead.source && (
+                      <div>
+                        <div className="text-xs mb-0.5" style={{ color: "oklch(0.45 0.01 250)" }}>Source</div>
+                        <div className="text-sm font-medium" style={{ color: "oklch(0.85 0.005 250)" }}>{lead.source}</div>
+                      </div>
+                    )}
+                    <div>
+                      <div className="text-xs mb-0.5" style={{ color: "oklch(0.45 0.01 250)" }}>Date Added</div>
+                      <div className="text-sm font-medium" style={{ color: "oklch(0.85 0.005 250)" }}>{lead.date}</div>
+                    </div>
+                    {lead.convertedDate && (
+                      <div>
+                        <div className="text-xs mb-0.5" style={{ color: "oklch(0.45 0.01 250)" }}>Converted</div>
+                        <div className="text-sm font-medium" style={{ color: "oklch(0.65 0.18 145)" }}>{lead.convertedDate}</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {/* Retainer / Financials */}
+                {lead.retainerBooked > 0 && (
+                  <div className="rounded-lg p-4 border space-y-3" style={{ background: "oklch(0.19 0.025 250)", borderColor: "oklch(1 0 0 / 8%)" }}>
+                    <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "oklch(0.55 0.01 250)" }}>Retainer</h3>
+                    <div className="grid grid-cols-3 gap-2 text-center">
+                      <div>
+                        <div className="text-xs mb-0.5" style={{ color: "oklch(0.45 0.01 250)" }}>Booked</div>
+                        <div className="text-sm font-bold" style={{ color: "oklch(0.72 0.12 75)" }}>{formatCurrency(lead.retainerBooked)}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs mb-0.5" style={{ color: "oklch(0.45 0.01 250)" }}>Received</div>
+                        <div className="text-sm font-bold" style={{ color: "oklch(0.65 0.18 145)" }}>{formatCurrency(totalRcvd)}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs mb-0.5" style={{ color: "oklch(0.45 0.01 250)" }}>Outstanding</div>
+                        <div className="text-sm font-bold" style={{ color: outstanding <= 0 ? "oklch(0.65 0.18 145)" : "oklch(0.70 0.22 25)" }}>
+                          {outstanding <= 0 ? "PAID ✓" : formatCurrency(outstanding)}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="h-2 rounded-full overflow-hidden" style={{ background: "oklch(0.22 0.025 250)" }}>
+                      <div className="h-full rounded-full transition-all" style={{
+                        width: `${Math.min(100, (totalRcvd / lead.retainerBooked) * 100)}%`,
+                        background: outstanding <= 0 ? "oklch(0.55 0.18 145)" : "oklch(0.72 0.12 75)",
+                      }} />
+                    </div>
+                    {/* Payment history */}
+                    {leadPayments.length > 0 && (
+                      <div className="space-y-1.5 pt-1">
+                        <div className="text-xs font-medium" style={{ color: "oklch(0.45 0.01 250)" }}>Payment History</div>
+                        {leadPayments.sort((a, b) => a.date.localeCompare(b.date)).map((p, i) => (
+                          <div key={i} className="flex items-center justify-between text-xs py-1 border-b last:border-0" style={{ borderColor: "oklch(1 0 0 / 6%)" }}>
+                            <span style={{ color: "oklch(0.65 0.01 250)" }}>{p.date} · {p.receivedFor}</span>
+                            <span className="font-semibold" style={{ color: "oklch(0.72 0.12 75)" }}>{formatCurrency(p.amount)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {/* Notes */}
+                {lead.notes && (
+                  <div className="rounded-lg p-4 border" style={{ background: "oklch(0.19 0.025 250)", borderColor: "oklch(1 0 0 / 8%)" }}>
+                    <h3 className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "oklch(0.55 0.01 250)" }}>Notes</h3>
+                    <p className="text-sm leading-relaxed" style={{ color: "oklch(0.70 0.01 250)" }}>{lead.notes}</p>
+                  </div>
+                )}
+                {/* Follow-Ups for this lead */}
+                {leadFollowUps.length > 0 && (
+                  <div className="rounded-lg p-4 border" style={{ background: "oklch(0.19 0.025 250)", borderColor: "oklch(1 0 0 / 8%)" }}>
+                    <h3 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "oklch(0.55 0.01 250)" }}>Follow-Up Tasks ({leadFollowUps.length})</h3>
+                    <div className="space-y-2">
+                      {leadFollowUps.map(fu => (
+                        <div key={fu.id} className="flex items-center justify-between text-xs py-1.5 border-b last:border-0" style={{ borderColor: "oklch(1 0 0 / 6%)" }}>
+                          <div>
+                            <span style={{ color: "oklch(0.80 0.005 250)" }}>{fu.title}</span>
+                            <span className="ml-2" style={{ color: "oklch(0.45 0.01 250)" }}>Due {formatDate(fu.dueDate)}</span>
+                          </div>
+                          <span className="px-1.5 py-0.5 rounded-full font-medium" style={{
+                            background: fu.status === "Done" ? "oklch(0.55 0.18 145 / 12%)" : fu.status === "Snoozed" ? "oklch(0.55 0.01 250 / 12%)" : "oklch(0.72 0.12 75 / 12%)",
+                            color: fu.status === "Done" ? "oklch(0.65 0.18 145)" : fu.status === "Snoozed" ? "oklch(0.65 0.01 250)" : "oklch(0.72 0.12 75)",
+                          }}>
+                            {fu.status}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        );
+      })()}
     </div>
   );
 }

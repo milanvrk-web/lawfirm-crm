@@ -41,6 +41,9 @@ import {
   Download,
   Bell,
   AlertCircle,
+  X,
+  Phone,
+  FileText,
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -71,7 +74,10 @@ export default function Dashboard() {
   const { data } = useCRM();
   const now = new Date();
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1); // current month
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
+  // Drill-down drawer
+  type DrillKey = "leads" | "converted" | "revBooked" | "newClient" | "existingClient" | "totalReceived" | null;
+  const [drillDown, setDrillDown] = useState<DrillKey>(null); // current month
 
   const monthLeads = useMemo(() => getMonthLeads(data, selectedYear, selectedMonth), [data, selectedYear, selectedMonth]);
   const monthPayments = useMemo(() => getMonthPayments(data, selectedYear, selectedMonth), [data, selectedYear, selectedMonth]);
@@ -127,6 +133,19 @@ export default function Dashboard() {
   const todayLeads = data.leads.filter(l => l.date === todayStr).length;
   // Use convertedDate for today's conversion count so same-day converts show immediately
   const todayConverted = data.leads.filter(l => l.stage === "Retained" && (l.convertedDate === todayStr || (!l.convertedDate && l.date === todayStr))).length;
+
+  // Drill-down data
+  const drillLeads = useMemo(() => monthLeads, [monthLeads]);
+  const drillConverted = useMemo(() => data.leads.filter(l => {
+    if (l.stage !== "Retained") return false;
+    const dateToCheck = l.convertedDate || l.date;
+    const d = new Date(dateToCheck + "T12:00:00");
+    return d.getFullYear() === selectedYear && d.getMonth() + 1 === selectedMonth;
+  }), [data.leads, selectedYear, selectedMonth]);
+  const drillRevBooked = drillConverted;
+  const drillNewClient = useMemo(() => monthPayments.filter(p => p.paymentType === "New Client"), [monthPayments]);
+  const drillExisting = useMemo(() => monthPayments.filter(p => p.paymentType === "Existing Client"), [monthPayments]);
+  const drillTotal = monthPayments;
 
   const prevMonth = () => {
     if (selectedMonth === 1) { setSelectedMonth(12); setSelectedYear(y => y - 1); }
@@ -330,12 +349,12 @@ export default function Dashboard() {
 
             {/* ── 7 Stat Cards ────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
-        <StatCard icon={<Users className="w-4 h-4" />} label="Leads In" value={totalLeads} sub="this month" />
-        <StatCard icon={<UserCheck className="w-4 h-4" />} label="Converted" value={converted} sub={`${convRate}% conv. rate`} />
-        <StatCard icon={<TrendingUp className="w-4 h-4" />} label="Conv. Rate" value={`${convRate}%`} sub={`${converted} of ${totalLeads}`} />
-        <StatCard icon={<BookOpen className="w-4 h-4" />} label="Rev. Booked" value={formatCurrency(revenueBooked)} sub={`${converted} retainers signed`} gold />
-        <StatCard icon={<DollarSign className="w-4 h-4" />} label="New Client $" value={formatCurrency(newClientRev)} sub="from new clients" />
-        <StatCard icon={<DollarSign className="w-4 h-4" />} label="Existing Client $" value={formatCurrency(existingClientRev)} sub="from ongoing cases" />
+        <StatCard icon={<Users className="w-4 h-4" />} label="Leads In" value={totalLeads} sub="this month" onClick={() => setDrillDown("leads")} />
+        <StatCard icon={<UserCheck className="w-4 h-4" />} label="Converted" value={converted} sub={`${convRate}% conv. rate`} onClick={() => setDrillDown("converted")} />
+        <StatCard icon={<TrendingUp className="w-4 h-4" />} label="Conv. Rate" value={`${convRate}%`} sub={`${converted} of ${totalLeads}`} onClick={() => setDrillDown("converted")} />
+        <StatCard icon={<BookOpen className="w-4 h-4" />} label="Rev. Booked" value={formatCurrency(revenueBooked)} sub={`${converted} retainers signed`} gold onClick={() => setDrillDown("revBooked")} />
+        <StatCard icon={<DollarSign className="w-4 h-4" />} label="New Client $" value={formatCurrency(newClientRev)} sub="from new clients" onClick={() => setDrillDown("newClient")} />
+        <StatCard icon={<DollarSign className="w-4 h-4" />} label="Existing Client $" value={formatCurrency(existingClientRev)} sub="from ongoing cases" onClick={() => setDrillDown("existingClient")} />
         <StatCard
           icon={<ArrowUpRight className="w-4 h-4" />}
           label="Total Received"
@@ -345,6 +364,7 @@ export default function Dashboard() {
           statusBg={sc.bg}
           statusBorder={sc.border}
           statusLabel={sc.label}
+          onClick={() => setDrillDown("totalReceived")}
         />
       </div>
 
@@ -448,6 +468,159 @@ export default function Dashboard() {
         </ResponsiveContainer>
       </div>
 
+      {/* ── Drill-Down Drawer ───────────────────────────────── */}
+      {drillDown && (() => {
+        type PaymentRow = { date: string; clientName: string; caseType: string; caseNumber?: string; paymentType: string; amount: number; receivedFor: string; notes?: string; };
+        type LeadRow = { id: string; name: string; phone?: string; caseType: string; caseNumber?: string; stage: string; date: string; convertedDate?: string; retainerBooked: number; source?: string; notes?: string; };
+        const isPaymentDrill = drillDown === "newClient" || drillDown === "existingClient" || drillDown === "totalReceived";
+        const isLeadDrill = drillDown === "leads" || drillDown === "converted" || drillDown === "revBooked";
+        const titleMap: Record<string, string> = {
+          leads: "All Leads This Month",
+          converted: "Converted Leads This Month",
+          revBooked: "Revenue Booked — Converted Leads",
+          newClient: "New Client Payments",
+          existingClient: "Existing Client Payments",
+          totalReceived: "All Payments This Month",
+        };
+        const payments: PaymentRow[] = isPaymentDrill
+          ? (drillDown === "newClient" ? drillNewClient : drillDown === "existingClient" ? drillExisting : drillTotal)
+          : [];
+        const leads: LeadRow[] = isLeadDrill
+          ? (drillDown === "leads" ? drillLeads : drillConverted)
+          : [];
+        const totalAmt = payments.reduce((s, p) => s + p.amount, 0);
+        return (
+          <>
+            {/* Backdrop */}
+            <div
+              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+              onClick={() => setDrillDown(null)}
+            />
+            {/* Drawer */}
+            <div
+              className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-xl flex flex-col shadow-2xl"
+              style={{ background: "oklch(0.16 0.025 250)", borderLeft: "1px solid oklch(0.72 0.12 75 / 25%)" }}
+            >
+              {/* Drawer Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: "oklch(1 0 0 / 10%)" }}>
+                <div>
+                  <h2 className="text-base font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.93 0.005 250)" }}>
+                    {titleMap[drillDown]}
+                  </h2>
+                  <p className="text-xs mt-0.5" style={{ color: "oklch(0.55 0.01 250)" }}>
+                    {MONTHS[selectedMonth - 1]} {selectedYear} · {isPaymentDrill ? `${payments.length} payments` : `${leads.length} leads`}
+                    {isPaymentDrill && totalAmt > 0 && ` · Total: ${formatCurrency(totalAmt)}`}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setDrillDown(null)}
+                  className="p-2 rounded-lg transition-colors hover:bg-white/5"
+                  style={{ color: "oklch(0.55 0.01 250)" }}
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              {/* Drawer Body */}
+              <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
+                {isPaymentDrill && payments.length === 0 && (
+                  <div className="text-center py-12 text-sm" style={{ color: "oklch(0.45 0.01 250)" }}>No payments in this category for {MONTHS[selectedMonth - 1]}.</div>
+                )}
+                {isPaymentDrill && payments
+                  .sort((a, b) => a.date.localeCompare(b.date))
+                  .map((p, i) => (
+                  <div key={i} className="rounded-lg p-3 border" style={{ background: "oklch(0.19 0.025 250)", borderColor: "oklch(1 0 0 / 8%)" }}>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-sm" style={{ color: "oklch(0.93 0.005 250)" }}>{p.clientName}</span>
+                          <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: "oklch(0.72 0.12 75 / 15%)", color: "oklch(0.72 0.12 75)" }}>{p.caseType}</span>
+                          {p.caseNumber && <span className="text-xs" style={{ color: "oklch(0.50 0.01 250)" }}>#{p.caseNumber}</span>}
+                        </div>
+                        <div className="text-xs mt-1" style={{ color: "oklch(0.55 0.01 250)" }}>
+                          {p.receivedFor} · {p.date}
+                        </div>
+                        {p.notes && <div className="text-xs mt-1 italic" style={{ color: "oklch(0.50 0.01 250)" }}>{p.notes}</div>}
+                      </div>
+                      <div className="text-base font-bold flex-shrink-0" style={{ color: "oklch(0.72 0.12 75)" }}>
+                        {formatCurrency(p.amount)}
+                      </div>
+                    </div>
+                    <div className="mt-1.5">
+                      <span className="text-xs px-2 py-0.5 rounded-full" style={{
+                        background: p.paymentType === "New Client" ? "oklch(0.55 0.18 145 / 12%)" : "oklch(0.60 0.15 250 / 12%)",
+                        color: p.paymentType === "New Client" ? "oklch(0.65 0.18 145)" : "oklch(0.65 0.15 250)",
+                        border: `1px solid ${p.paymentType === "New Client" ? "oklch(0.55 0.18 145 / 30%)" : "oklch(0.60 0.15 250 / 30%)"}`,
+                      }}>
+                        {p.paymentType}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+                {isLeadDrill && leads.length === 0 && (
+                  <div className="text-center py-12 text-sm" style={{ color: "oklch(0.45 0.01 250)" }}>No leads in this category for {MONTHS[selectedMonth - 1]}.</div>
+                )}
+                {isLeadDrill && leads
+                  .sort((a, b) => a.date.localeCompare(b.date))
+                  .map((l, i) => {
+                    const totalRcvd = data.payments.filter(p => p.leadId === l.id).reduce((s, p) => s + p.amount, 0);
+                    const outstanding = l.retainerBooked > 0 ? l.retainerBooked - totalRcvd : 0;
+                    return (
+                      <div key={i} className="rounded-lg p-3 border" style={{ background: "oklch(0.19 0.025 250)", borderColor: "oklch(1 0 0 / 8%)" }}>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-semibold text-sm" style={{ color: "oklch(0.93 0.005 250)" }}>{l.name}</span>
+                              <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: "oklch(0.72 0.12 75 / 15%)", color: "oklch(0.72 0.12 75)" }}>{l.caseType}</span>
+                              {l.caseNumber && <span className="text-xs" style={{ color: "oklch(0.50 0.01 250)" }}>#{l.caseNumber}</span>}
+                            </div>
+                            {l.phone && (
+                              <a href={`tel:${l.phone}`} className="flex items-center gap-1 text-xs mt-1 hover:underline" style={{ color: "oklch(0.65 0.01 250)" }}>
+                                <Phone className="w-3 h-3" />{l.phone}
+                              </a>
+                            )}
+                            <div className="text-xs mt-1" style={{ color: "oklch(0.50 0.01 250)" }}>
+                              {l.source && `Source: ${l.source} · `}
+                              {l.convertedDate ? `Converted: ${l.convertedDate}` : `Added: ${l.date}`}
+                            </div>
+                            {l.notes && (
+                              <div className="text-xs mt-1.5 p-2 rounded" style={{ background: "oklch(0.22 0.025 250)", color: "oklch(0.60 0.01 250)" }}>
+                                <FileText className="w-3 h-3 inline mr-1" />{l.notes}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-shrink-0 text-right">
+                            <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{
+                              background: l.stage === "Retained" ? "oklch(0.55 0.18 145 / 12%)" : l.stage === "Lost" ? "oklch(0.60 0.22 25 / 12%)" : "oklch(0.60 0.15 250 / 12%)",
+                              color: l.stage === "Retained" ? "oklch(0.65 0.18 145)" : l.stage === "Lost" ? "oklch(0.70 0.22 25)" : "oklch(0.65 0.15 250)",
+                            }}>{l.stage}</span>
+                          </div>
+                        </div>
+                        {l.retainerBooked > 0 && (
+                          <div className="mt-2 pt-2 border-t" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
+                            <div className="flex justify-between text-xs mb-1" style={{ color: "oklch(0.50 0.01 250)" }}>
+                              <span>Booked: {formatCurrency(l.retainerBooked)}</span>
+                              <span>Rcvd: {formatCurrency(totalRcvd)}</span>
+                              <span style={{ color: outstanding <= 0 ? "oklch(0.65 0.18 145)" : "oklch(0.70 0.22 25)" }}>
+                                {outstanding <= 0 ? "PAID IN FULL ✓" : `Due: ${formatCurrency(outstanding)}`}
+                              </span>
+                            </div>
+                            <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "oklch(0.22 0.025 250)" }}>
+                              <div className="h-full rounded-full" style={{
+                                width: `${Math.min(100, l.retainerBooked > 0 ? (totalRcvd / l.retainerBooked) * 100 : 0)}%`,
+                                background: outstanding <= 0 ? "oklch(0.55 0.18 145)" : "oklch(0.72 0.12 75)",
+                              }} />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                }
+              </div>
+            </div>
+          </>
+        );
+      })()}
       {/* ── Quick Actions ────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
@@ -472,7 +645,7 @@ export default function Dashboard() {
 // ─── Stat Card ────────────────────────────────────────────────
 
 function StatCard({
-  icon, label, value, sub, gold, statusColor, statusBg, statusBorder, statusLabel
+  icon, label, value, sub, gold, statusColor, statusBg, statusBorder, statusLabel, onClick
 }: {
   icon: React.ReactNode;
   label: string;
@@ -483,9 +656,15 @@ function StatCard({
   statusBg?: string;
   statusBorder?: string;
   statusLabel?: string;
+  onClick?: () => void;
 }) {
   return (
-    <div className="stat-card flex flex-col gap-2" style={statusBg ? { background: statusBg, borderColor: statusBorder } : {}}>
+    <div
+      className={`stat-card flex flex-col gap-2 transition-all${onClick ? " cursor-pointer hover:ring-1 hover:ring-yellow-500/40 hover:scale-[1.02]" : ""}`}
+      style={statusBg ? { background: statusBg, borderColor: statusBorder } : {}}
+      onClick={onClick}
+      title={onClick ? "Click to view details" : undefined}
+    >
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium uppercase tracking-wider" style={{ color: "oklch(0.55 0.01 250)" }}>{label}</span>
         <span style={{ color: gold ? "oklch(0.72 0.12 75)" : statusColor || "oklch(0.55 0.01 250)" }}>{icon}</span>
