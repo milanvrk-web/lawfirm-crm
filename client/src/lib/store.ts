@@ -421,13 +421,38 @@ export function getWeeksInMonth(year: number, month: number): Array<{ label: str
   return weeks;
 }
 
-export const TARGETS = {
+export interface Targets {
+  monthly: { green: number; yellow: number };
+  weekly: { green: number; yellow: number };
+}
+
+export const DEFAULT_TARGETS: Targets = {
   monthly: { green: 70000, yellow: 50000 },
   weekly: { green: 17500, yellow: 12500 },
 };
 
-export function getTargetStatus(amount: number, type: "monthly" | "weekly"): "green" | "yellow" | "red" {
-  const t = TARGETS[type];
+const TARGETS_KEY = "lawfirm_crm_targets";
+
+export function loadTargets(): Targets {
+  try {
+    const raw = localStorage.getItem(TARGETS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as Partial<Targets>;
+      return {
+        monthly: { ...DEFAULT_TARGETS.monthly, ...(parsed.monthly ?? {}) },
+        weekly: { ...DEFAULT_TARGETS.weekly, ...(parsed.weekly ?? {}) },
+      };
+    }
+  } catch {}
+  return DEFAULT_TARGETS;
+}
+
+export function saveTargets(t: Targets): void {
+  localStorage.setItem(TARGETS_KEY, JSON.stringify(t));
+}
+
+export function getTargetStatus(amount: number, type: "monthly" | "weekly", targets?: Targets): "green" | "yellow" | "red" {
+  const t = (targets ?? DEFAULT_TARGETS)[type];
   if (amount >= t.green) return "green";
   if (amount >= t.yellow) return "yellow";
   return "red";

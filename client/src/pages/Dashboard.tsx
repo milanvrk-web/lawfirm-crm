@@ -11,7 +11,6 @@ import {
   getMonthLeads,
   getMonthPayments,
   getWeeksInMonth,
-  TARGETS,
   getTargetStatus,
   getDueTodayFollowUps,
   getOverdueFollowUps,
@@ -71,7 +70,7 @@ function downloadCSV(filename: string, rows: string[][]): void {
 }
 
 export default function Dashboard() {
-  const { data } = useCRM();
+  const { data, targets } = useCRM();
   const now = new Date();
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
@@ -120,7 +119,7 @@ export default function Dashboard() {
   }), [data.payments, weeks]);
 
   // Monthly target status
-  const monthStatus = getTargetStatus(totalReceived, "monthly");
+  const monthStatus = getTargetStatus(totalReceived, "monthly", targets);
 
   // Today's stats
   const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
@@ -385,11 +384,11 @@ export default function Dashboard() {
             </div>
             <div className="relative h-4 rounded-full overflow-hidden mb-2" style={{ background: "oklch(0.22 0.025 250)" }}>
               {/* Red zone */}
-              <div className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${Math.min(100, (TARGETS.monthly.yellow / 80000) * 100)}%`, background: "oklch(0.60 0.22 25 / 30%)" }} />
+              <div className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${Math.min(100, (targets.monthly.yellow / 80000) * 100)}%`, background: "oklch(0.60 0.22 25 / 30%)" }} />
               {/* Yellow zone */}
-              <div className="absolute inset-y-0 rounded-full" style={{ left: `${(TARGETS.monthly.yellow / 80000) * 100}%`, width: `${((TARGETS.monthly.green - TARGETS.monthly.yellow) / 80000) * 100}%`, background: "oklch(0.72 0.15 80 / 30%)" }} />
+              <div className="absolute inset-y-0 rounded-full" style={{ left: `${(targets.monthly.yellow / 80000) * 100}%`, width: `${((targets.monthly.green - targets.monthly.yellow) / 80000) * 100}%`, background: "oklch(0.72 0.15 80 / 30%)" }} />
               {/* Green zone */}
-              <div className="absolute inset-y-0 rounded-full" style={{ left: `${(TARGETS.monthly.green / 80000) * 100}%`, right: 0, background: "oklch(0.55 0.18 145 / 30%)" }} />
+              <div className="absolute inset-y-0 rounded-full" style={{ left: `${(targets.monthly.green / 80000) * 100}%`, right: 0, background: "oklch(0.55 0.18 145 / 30%)" }} />
               {/* Progress */}
               <div className="absolute inset-y-0 left-0 rounded-full transition-all duration-700" style={{ width: `${Math.min(100, (totalReceived / 80000) * 100)}%`, background: sc.text }} />
             </div>
@@ -397,9 +396,9 @@ export default function Dashboard() {
               <span>{formatCurrency(totalReceived)}</span>
               <span>Target: {formatCurrency(80000)}</span>
             </div>
-            {totalReceived < TARGETS.monthly.green && (
+            {totalReceived < targets.monthly.green && (
               <div className="text-xs mt-1" style={{ color: "oklch(0.55 0.01 250)" }}>
-                {formatCurrency(TARGETS.monthly.green - totalReceived)} to reach green zone
+                {formatCurrency(targets.monthly.green - totalReceived)} to reach green zone
               </div>
             )}
           </div>
@@ -414,7 +413,7 @@ export default function Dashboard() {
             </div>
             <div className="space-y-2">
               {weeklyData.map((w, i) => {
-                const wStatus = getTargetStatus(w.total, "weekly");
+                const wStatus = getTargetStatus(w.total, "weekly", targets);
                 const wSc = statusColors[wStatus];
                 const pct = Math.min(100, (w.total / 20000) * 100);
                 return (
@@ -423,9 +422,9 @@ export default function Dashboard() {
                     <div className="flex-1 h-3 rounded-full overflow-hidden relative" style={{ background: "oklch(0.22 0.025 250)" }}>
                       <div className="absolute inset-y-0 left-0 rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: wSc.text }} />
                       {/* Yellow tick */}
-                      <div className="absolute inset-y-0 w-px" style={{ left: `${(TARGETS.weekly.yellow / 20000) * 100}%`, background: "oklch(0.72 0.15 80 / 60%)" }} />
+                      <div className="absolute inset-y-0 w-px" style={{ left: `${(targets.weekly.yellow / 20000) * 100}%`, background: "oklch(0.72 0.15 80 / 60%)" }} />
                       {/* Green tick */}
-                      <div className="absolute inset-y-0 w-px" style={{ left: `${(TARGETS.weekly.green / 20000) * 100}%`, background: "oklch(0.55 0.18 145 / 60%)" }} />
+                      <div className="absolute inset-y-0 w-px" style={{ left: `${(targets.weekly.green / 20000) * 100}%`, background: "oklch(0.55 0.18 145 / 60%)" }} />
                     </div>
                     <span className="text-xs w-16 text-right font-medium" style={{ color: wSc.text }}>{formatCurrency(w.total)}</span>
                   </div>
@@ -458,8 +457,8 @@ export default function Dashboard() {
               contentStyle={{ background: "oklch(0.22 0.025 250)", border: "1px solid oklch(1 0 0 / 12%)", borderRadius: "8px", color: "oklch(0.93 0.005 250)" }}
               formatter={(v: number, name: string) => [formatCurrency(v), name]}
             />
-            <ReferenceLine y={TARGETS.weekly.green} stroke="oklch(0.55 0.18 145)" strokeDasharray="6 3" strokeWidth={1.5} />
-            <ReferenceLine y={TARGETS.weekly.yellow} stroke="oklch(0.72 0.15 80)" strokeDasharray="6 3" strokeWidth={1.5} />
+            <ReferenceLine y={targets.weekly.green} stroke="oklch(0.55 0.18 145)" strokeDasharray="6 3" strokeWidth={1.5} />
+            <ReferenceLine y={targets.weekly.yellow} stroke="oklch(0.72 0.15 80)" strokeDasharray="6 3" strokeWidth={1.5} />
             <Bar dataKey="New Client" stackId="a" fill="oklch(0.72 0.12 75)" radius={[0, 0, 0, 0]} />
             <Bar dataKey="Existing Client" stackId="a" fill="oklch(0.35 0.05 250)" radius={[4, 4, 0, 0]} />
           </BarChart>

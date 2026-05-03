@@ -9,6 +9,7 @@ import {
   type Lead,
   type Payment,
   type FollowUp,
+  type Targets,
   addLead,
   addPayment,
   closeDayRecord,
@@ -23,10 +24,14 @@ import {
   deleteFollowUp,
   addFollowUpComment,
   addLeadNote,
+  loadTargets,
+  saveTargets,
 } from "@/lib/store";
 
 interface CRMContextValue {
   data: CRMData;
+  targets: Targets;
+  updateTargets: (t: Targets) => void;
   // Leads
   addLead: (lead: Omit<Lead, "id">) => void;
   updateLead: (id: string, updates: Partial<Lead>) => void;
@@ -52,11 +57,17 @@ const CRMContext = createContext<CRMContextValue | null>(null);
 
 export function CRMProvider({ children }: { children: React.ReactNode }) {
   const [data, setData] = useState<CRMData>(() => loadData());
+  const [targets, setTargets] = useState<Targets>(() => loadTargets());
 
   // Persist on every change
   useEffect(() => {
     saveData(data);
   }, [data]);
+
+  const handleUpdateTargets = useCallback((t: Targets) => {
+    setTargets(t);
+    saveTargets(t);
+  }, []);
 
   const handleAddLead = useCallback((lead: Omit<Lead, "id">) => {
     setData(d => addLead(d, lead));
@@ -106,6 +117,8 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
   return (
     <CRMContext.Provider value={{
       data,
+      targets,
+      updateTargets: handleUpdateTargets,
       addLead: handleAddLead,
       updateLead: handleUpdateLead,
       deleteLead: handleDeleteLead,

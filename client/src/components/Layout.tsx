@@ -18,6 +18,7 @@ import {
   X,
   ChevronRight,
   Bell,
+  Settings2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCRM } from "@/contexts/CRMContext";
@@ -31,6 +32,7 @@ const BASE_NAV = [
   { path: "/follow-ups", icon: Bell, label: "Follow-Ups" },
   { path: "/close-day", icon: CalendarCheck, label: "Close Day" },
   { path: "/all-data", icon: Database, label: "All Data" },
+  { path: "/settings", icon: Settings2, label: "Settings" },
 ];
 
 export default function Layout({ children }: { children: React.ReactNode }) {
