@@ -10,7 +10,7 @@ import { type Lead, type LeadStage, type CaseType, formatCurrency, formatDate, g
 import { toast } from "sonner";
 import {
   Users, Plus, X, ChevronDown, ChevronUp, Phone, Mail,
-  Edit2, Trash2, CheckCircle, Search, Filter
+  Edit2, Trash2, CheckCircle, Search, Filter, Bell, Clock
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -43,7 +43,7 @@ const emptyLead: Omit<Lead, "id"> = {
 };
 
 export default function Leads() {
-  const { data, addLead, updateLead, deleteLead, addPayment } = useCRM();
+  const { data, addLead, updateLead, deleteLead, addPayment, addFollowUp } = useCRM();
   const [showAdd, setShowAdd] = useState(false);
   const [editLead, setEditLead] = useState<Lead | null>(null);
   const [convertLead, setConvertLead] = useState<Lead | null>(null);
@@ -52,6 +52,10 @@ export default function Leads() {
   const [search, setSearch] = useState("");
   const [filterStage, setFilterStage] = useState<LeadStage | "All">("All");
   const [expandedLeads, setExpandedLeads] = useState<Set<string>>(new Set());
+  // Quick follow-up inline form state
+  const [quickFULeadId, setQuickFULeadId] = useState<string | null>(null);
+  const [quickFUTitle, setQuickFUTitle] = useState("Call back");
+  const [quickFUDate, setQuickFUDate] = useState(new Date().toISOString().split("T")[0]);
 
   const filtered = useMemo(() => {
     return data.leads.filter(l => {
@@ -130,6 +134,16 @@ export default function Leads() {
       return next;
     });
   };
+  const handleQuickFollowUp = (leadId: string) => {
+    if (!quickFUTitle.trim()) { return; }
+    if (!quickFUDate) { return; }
+    addFollowUp({ leadId, dueDate: quickFUDate, status: "Pending", title: quickFUTitle.trim() });
+    setQuickFULeadId(null);
+    setQuickFUTitle("Call back");
+    setQuickFUDate(new Date().toISOString().split("T")[0]);
+    // Use dynamic import to avoid circular dep
+    import("sonner").then(({ toast }) => toast.success("Follow-up added"));
+  };
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
@@ -194,6 +208,14 @@ export default function Leads() {
                   onEdit={() => openEdit(lead)}
                   onDelete={() => { deleteLead(lead.id); toast.success("Lead deleted"); }}
                   onConvert={() => setConvertLead(lead)}
+                  quickFUOpen={quickFULeadId === lead.id}
+                  quickFUTitle={quickFUTitle}
+                  quickFUDate={quickFUDate}
+                  onOpenQuickFU={() => { setQuickFULeadId(lead.id); setQuickFUTitle("Call back"); setQuickFUDate(new Date().toISOString().split("T")[0]); }}
+                  onCloseQuickFU={() => setQuickFULeadId(null)}
+                  onQuickFUTitleChange={setQuickFUTitle}
+                  onQuickFUDateChange={setQuickFUDate}
+                  onSaveQuickFU={() => handleQuickFollowUp(lead.id)}
                 />
               ))}
             </div>
@@ -351,7 +373,10 @@ export default function Leads() {
 
 // ─── Lead Card ────────────────────────────────────────────────
 
-function LeadCard({ lead, data, expanded, onToggle, onEdit, onDelete, onConvert }: {
+function LeadCard({ lead, data, expanded, onToggle, onEdit, onDelete, onConvert,
+  quickFUOpen, quickFUTitle, quickFUDate,
+  onOpenQuickFU, onCloseQuickFU, onQuickFUTitleChange, onQuickFUDateChange, onSaveQuickFU
+}: {
   lead: Lead;
   data: any;
   expanded: boolean;
@@ -359,6 +384,14 @@ function LeadCard({ lead, data, expanded, onToggle, onEdit, onDelete, onConvert 
   onEdit: () => void;
   onDelete: () => void;
   onConvert: () => void;
+  quickFUOpen: boolean;
+  quickFUTitle: string;
+  quickFUDate: string;
+  onOpenQuickFU: () => void;
+  onCloseQuickFU: () => void;
+  onQuickFUTitleChange: (v: string) => void;
+  onQuickFUDateChange: (v: string) => void;
+  onSaveQuickFU: () => void;
 }) {
   const totalReceived = getLeadTotalReceived(data, lead.id);
   const outstanding = lead.retainerBooked > 0 ? lead.retainerBooked - totalReceived : 0;
@@ -438,6 +471,19 @@ function LeadCard({ lead, data, expanded, onToggle, onEdit, onDelete, onConvert 
             <CheckCircle className="w-3 h-3" /> Convert
           </button>
         )}
+        {/* Quick Follow-Up shortcut */}
+        <button
+          onClick={quickFUOpen ? onCloseQuickFU : onOpenQuickFU}
+          className="flex items-center gap-1 text-xs px-2 py-1 rounded font-medium transition-colors"
+          style={{
+            background: quickFUOpen ? "oklch(0.72 0.12 75 / 20%)" : "oklch(0.72 0.12 75 / 8%)",
+            color: "oklch(0.72 0.12 75)",
+            border: `1px solid oklch(0.72 0.12 75 / ${quickFUOpen ? "50%" : "25%"})`,
+          }}
+          title="Add follow-up task"
+        >
+          <Bell className="w-3 h-3" /> Follow-Up
+        </button>
         <button onClick={onEdit} className="p-1.5 rounded transition-colors hover:bg-white/5" style={{ color: "oklch(0.55 0.01 250)" }}>
           <Edit2 className="w-3.5 h-3.5" />
         </button>
@@ -445,6 +491,50 @@ function LeadCard({ lead, data, expanded, onToggle, onEdit, onDelete, onConvert 
           <Trash2 className="w-3.5 h-3.5" />
         </button>
       </div>
+      {/* Inline Quick Follow-Up Form */}
+      {quickFUOpen && (
+        <div className="mt-3 pt-3 border-t space-y-2" style={{ borderColor: "oklch(0.72 0.12 75 / 25%)" }}>
+          <div className="flex items-center gap-1.5 mb-2">
+            <Clock className="w-3 h-3" style={{ color: "oklch(0.72 0.12 75)" }} />
+            <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "oklch(0.72 0.12 75)" }}>Quick Follow-Up</span>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            <input
+              type="text"
+              value={quickFUTitle}
+              onChange={e => onQuickFUTitleChange(e.target.value)}
+              placeholder="Task (e.g. Call back)"
+              className="flex-1 min-w-32 px-2.5 py-1.5 rounded text-xs outline-none"
+              style={{ background: "oklch(0.22 0.025 250)", border: "1px solid oklch(0.72 0.12 75 / 30%)", color: "oklch(0.90 0.005 250)" }}
+              onKeyDown={e => { if (e.key === "Enter") onSaveQuickFU(); if (e.key === "Escape") onCloseQuickFU(); }}
+              autoFocus
+            />
+            <input
+              type="date"
+              value={quickFUDate}
+              onChange={e => onQuickFUDateChange(e.target.value)}
+              className="px-2.5 py-1.5 rounded text-xs outline-none"
+              style={{ background: "oklch(0.22 0.025 250)", border: "1px solid oklch(0.72 0.12 75 / 30%)", color: "oklch(0.90 0.005 250)" }}
+            />
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={onSaveQuickFU}
+              className="text-xs px-3 py-1.5 rounded font-medium transition-all hover:opacity-90"
+              style={{ background: "oklch(0.72 0.12 75)", color: "oklch(0.13 0.025 250)" }}
+            >
+              Add Task
+            </button>
+            <button
+              onClick={onCloseQuickFU}
+              className="text-xs px-3 py-1.5 rounded transition-all hover:bg-white/5"
+              style={{ color: "oklch(0.55 0.01 250)", border: "1px solid oklch(1 0 0 / 10%)" }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
