@@ -368,33 +368,40 @@ export function formatDate(dateStr: string): string {
   return new Date(dateStr + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-export function getWeeksInMonth(year: number, month: number): Array<{ label: string; start: Date; end: Date }> {
-  const weeks: Array<{ label: string; start: Date; end: Date }> = [];
-  const firstDay = new Date(year, month - 1, 1);
-  const lastDay = new Date(year, month, 0);
+// Returns weeks as YYYY-MM-DD string ranges to avoid all timezone issues
+export function getWeeksInMonth(year: number, month: number): Array<{ label: string; startStr: string; endStr: string }> {
+  const weeks: Array<{ label: string; startStr: string; endStr: string }> = [];
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const toStr = (y: number, m: number, d: number) =>
+    `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 
-  let weekStart = new Date(firstDay);
+  let day = 1;
   let weekNum = 1;
-
-  while (weekStart <= lastDay) {
-    const weekEnd = new Date(weekStart);
-    // Find end of week (Friday or end of month)
-    while (weekEnd.getDay() !== 5 && weekEnd < lastDay) {
-      weekEnd.setDate(weekEnd.getDate() + 1);
+  while (day <= daysInMonth) {
+    const startDay = day;
+    const startDate = new Date(year, month - 1, day);
+    // Advance to end of week: stop at Friday (5) or end of month
+    while (day <= daysInMonth) {
+      const dow = new Date(year, month - 1, day).getDay();
+      if (dow === 5) break; // Friday
+      if (day === daysInMonth) break; // end of month
+      day++;
     }
-    if (weekEnd > lastDay) weekEnd.setTime(lastDay.getTime());
-
+    const endDay = day;
     weeks.push({
       label: `Week ${weekNum}`,
-      start: new Date(weekStart),
-      end: new Date(weekEnd),
+      startStr: toStr(year, month, startDay),
+      endStr: toStr(year, month, endDay),
     });
-
-    weekStart = new Date(weekEnd);
-    weekStart.setDate(weekStart.getDate() + 3); // skip weekend to next Monday
+    // Skip to next Monday (skip Sat + Sun)
+    day++;
+    while (day <= daysInMonth) {
+      const dow = new Date(year, month - 1, day).getDay();
+      if (dow !== 0 && dow !== 6) break;
+      day++;
+    }
     weekNum++;
   }
-
   return weeks;
 }
 

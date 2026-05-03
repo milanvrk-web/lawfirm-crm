@@ -112,10 +112,8 @@ export default function Dashboard() {
   // Weekly data
   const weeks = useMemo(() => getWeeksInMonth(selectedYear, selectedMonth), [selectedYear, selectedMonth]);
   const weeklyData = useMemo(() => weeks.map(w => {
-    const wPayments = data.payments.filter(p => {
-      const d = new Date(p.date + "T12:00:00"); // midday-safe timezone fix
-      return d >= w.start && d <= w.end;
-    });
+    // Pure YYYY-MM-DD string comparison — no Date objects, no timezone issues
+    const wPayments = data.payments.filter(p => p.date >= w.startStr && p.date <= w.endStr);
     const newRev = wPayments.filter(p => p.paymentType === "New Client").reduce((s, p) => s + p.amount, 0);
     const existRev = wPayments.filter(p => p.paymentType === "Existing Client").reduce((s, p) => s + p.amount, 0);
     return { name: w.label, "New Client": newRev, "Existing Client": existRev, total: newRev + existRev };
