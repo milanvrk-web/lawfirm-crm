@@ -17,17 +17,17 @@ function todayStr() {
 }
 
 export default function CloseDay() {
-  const { data, closeDay, isDayClosed, getDayClose } = useCRM();
+  const { leads, payments, closeDay, isDayClosed, getDayClose } = useCRM();
   const [selectedDate, setSelectedDate] = useState(todayStr());
 
   const paymentsForDay = useMemo(() =>
-    data.payments.filter(p => p.date === selectedDate).sort((a, b) => a.clientName.localeCompare(b.clientName)),
-    [data.payments, selectedDate]
+    payments.filter(p => p.date === selectedDate).sort((a, b) => a.clientName.localeCompare(b.clientName)),
+    [payments, selectedDate]
   );
 
   const leadsForDay = useMemo(() =>
-    data.leads.filter(l => l.date === selectedDate),
-    [data.leads, selectedDate]
+    leads.filter(l => l.date === selectedDate),
+    [leads, selectedDate]
   );
 
   const newPayments = paymentsForDay.filter(p => p.paymentType === "New Client");

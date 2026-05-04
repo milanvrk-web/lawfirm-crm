@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1777925752247,
+      "tag": "0000_natural_lady_ursula",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1777925848314,
+      "tag": "0001_crazy_sugar_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1777925933317,
+      "tag": "0002_cynical_machine_man",
+      "breakpoints": true
+    }
+  ]
+}

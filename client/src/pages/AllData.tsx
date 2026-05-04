@@ -16,7 +16,7 @@ import { Link } from "wouter";
 const STAGES: LeadStage[] = ["New Lead", "Consultation", "Retained", "Lost"];
 
 export default function AllData() {
-  const { data, deleteLead, deletePayment } = useCRM();
+  const { leads, payments, deleteLead, deletePayment } = useCRM();
   const [activeTab, setActiveTab] = useState<"leads" | "payments">("leads");
 
   // Leads filters
@@ -29,21 +29,21 @@ export default function AllData() {
   const [payTypeFilter, setPayTypeFilter] = useState<PaymentType | "All">("All");
 
   const filteredLeads = useMemo(() => {
-    let leads = [...data.leads];
-    if (leadSearch) leads = leads.filter(l =>
+    let allLeads = [...leads];
+    if (leadSearch) allLeads = allLeads.filter((l: typeof leads[0]) =>
       l.name.toLowerCase().includes(leadSearch.toLowerCase()) ||
       l.caseNumber.toLowerCase().includes(leadSearch.toLowerCase()) ||
       l.caseType.toLowerCase().includes(leadSearch.toLowerCase())
     );
-    if (leadStageFilter !== "All") leads = leads.filter(l => l.stage === leadStageFilter);
-    if (leadSort === "date-desc") leads.sort((a, b) => b.date.localeCompare(a.date));
-    else if (leadSort === "date-asc") leads.sort((a, b) => a.date.localeCompare(b.date));
-    else leads.sort((a, b) => a.name.localeCompare(b.name));
-    return leads;
-  }, [data.leads, leadSearch, leadStageFilter, leadSort]);
+    if (leadStageFilter !== "All") allLeads = allLeads.filter((l: typeof leads[0]) => l.stage === leadStageFilter);
+    if (leadSort === "date-desc") allLeads.sort((a: typeof leads[0], b: typeof leads[0]) => b.date.localeCompare(a.date));
+    else if (leadSort === "date-asc") allLeads.sort((a: typeof leads[0], b: typeof leads[0]) => a.date.localeCompare(b.date));
+    else allLeads.sort((a: typeof leads[0], b: typeof leads[0]) => a.name.localeCompare(b.name));
+    return allLeads;
+  }, [leads, leadSearch, leadStageFilter, leadSort]);
 
   const filteredPayments = useMemo(() => {
-    let pays = [...data.payments];
+    let pays = [...payments];
     if (paySearch) pays = pays.filter(p =>
       p.clientName.toLowerCase().includes(paySearch.toLowerCase()) ||
       p.caseNumber.toLowerCase().includes(paySearch.toLowerCase()) ||
@@ -52,7 +52,7 @@ export default function AllData() {
     if (payTypeFilter !== "All") pays = pays.filter(p => p.paymentType === payTypeFilter);
     pays.sort((a, b) => b.date.localeCompare(a.date));
     return pays;
-  }, [data.payments, paySearch, payTypeFilter]);
+  }, [payments, paySearch, payTypeFilter]);
 
   const stageColor: Record<LeadStage, string> = {
     "New Lead": "badge-new",
@@ -69,7 +69,7 @@ export default function AllData() {
           All Data
         </h1>
         <p className="text-sm mt-1" style={{ color: "oklch(0.55 0.01 250)" }}>
-          {data.leads.length} leads · {data.payments.length} payments
+          {leads.length} leads · {payments.length} payments
         </p>
       </div>
 
@@ -85,7 +85,7 @@ export default function AllData() {
               color: activeTab === tab ? "oklch(0.13 0.025 250)" : "oklch(0.55 0.01 250)",
             }}
           >
-            {tab} ({tab === "leads" ? data.leads.length : data.payments.length})
+            {tab} ({tab === "leads" ? leads.length : payments.length})
           </button>
         ))}
       </div>

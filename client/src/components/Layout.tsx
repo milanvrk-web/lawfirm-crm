@@ -38,11 +38,12 @@ const BASE_NAV = [
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { data } = useCRM();
+  const { followUps } = useCRM();
 
   const urgentCount = useMemo(() => {
-    return getDueTodayFollowUps(data).length + getOverdueFollowUps(data).length;
-  }, [data]);
+    const today = new Date().toISOString().split("T")[0];
+    return followUps.filter(f => f.status === "Pending" && (f.dueDate === today || f.dueDate < today)).length;
+  }, [followUps]);
 
   return (
     <div className="flex min-h-screen" style={{ background: "oklch(0.13 0.025 250)" }}>
@@ -120,10 +121,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         {/* Footer */}
         <div className="px-6 py-4 border-t" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
           <div className="text-xs" style={{ color: "oklch(0.40 0.01 250)" }}>
-            April 2026 data pre-loaded
+            Law Firm CRM v2.0
           </div>
           <div className="text-xs mt-0.5" style={{ color: "oklch(0.35 0.01 250)" }}>
-            Data saved locally in browser
+            Data synced to cloud database
           </div>
         </div>
       </aside>

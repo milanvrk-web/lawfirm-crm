@@ -8,9 +8,6 @@
 import { useState, useMemo } from "react";
 import { useCRM } from "@/contexts/CRMContext";
 import {
-  getDueTodayFollowUps,
-  getOverdueFollowUps,
-  getPendingFollowUps,
   formatDate,
   type FollowUp,
   type FollowUpStatus,
@@ -44,7 +41,7 @@ const STATUS_COLORS: Record<FollowUpStatus, { bg: string; border: string; text: 
 type FilterType = "All" | "Due Today" | "Overdue" | "Pending" | "Done" | "Snoozed";
 
 export default function FollowUps() {
-  const { data, addFollowUp, updateFollowUp, deleteFollowUp, addFollowUpComment } = useCRM();
+  const { leads, followUps, addFollowUp, updateFollowUp, deleteFollowUp, addFollowUpComment } = useCRM();
 
   // ── Filters ──────────────────────────────────────────────
   const [filter, setFilter] = useState<FilterType>("All");
@@ -67,12 +64,12 @@ export default function FollowUps() {
   const today = new Date().toISOString().split("T")[0];
 
   // ── Derived data ─────────────────────────────────────────
-  const dueToday = useMemo(() => getDueTodayFollowUps(data), [data]);
-  const overdue = useMemo(() => getOverdueFollowUps(data), [data]);
-  const pending = useMemo(() => getPendingFollowUps(data), [data]);
+  const dueToday = useMemo(() => followUps.filter(f => f.status === "Pending" && f.dueDate === today), [followUps, today]);
+  const overdue = useMemo(() => followUps.filter(f => f.status === "Pending" && f.dueDate < today), [followUps, today]);
+  const pending = useMemo(() => followUps.filter(f => f.status === "Pending"), [followUps]);
 
   const filteredFollowUps = useMemo(() => {
-    let list = [...data.followUps];
+    let list = [...followUps];
     if (filter === "Due Today") list = dueToday;
     else if (filter === "Overdue") list = overdue;
     else if (filter === "Pending") list = pending;
@@ -84,19 +81,19 @@ export default function FollowUps() {
       if (b.status === "Done" && a.status !== "Done") return -1;
       return a.dueDate.localeCompare(b.dueDate);
     });
-  }, [data.followUps, filter, dueToday, overdue, pending]);
+  }, [followUps, filter, dueToday, overdue, pending]);
 
   const leadOptions = useMemo(() =>
-    data.leads.filter(l =>
+    leads.filter(l =>
       l.name.toLowerCase().includes(addLeadSearch.toLowerCase()) ||
       (l.phone && l.phone.includes(addLeadSearch))
     ).slice(0, 8),
-    [data.leads, addLeadSearch]
+    [leads, addLeadSearch]
   );
 
   // ── Helpers ──────────────────────────────────────────────
   const getLeadForFollowUp = (fu: FollowUp) =>
-    data.leads.find(l => l.id === fu.leadId);
+    leads.find(l => l.id === fu.leadId);
 
   const getDueBadge = (fu: FollowUp) => {
     if (fu.status !== "Pending") return null;
@@ -143,12 +140,12 @@ export default function FollowUps() {
 
   const filterButtons: FilterType[] = ["All", "Due Today", "Overdue", "Pending", "Done", "Snoozed"];
   const filterCounts: Record<FilterType, number> = {
-    All: data.followUps.length,
+    All: followUps.length,
     "Due Today": dueToday.length,
     Overdue: overdue.length,
     Pending: pending.length,
-    Done: data.followUps.filter(f => f.status === "Done").length,
-    Snoozed: data.followUps.filter(f => f.status === "Snoozed").length,
+    Done: followUps.filter(f => f.status === "Done").length,
+    Snoozed: followUps.filter(f => f.status === "Snoozed").length,
   };
 
   return (
@@ -209,7 +206,7 @@ export default function FollowUps() {
               <input
                 type="text"
                 placeholder="Search by name or phone..."
-                value={addLeadId ? (data.leads.find(l => l.id === addLeadId)?.name || addLeadSearch) : addLeadSearch}
+                value={addLeadId ? (leads.find(l => l.id === addLeadId)?.name || addLeadSearch) : addLeadSearch}
                 onChange={e => { setAddLeadSearch(e.target.value); setAddLeadId(""); }}
                 className="w-full px-3 py-2 rounded-lg text-sm outline-none"
                 style={{ background: "oklch(0.22 0.025 250)", border: "1px solid oklch(1 0 0 / 12%)", color: "oklch(0.90 0.005 250)" }}

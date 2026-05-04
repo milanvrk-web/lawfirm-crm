@@ -70,7 +70,7 @@ function formatTimestamp(iso: string) {
 
 // ── Main Component ─────────────────────────────────────────
 export default function Leads() {
-  const { data, addLead, updateLead, deleteLead, addPayment, updateFollowUp } = useCRM();
+  const { leads, payments, followUps, addLead, updateLead, deleteLead, addPayment, updateFollowUp } = useCRM();
   const [showAdd, setShowAdd] = useState(false);
   const [editLead, setEditLead] = useState<Lead | null>(null);
   const [convertLead, setConvertLead] = useState<Lead | null>(null);
@@ -83,13 +83,13 @@ export default function Leads() {
   const [detailLeadId, setDetailLeadId] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
-    return data.leads.filter(l => {
+    return leads.filter(l => {
       const matchSearch = !search || l.name.toLowerCase().includes(search.toLowerCase()) ||
         l.phone.includes(search) || l.caseNumber.toLowerCase().includes(search.toLowerCase());
       const matchStage = filterStage === "All" || l.stage === filterStage;
       return matchSearch && matchStage;
     });
-  }, [data.leads, search, filterStage]);
+  }, [leads, search, filterStage]);
 
   const byStage = useMemo(() => {
     const map: Record<LeadStage, Lead[]> = { "New Lead": [], "Consultation": [], "Retained": [], "Lost": [] };
@@ -176,7 +176,7 @@ export default function Leads() {
             Leads Pipeline
           </h1>
           <p className="text-sm mt-1" style={{ color: "oklch(0.55 0.01 250)" }}>
-            {data.leads.length} total · {data.leads.filter(l => l.stage === "Retained").length} retained
+            {leads.length} total · {leads.filter(l => l.stage === "Retained").length} retained
           </p>
         </div>
         <Button onClick={() => { setEditLead(null); setForm(emptyLead); setShowAdd(true); }}
@@ -222,7 +222,6 @@ export default function Leads() {
                 <LeadCard
                   key={lead.id}
                   lead={lead}
-                  data={data}
                   onOpenDetail={() => openDetail(lead)}
                   onEdit={() => openEdit(lead)}
                   onDelete={() => { deleteLead(lead.id); toast.success("Lead deleted"); }}
@@ -384,10 +383,9 @@ export default function Leads() {
 
 // ── LeadCard Component (compact — click name to open detail panel) ──
 function LeadCard({
-  lead, data, onOpenDetail, onEdit, onDelete, onConvert, onMarkDone, onSnooze, onReschedule,
+  lead, onOpenDetail, onEdit, onDelete, onConvert, onMarkDone, onSnooze, onReschedule,
 }: {
   lead: Lead;
-  data: any;
   onOpenDetail: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -397,11 +395,12 @@ function LeadCard({
   onReschedule: (fu: FollowUp, newDate: string) => void;
 }) {
   const [editingDueDate, setEditingDueDate] = useState(false);
-  const totalReceived = getLeadTotalReceived(data, lead.id);
+  const { payments: allPayments, followUps: allFollowUps } = useCRM();
+  const totalReceived = allPayments.filter(p => p.leadId === lead.id).reduce((s, p) => s + p.amount, 0);
   const outstanding = lead.retainerBooked > 0 ? lead.retainerBooked - totalReceived : 0;
   const pct = lead.retainerBooked > 0 ? Math.min(100, (totalReceived / lead.retainerBooked) * 100) : 0;
   const paidFull = lead.retainerBooked > 0 && totalReceived >= lead.retainerBooked;
-  const leadFollowUps = getLeadFollowUps(data, lead.id);
+  const leadFollowUps = allFollowUps.filter(f => f.leadId === lead.id);
   const nextFU = getNextFollowUp(leadFollowUps);
   const pendingCount = leadFollowUps.filter(f => f.status === "Pending").length;
   const dueInfo = nextFU ? dueDateLabel(nextFU.dueDate) : null;

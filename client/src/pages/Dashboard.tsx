@@ -70,7 +70,8 @@ function downloadCSV(filename: string, rows: string[][]): void {
 }
 
 export default function Dashboard() {
-  const { data, targets } = useCRM();
+  const { leads, payments, followUps, dayCloses, targets } = useCRM();
+  const crmData = useMemo(() => ({ leads, payments, followUps, dayCloses }), [leads, payments, followUps, dayCloses]);
   const now = new Date();
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
@@ -78,31 +79,31 @@ export default function Dashboard() {
   type DrillKey = "leads" | "converted" | "revBooked" | "newClient" | "existingClient" | "totalReceived" | null;
   const [drillDown, setDrillDown] = useState<DrillKey>(null); // current month
 
-  const monthLeads = useMemo(() => getMonthLeads(data, selectedYear, selectedMonth), [data, selectedYear, selectedMonth]);
-  const monthPayments = useMemo(() => getMonthPayments(data, selectedYear, selectedMonth), [data, selectedYear, selectedMonth]);
+  const monthLeads = useMemo(() => getMonthLeads(crmData as any, selectedYear, selectedMonth), [crmData, selectedYear, selectedMonth]);
+  const monthPayments = useMemo(() => getMonthPayments(crmData as any, selectedYear, selectedMonth), [crmData, selectedYear, selectedMonth]);
 
   // Stats
   const totalLeads = monthLeads.length;
   // Converted: leads that were converted in this month (by convertedDate or date)
   const converted = useMemo(() => {
-    return data.leads.filter(l => {
+    return leads.filter(l => {
       if (l.stage !== "Retained") return false;
       const dateToCheck = l.convertedDate || l.date;
       const d = new Date(dateToCheck + "T12:00:00");
       return d.getFullYear() === selectedYear && d.getMonth() + 1 === selectedMonth;
     }).length;
-  }, [data.leads, selectedYear, selectedMonth]);
+  }, [leads, selectedYear, selectedMonth]);
   const convRate = totalLeads > 0 ? Math.round((converted / totalLeads) * 100) : 0;
   // Revenue Booked: sum retainerBooked for leads converted in the selected month
   // Use convertedDate if available, otherwise fall back to lead intake date
   const revenueBooked = useMemo(() => {
-    return data.leads.filter(l => {
+    return leads.filter(l => {
       if (l.stage !== "Retained") return false;
       const dateToCheck = l.convertedDate || l.date;
       const d = new Date(dateToCheck + "T12:00:00");
       return d.getFullYear() === selectedYear && d.getMonth() + 1 === selectedMonth;
     }).reduce((s, l) => s + l.retainerBooked, 0);
-  }, [data.leads, selectedYear, selectedMonth]);
+  }, [leads, selectedYear, selectedMonth]);
   const newClientRev = monthPayments.filter(p => p.paymentType === "New Client").reduce((s, p) => s + p.amount, 0);
   const existingClientRev = monthPayments.filter(p => p.paymentType === "Existing Client").reduce((s, p) => s + p.amount, 0);
   const totalReceived = newClientRev + existingClientRev;
@@ -112,33 +113,33 @@ export default function Dashboard() {
   const weeks = useMemo(() => getWeeksInMonth(selectedYear, selectedMonth), [selectedYear, selectedMonth]);
   const weeklyData = useMemo(() => weeks.map(w => {
     // Pure YYYY-MM-DD string comparison — no Date objects, no timezone issues
-    const wPayments = data.payments.filter(p => p.date >= w.startStr && p.date <= w.endStr);
+    const wPayments = payments.filter(p => p.date >= w.startStr && p.date <= w.endStr);
     const newRev = wPayments.filter(p => p.paymentType === "New Client").reduce((s, p) => s + p.amount, 0);
     const existRev = wPayments.filter(p => p.paymentType === "Existing Client").reduce((s, p) => s + p.amount, 0);
     return { name: w.label, "New Client": newRev, "Existing Client": existRev, total: newRev + existRev };
-  }), [data.payments, weeks]);
+  }), [payments, weeks]);
 
   // Monthly target status
   const monthStatus = getTargetStatus(totalReceived, "monthly", targets);
 
   // Today's stats
   const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
-  const todayPayments = data.payments.filter(p => p.date === todayStr);
+  const todayPayments = payments.filter(p => p.date === todayStr);
   const todayNew = todayPayments.filter(p => p.paymentType === "New Client").reduce((s, p) => s + p.amount, 0);
   const todayExisting = todayPayments.filter(p => p.paymentType === "Existing Client").reduce((s, p) => s + p.amount, 0);
   const todayTotal = todayNew + todayExisting;
-  const todayLeads = data.leads.filter(l => l.date === todayStr).length;
+  const todayLeads = leads.filter(l => l.date === todayStr).length;
   // Use convertedDate for today's conversion count so same-day converts show immediately
-  const todayConverted = data.leads.filter(l => l.stage === "Retained" && (l.convertedDate === todayStr || (!l.convertedDate && l.date === todayStr))).length;
+  const todayConverted = leads.filter(l => l.stage === "Retained" && (l.convertedDate === todayStr || (!l.convertedDate && l.date === todayStr))).length;
 
   // Drill-down data
   const drillLeads = useMemo(() => monthLeads, [monthLeads]);
-  const drillConverted = useMemo(() => data.leads.filter(l => {
+  const drillConverted = useMemo(() => leads.filter(l => {
     if (l.stage !== "Retained") return false;
     const dateToCheck = l.convertedDate || l.date;
     const d = new Date(dateToCheck + "T12:00:00");
     return d.getFullYear() === selectedYear && d.getMonth() + 1 === selectedMonth;
-  }), [data.leads, selectedYear, selectedMonth]);
+  }), [leads, selectedYear, selectedMonth]);
   const drillRevBooked = drillConverted;
   const drillNewClient = useMemo(() => monthPayments.filter(p => p.paymentType === "New Client"), [monthPayments]);
   const drillExisting = useMemo(() => monthPayments.filter(p => p.paymentType === "Existing Client"), [monthPayments]);
@@ -299,8 +300,8 @@ export default function Dashboard() {
 
       {/* -- Follow-Up Alert Strip */}
       {(() => {
-        const dueTodayFUs = getDueTodayFollowUps(data);
-        const overdueFUs = getOverdueFollowUps(data);
+        const dueTodayFUs = getDueTodayFollowUps(crmData as any);
+        const overdueFUs = getOverdueFollowUps(crmData as any);
         if (dueTodayFUs.length === 0 && overdueFUs.length === 0) return null;
         return (
           <div className="rounded-lg p-4 border flex items-start gap-4 flex-wrap" style={{ background: "oklch(0.70 0.22 25 / 8%)", borderColor: "oklch(0.70 0.22 25 / 35%)" }}>
@@ -315,7 +316,7 @@ export default function Dashboard() {
                   <span className="text-sm font-semibold" style={{ color: "oklch(0.70 0.22 25)" }}>{overdueFUs.length} overdue</span>
                   <span className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>
                     {overdueFUs.slice(0, 2).map(f => {
-                      const lead = data.leads.find(l => l.id === f.leadId);
+                      const lead = leads.find(l => l.id === f.leadId);
                       return lead?.name || "Unknown";
                     }).join(", ")}{overdueFUs.length > 2 ? ` +${overdueFUs.length - 2} more` : ""}
                   </span>
@@ -327,7 +328,7 @@ export default function Dashboard() {
                   <span className="text-sm font-semibold" style={{ color: "oklch(0.72 0.12 75)" }}>{dueTodayFUs.length} due today</span>
                   <span className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>
                     {dueTodayFUs.slice(0, 2).map(f => {
-                      const lead = data.leads.find(l => l.id === f.leadId);
+                      const lead = leads.find(l => l.id === f.leadId);
                       return lead?.name || "Unknown";
                     }).join(", ")}{dueTodayFUs.length > 2 ? ` +${dueTodayFUs.length - 2} more` : ""}
                   </span>
@@ -467,7 +468,7 @@ export default function Dashboard() {
 
       {/* ── Drill-Down Drawer ───────────────────────────────── */}
       {drillDown && (() => {
-        type PaymentRow = { date: string; clientName: string; caseType: string; caseNumber?: string; paymentType: string; amount: number; receivedFor: string; notes?: string; };
+        type PaymentRow = { date: string; clientName: string; caseType: string; caseNumber?: string; paymentType: string; amount: number; receivedFor: string; notes?: string; leadId?: string; };
         type LeadRow = { id: string; name: string; phone?: string; caseType: string; caseNumber?: string; stage: string; date: string; convertedDate?: string; retainerBooked: number; source?: string; notes?: string; };
         const isPaymentDrill = drillDown === "newClient" || drillDown === "existingClient" || drillDown === "totalReceived";
         const isLeadDrill = drillDown === "leads" || drillDown === "converted" || drillDown === "revBooked";
@@ -559,7 +560,7 @@ export default function Dashboard() {
                 {isLeadDrill && leads
                   .sort((a, b) => a.date.localeCompare(b.date))
                   .map((l, i) => {
-                    const totalRcvd = data.payments.filter(p => p.leadId === l.id).reduce((s, p) => s + p.amount, 0);
+                    const totalRcvd = payments.filter(p => p.leadId === l.id).reduce((s, p) => s + p.amount, 0);
                     const outstanding = l.retainerBooked > 0 ? l.retainerBooked - totalRcvd : 0;
                     return (
                       <div key={i} className="rounded-lg p-3 border" style={{ background: "oklch(0.19 0.025 250)", borderColor: "oklch(1 0 0 / 8%)" }}>

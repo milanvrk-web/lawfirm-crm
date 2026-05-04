@@ -32,7 +32,7 @@ const emptyPayment: Omit<Payment, "id"> = {
 };
 
 export default function Payments() {
-  const { data, addPayment, updatePayment, deletePayment } = useCRM();
+  const { leads, payments, addPayment, updatePayment, deletePayment } = useCRM();
   const [showAdd, setShowAdd] = useState(false);
   const [editPayment, setEditPayment] = useState<Payment | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Payment | null>(null);
@@ -43,21 +43,21 @@ export default function Payments() {
   const [filterType, setFilterType] = useState<PaymentType | "All">("All");
 
   // Retained clients for search
-  const retainedLeads = useMemo(() => data.leads.filter(l => l.stage === "Retained"), [data.leads]);
+  const retainedLeads = useMemo(() => leads.filter(l => l.stage === "Retained"), [leads]);
   const clientMatches = useMemo(() => {
     if (clientSearch.length < 2) return [];
     return retainedLeads.filter(l => l.name.toLowerCase().includes(clientSearch.toLowerCase())).slice(0, 6);
   }, [retainedLeads, clientSearch]);
 
   const filtered = useMemo(() => {
-    return data.payments.filter(p => {
+    return payments.filter(p => {
       const matchSearch = !search || p.clientName.toLowerCase().includes(search.toLowerCase()) ||
         p.caseNumber.toLowerCase().includes(search.toLowerCase()) ||
         p.receivedFor.toLowerCase().includes(search.toLowerCase());
       const matchType = filterType === "All" || p.paymentType === filterType;
       return matchSearch && matchType;
     }).sort((a, b) => b.date.localeCompare(a.date));
-  }, [data.payments, search, filterType]);
+  }, [payments, search, filterType]);
 
   const totalNew = filtered.filter(p => p.paymentType === "New Client").reduce((s, p) => s + p.amount, 0);
   const totalExisting = filtered.filter(p => p.paymentType === "Existing Client").reduce((s, p) => s + p.amount, 0);
@@ -109,7 +109,7 @@ export default function Payments() {
             Payments
           </h1>
           <p className="text-sm mt-1" style={{ color: "oklch(0.55 0.01 250)" }}>
-            {data.payments.length} total payments
+            {payments.length} total payments
           </p>
         </div>
         <Button onClick={() => { setEditPayment(null); setForm(emptyPayment); setClientSearch(""); setShowAdd(true); }}

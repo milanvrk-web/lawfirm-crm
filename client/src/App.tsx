@@ -20,8 +20,8 @@ import AllData from "./pages/AllData";
 import FollowUps from "./pages/FollowUps";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
-
 function Router() {
+  // make sure to consider if you need authentication for certain routes
   return (
     <Layout>
       <Switch>

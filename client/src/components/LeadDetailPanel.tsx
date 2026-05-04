@@ -61,7 +61,7 @@ export default function LeadDetailPanel({
   onConvertLead,
   initialTab = "followups",
 }: LeadDetailPanelProps) {
-  const { data, addFollowUp, updateFollowUp, deleteFollowUp, addFollowUpComment, addLeadNote } = useCRM();
+  const { leads, payments, followUps: allFollowUps, addFollowUp, updateFollowUp, deleteFollowUp, addFollowUpComment, addLeadNote } = useCRM();
 
   const [detailTab, setDetailTab] = useState<"followups" | "notes" | "info">(initialTab);
   const [fuTitle, setFuTitle] = useState("Call back");
@@ -74,24 +74,23 @@ export default function LeadDetailPanel({
   const today = new Date().toISOString().split("T")[0];
 
   const lead = useMemo(() =>
-    leadId ? data.leads.find(l => l.id === leadId) ?? null : null,
-    [leadId, data.leads]
+    leadId ? leads.find(l => l.id === leadId) ?? null : null,
+    [leadId, leads]
   );
 
-  const followUps = useMemo(() =>
-    lead ? getLeadFollowUps(data, lead.id).sort((a, b) => {
+  const leadFollowUps = useMemo(() =>
+    lead ? allFollowUps.filter(f => f.leadId === lead.id).sort((a, b) => {
       if (a.status === "Done" && b.status !== "Done") return 1;
       if (b.status === "Done" && a.status !== "Done") return -1;
       return a.dueDate.localeCompare(b.dueDate);
     }) : [],
-    [lead, data]
+    [lead, allFollowUps]
   );
 
-  const payments = useMemo(() =>
-    lead ? data.payments.filter(p => p.leadId === lead.id) : [],
-    [lead, data.payments]
+  const leadPayments = useMemo(() =>
+    lead ? payments.filter(p => p.leadId === lead.id) : [],
+    [lead, payments]
   );
-
   if (!lead) return null;
 
   const handleSaveFollowUp = () => {
@@ -141,8 +140,8 @@ export default function LeadDetailPanel({
     toast.success("Due date updated");
   };
 
-  const totalReceived = getLeadTotalReceived(data, lead.id);
-  const pendingCount = followUps.filter(f => f.status === "Pending").length;
+  const totalReceived = leadPayments.reduce((s, p) => s + p.amount, 0);
+  const pendingCount = leadFollowUps.filter(f => f.status === "Pending").length;
 
   return (
     <>
@@ -247,10 +246,10 @@ export default function LeadDetailPanel({
               {tab.label}
               {tab.count > 0 && (
                 <span className="text-xs px-1.5 py-0 rounded-full font-bold" style={{
-                  background: tab.id === "followups" && followUps.some(f => f.status === "Pending" && f.dueDate <= today)
+                  background: tab.id === "followups" && leadFollowUps.some(f => f.status === "Pending" && f.dueDate <= today)
                     ? "oklch(0.65 0.22 25)"
                     : "oklch(0.72 0.12 75 / 25%)",
-                  color: tab.id === "followups" && followUps.some(f => f.status === "Pending" && f.dueDate <= today)
+                  color: tab.id === "followups" && leadFollowUps.some(f => f.status === "Pending" && f.dueDate <= today)
                     ? "oklch(0.98 0 0)"
                     : "oklch(0.72 0.12 75)",
                   lineHeight: "16px",
@@ -312,14 +311,14 @@ export default function LeadDetailPanel({
               )}
 
               {/* Follow-up list */}
-              {followUps.length === 0 ? (
+              {leadFollowUps.length === 0 ? (
                 <div className="text-center py-8">
                   <Bell className="w-8 h-8 mx-auto mb-2" style={{ color: "oklch(0.30 0.01 250)" }} />
                   <p className="text-sm" style={{ color: "oklch(0.45 0.01 250)" }}>No follow-ups yet.</p>
                   <p className="text-xs mt-1" style={{ color: "oklch(0.35 0.01 250)" }}>Click "Add Follow-Up Task" above.</p>
                 </div>
               ) : (
-                followUps.map(fu => {
+                leadFollowUps.map(fu => {
                   const dueInfo = dueDateLabel(fu.dueDate);
                   const isOverdue = fu.status === "Pending" && fu.dueDate < today;
                   const isDueToday = fu.status === "Pending" && fu.dueDate === today;
@@ -508,11 +507,11 @@ export default function LeadDetailPanel({
                   <div className="text-sm leading-relaxed" style={{ color: "oklch(0.75 0.01 250)" }}>{lead.notes}</div>
                 </div>
               )}
-              {payments.length > 0 && (
+              {leadPayments.length > 0 && (
                 <div>
                   <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "oklch(0.45 0.01 250)" }}>Payment History</div>
                   <div className="space-y-1.5">
-                    {[...payments].sort((a, b) => b.date.localeCompare(a.date)).map(p => (
+                    {[...leadPayments].sort((a, b) => b.date.localeCompare(a.date)).map(p => (
                       <div key={p.id} className="flex items-center justify-between text-xs px-3 py-2 rounded" style={{ background: "oklch(0.18 0.025 250)" }}>
                         <div>
                           <span style={{ color: "oklch(0.65 0.01 250)" }}>{formatDate(p.date)}</span>

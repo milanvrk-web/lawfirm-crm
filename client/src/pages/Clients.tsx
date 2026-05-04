@@ -6,26 +6,26 @@
 
 import { useState, useMemo } from "react";
 import { useCRM } from "@/contexts/CRMContext";
-import { formatCurrency, formatDate, getClientPayments } from "@/lib/store";
+import { formatCurrency, formatDate } from "@/lib/store";
 import { BookOpen, ChevronDown, ChevronUp, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 export default function Clients() {
-  const { data } = useCRM();
+  const { leads, payments: allPayments } = useCRM();
   const [search, setSearch] = useState("");
   const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
 
-  const retainedLeads = useMemo(() => data.leads.filter(l => l.stage === "Retained"), [data.leads]);
+  const retainedLeads = useMemo(() => leads.filter(l => l.stage === "Retained"), [leads]);
 
   const clientsWithData = useMemo(() => {
     return retainedLeads.map(lead => {
-      const payments = getClientPayments(data, lead.id);
+      const payments = allPayments.filter(p => p.leadId === lead.id);
       const totalReceived = payments.reduce((s, p) => s + p.amount, 0);
       const outstanding = lead.retainerBooked > 0 ? Math.max(0, lead.retainerBooked - totalReceived) : 0;
       const paidFull = lead.retainerBooked > 0 && totalReceived >= lead.retainerBooked;
       return { lead, payments, totalReceived, outstanding, paidFull };
     }).filter(c => !search || c.lead.name.toLowerCase().includes(search.toLowerCase()) || c.lead.caseType.toLowerCase().includes(search.toLowerCase()));
-  }, [retainedLeads, data, search]);
+  }, [retainedLeads, allPayments, search]);
 
   // Portfolio totals
   const totalBooked = clientsWithData.reduce((s, c) => s + c.lead.retainerBooked, 0);
