@@ -122,6 +122,20 @@ export default function Dashboard() {
   // Monthly target status
   const monthStatus = getTargetStatus(totalReceived, "monthly", targets);
 
+  // Case type revenue breakdown
+  const caseTypeData = useMemo(() => {
+    const map: Record<string, { revenue: number; count: number }> = {};
+    monthPayments.forEach(p => {
+      const ct = p.caseType || "Unknown";
+      if (!map[ct]) map[ct] = { revenue: 0, count: 0 };
+      map[ct].revenue += p.amount;
+      map[ct].count += 1;
+    });
+    return Object.entries(map)
+      .map(([caseType, { revenue, count }]) => ({ caseType, revenue, count, pct: totalReceived > 0 ? Math.round((revenue / totalReceived) * 100) : 0 }))
+      .sort((a, b) => b.revenue - a.revenue);
+  }, [monthPayments, totalReceived]);
+
   // Today's stats
   const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
   const todayPayments = payments.filter(p => p.date === todayStr);
@@ -464,6 +478,71 @@ export default function Dashboard() {
             <Bar dataKey="Existing Client" stackId="a" fill="oklch(0.35 0.05 250)" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
+      </div>
+
+      {/* ── Case Type Revenue Breakdown ─────────────────────── */}
+      <div className="rounded-lg p-5 border" style={{ background: "oklch(0.18 0.025 250)", borderColor: "oklch(1 0 0 / 8%)" }}>
+          <h2 className="text-sm font-semibold uppercase tracking-wider mb-4" style={{ color: "oklch(0.72 0.12 75)" }}>
+            Revenue by Case Type — {MONTHS[selectedMonth - 1]} {selectedYear}
+          </h2>
+          {caseTypeData.length > 0 && <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Bar chart */}
+            <ResponsiveContainer width="100%" height={Math.max(160, caseTypeData.length * 44)}>
+              <BarChart data={caseTypeData} layout="vertical" margin={{ top: 0, right: 16, left: 8, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 6%)" horizontal={false} />
+                <XAxis type="number" tickFormatter={v => `$${(v/1000).toFixed(0)}k`} tick={{ fill: "oklch(0.55 0.01 250)", fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis type="category" dataKey="caseType" tick={{ fill: "oklch(0.80 0.01 250)", fontSize: 12 }} axisLine={false} tickLine={false} width={72} />
+                <Tooltip
+                  contentStyle={{ background: "oklch(0.22 0.025 250)", border: "1px solid oklch(1 0 0 / 12%)", borderRadius: "8px", color: "oklch(0.93 0.005 250)" }}
+                  formatter={(v: number) => [formatCurrency(v), "Revenue"]}
+                />
+                <Bar dataKey="revenue" fill="oklch(0.72 0.12 75)" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+            {/* Summary table */}
+            <div className="overflow-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr style={{ borderBottom: "1px solid oklch(1 0 0 / 10%)" }}>
+                    <th className="text-left py-2 pr-4 font-semibold" style={{ color: "oklch(0.72 0.12 75)" }}>Case Type</th>
+                    <th className="text-right py-2 pr-4 font-semibold" style={{ color: "oklch(0.72 0.12 75)" }}>Payments</th>
+                    <th className="text-right py-2 pr-4 font-semibold" style={{ color: "oklch(0.72 0.12 75)" }}>Revenue</th>
+                    <th className="text-right py-2 font-semibold" style={{ color: "oklch(0.72 0.12 75)" }}>% of Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {caseTypeData.map((row, i) => (
+                    <tr key={row.caseType} style={{ borderBottom: i < caseTypeData.length - 1 ? "1px solid oklch(1 0 0 / 6%)" : "none" }}>
+                      <td className="py-2 pr-4" style={{ color: "oklch(0.93 0.005 250)" }}>
+                        <span className="px-2 py-0.5 rounded text-xs font-medium" style={{ background: "oklch(0.72 0.12 75 / 15%)", color: "oklch(0.72 0.12 75)" }}>{row.caseType}</span>
+                      </td>
+                      <td className="text-right py-2 pr-4" style={{ color: "oklch(0.65 0.01 250)" }}>{row.count}</td>
+                      <td className="text-right py-2 pr-4 font-semibold" style={{ color: "oklch(0.93 0.005 250)" }}>{formatCurrency(row.revenue)}</td>
+                      <td className="text-right py-2">
+                        <div className="flex items-center justify-end gap-2">
+                          <div className="w-16 h-1.5 rounded-full overflow-hidden" style={{ background: "oklch(1 0 0 / 8%)" }}>
+                            <div className="h-full rounded-full" style={{ width: `${row.pct}%`, background: "oklch(0.72 0.12 75)" }} />
+                          </div>
+                          <span className="text-xs w-8 text-right" style={{ color: "oklch(0.65 0.01 250)" }}>{row.pct}%</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  <tr style={{ borderTop: "1px solid oklch(1 0 0 / 12%)" }}>
+                    <td className="pt-2 pr-4 font-semibold" style={{ color: "oklch(0.72 0.12 75)" }}>Total</td>
+                    <td className="text-right pt-2 pr-4" style={{ color: "oklch(0.65 0.01 250)" }}>{caseTypeData.reduce((s, r) => s + r.count, 0)}</td>
+                    <td className="text-right pt-2 pr-4 font-semibold" style={{ color: "oklch(0.72 0.12 75)" }}>{formatCurrency(totalReceived)}</td>
+                    <td className="text-right pt-2" style={{ color: "oklch(0.65 0.01 250)" }}>100%</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>}
+          {caseTypeData.length === 0 && (
+            <p className="text-sm text-center py-6" style={{ color: "oklch(0.45 0.01 250)" }}>
+              No payments recorded for {MONTHS[selectedMonth - 1]} {selectedYear}.
+            </p>
+          )}
       </div>
 
       {/* ── Drill-Down Drawer ───────────────────────────────── */}

@@ -1,18 +1,25 @@
 
-## User Login & Team Accounts
+## User Login & Team Accounts (cancelled — user chose access code approach instead)
 
-- [ ] Add login page with Manus OAuth sign-in button
-- [ ] Gate all app routes behind authentication (redirect to login if not signed in)
-- [ ] Show logged-in user name and avatar in sidebar footer
-- [ ] Add logout button in sidebar
-- [ ] Protect all tRPC procedures with protectedProcedure
-- [ ] Add Team Members page (admin only) to view all users and change roles
-- [ ] Show role badge (Admin / Staff) in sidebar for current user
+- [x] ~~Add login page with Manus OAuth sign-in button~~ (cancelled)
+- [x] ~~Gate all app routes behind authentication~~ (cancelled)
+- [x] ~~Show logged-in user name and avatar in sidebar footer~~ (cancelled)
+- [x] ~~Add logout button in sidebar~~ (cancelled)
+- [x] ~~Protect all tRPC procedures with protectedProcedure~~ (cancelled)
+- [x] ~~Add Team Members page (admin only)~~ (cancelled)
+- [x] ~~Show role badge (Admin / Staff) in sidebar~~ (cancelled)
 
 ## Access Code Lock Screen
 
-- [ ] Add ACCESS_CODE secret (server-side env variable)
-- [ ] Add tRPC procedure to verify the access code server-side
-- [ ] Build lock screen UI (logo, code input, submit button)
-- [ ] Store verified session in localStorage so users don't re-enter on every visit
-- [ ] Gate all app routes behind the lock screen
+- [x] Add ACCESS_CODE secret (server-side env variable)
+- [x] Add tRPC procedure to verify the access code server-side
+- [x] Build lock screen UI (logo, code input, submit button)
+- [x] Store verified session in sessionStorage so users don't re-enter on every visit
+- [x] Gate all app routes behind the lock screen
+
+## Case Type Revenue Breakdown
+
+- [x] Compute revenue per case type for the selected month from payments
+- [x] Add horizontal bar chart (Recharts) showing revenue by case type
+- [x] Add summary table with case type, payment count, total revenue, % of total
+- [x] Place section below the Weekly Revenue chart on the Dashboard
