@@ -48,6 +48,36 @@ function createAuthContext(): TrpcContext {
 }
 
 describe("CRM Router", () => {
+  describe("access", () => {
+    it("returns required=false when no ACCESS_CODE env is set", async () => {
+      const original = process.env.ACCESS_CODE;
+      delete process.env.ACCESS_CODE;
+      const ctx = createAuthContext();
+      const caller = appRouter.createCaller(ctx);
+      const result = await caller.access.isRequired();
+      expect(result).toEqual({ required: false });
+      if (original !== undefined) process.env.ACCESS_CODE = original;
+    });
+
+    it("returns success=true for correct code", async () => {
+      process.env.ACCESS_CODE = "test-secret-123";
+      const ctx = createAuthContext();
+      const caller = appRouter.createCaller(ctx);
+      const result = await caller.access.verify({ code: "test-secret-123" });
+      expect(result).toEqual({ success: true });
+      delete process.env.ACCESS_CODE;
+    });
+
+    it("returns success=false for wrong code", async () => {
+      process.env.ACCESS_CODE = "test-secret-123";
+      const ctx = createAuthContext();
+      const caller = appRouter.createCaller(ctx);
+      const result = await caller.access.verify({ code: "wrong-code" });
+      expect(result).toEqual({ success: false });
+      delete process.env.ACCESS_CODE;
+    });
+  });
+
   describe("leads", () => {
     it("returns empty leads list", async () => {
       const ctx = createAuthContext();

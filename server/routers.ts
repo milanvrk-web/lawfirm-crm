@@ -5,6 +5,7 @@ import { publicProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { nanoid } from "nanoid";
 import * as db from "./db";
+import { ENV } from "./_core/env";
 
 // ─── Shared Zod schemas ──────────────────────────────────────
 
@@ -46,6 +47,29 @@ const PaymentInput = z.object({
 
 export const appRouter = router({
   system: systemRouter,
+
+  // ─── Access Code ──────────────────────────────────────────
+  access: router({
+    verify: publicProcedure
+      .input(z.object({ code: z.string() }))
+      .mutation(({ input }) => {
+        // Read directly from process.env so tests can override it
+        const correct = process.env.ACCESS_CODE ?? "";
+        if (!correct) {
+          // No code set — allow access (open mode)
+          return { success: true };
+        }
+        if (input.code === correct) {
+          return { success: true };
+        }
+        return { success: false };
+      }),
+    isRequired: publicProcedure.query(() => {
+      const code = process.env.ACCESS_CODE ?? "";
+      return { required: Boolean(code) };
+    }),
+  }),
+
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {
