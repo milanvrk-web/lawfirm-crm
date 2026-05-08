@@ -27,6 +27,20 @@ vi.mock("./db", () => ({
   addFollowUpComment: vi.fn().mockResolvedValue(undefined),
   getAllDayCloses: vi.fn().mockResolvedValue([]),
   upsertDayClose: vi.fn().mockResolvedValue(undefined),
+  getInstallmentPlansForLead: vi.fn().mockResolvedValue([]),
+  createInstallmentPlan: vi.fn().mockResolvedValue(undefined),
+  updateInstallmentPlan: vi.fn().mockResolvedValue(undefined),
+  deleteInstallmentPlan: vi.fn().mockResolvedValue(undefined),
+  getInstallmentItemsForPlan: vi.fn().mockResolvedValue([]),
+  createInstallmentItem: vi.fn().mockResolvedValue(undefined),
+  updateInstallmentItem: vi.fn().mockResolvedValue(undefined),
+  deleteInstallmentItem: vi.fn().mockResolvedValue(undefined),
+  getFirstUnpaidInstallmentForLead: vi.fn().mockResolvedValue(null),
+  getPaymentByLinkedInstallment: vi.fn().mockResolvedValue(null),
+  getAllFollowUpComments: vi.fn().mockResolvedValue([]),
+  getFollowUpComments: vi.fn().mockResolvedValue([]),
+  createFollowUpComment: vi.fn().mockResolvedValue(undefined),
+  deleteFollowUpComment: vi.fn().mockResolvedValue(undefined),
 }));
 
 function createAuthContext(): TrpcContext {

@@ -515,9 +515,17 @@ export default function LeadDetailPanel({
                   <div className="space-y-1.5">
                     {[...leadPayments].sort((a, b) => b.date.localeCompare(a.date)).map(p => (
                       <div key={p.id} className="flex items-center justify-between text-xs px-3 py-2 rounded" style={{ background: "oklch(0.18 0.025 250)" }}>
-                        <div>
-                          <span style={{ color: "oklch(0.65 0.01 250)" }}>{formatDate(p.date)}</span>
-                          <span className="ml-2" style={{ color: "oklch(0.75 0.01 250)" }}>{p.receivedFor}</span>
+                        <div className="flex flex-col gap-0.5">
+                          <div>
+                            <span style={{ color: "oklch(0.65 0.01 250)" }}>{formatDate(p.date)}</span>
+                            <span className="ml-2" style={{ color: "oklch(0.75 0.01 250)" }}>{p.receivedFor}</span>
+                          </div>
+                          {p.linkedInstallmentId && (
+                            <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded" style={{ background: "oklch(0.25 0.06 75)", color: "oklch(0.72 0.12 75)" }}>
+                              <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                              Auto-linked to installment plan
+                            </span>
+                          )}
                         </div>
                         <span className="font-bold" style={{ color: "oklch(0.72 0.12 75)" }}>{formatCurrency(p.amount)}</span>
                       </div>

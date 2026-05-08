@@ -40,3 +40,11 @@
 - [x] Build installment plan tab in Lead Detail panel with schedule grid
 - [x] Show collected vs outstanding progress bar per plan
 - [x] Auto-generate installment schedule from total + count + start date
+
+## Auto-Link Installment Payments
+
+- [ ] When a payment is created for a lead with an active plan, auto-mark the earliest unpaid installment as paid
+- [ ] When a payment is deleted, unmark the linked installment (if any) back to unpaid
+- [ ] Add linkedInstallmentId column to payments table to track the link
+- [ ] Show a "Linked to installment #N" badge on the payment row in the Payments tab
+- [ ] Write tests covering auto-link and auto-unlink logic

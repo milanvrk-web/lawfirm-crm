@@ -155,13 +155,27 @@ export const appRouter = router({
 
     create: publicProcedure.input(PaymentInput).mutation(async ({ input }) => {
       const id = nanoid();
+      // Auto-link to earliest unpaid installment if this payment is for a lead with a plan
+      let linkedInstallmentId: string | null = null;
+      if (input.leadId) {
+        const unpaidItem = await db.getFirstUnpaidInstallmentForLead(input.leadId);
+        if (unpaidItem) {
+          linkedInstallmentId = unpaidItem.id;
+          // Mark the installment as paid
+          await db.updateInstallmentItem(unpaidItem.id, {
+            isPaid: 1,
+            paidDate: input.date,
+          });
+        }
+      }
       await db.createPayment({
         id,
         ...input,
         amount: String(input.amount),
         leadId: input.leadId ?? null,
+        linkedInstallmentId,
       });
-      return { id };
+      return { id, linkedInstallmentId };
     }),
 
     update: publicProcedure
@@ -174,6 +188,15 @@ export const appRouter = router({
       }),
 
     delete: publicProcedure.input(z.object({ id: z.string() })).mutation(async ({ input }) => {
+      // If this payment was linked to an installment, unmark it as paid
+      const allPayments = await db.getAllPayments();
+      const payment = allPayments.find(p => p.id === input.id);
+      if (payment?.linkedInstallmentId) {
+        await db.updateInstallmentItem(payment.linkedInstallmentId, {
+          isPaid: 0,
+          paidDate: undefined,
+        });
+      }
       await db.deletePayment(input.id);
       return { success: true };
     }),

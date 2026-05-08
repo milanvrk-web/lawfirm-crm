@@ -317,3 +317,35 @@ export async function deleteInstallmentItem(id: string) {
   if (!db) throw new Error("Database not available");
   await db.delete(installmentItems).where(eq(installmentItems.id, id));
 }
+
+// ─── Installment Auto-Link Helpers ───────────────────────────────────────────
+
+/** Returns the earliest unpaid installment item across all plans for a given lead. */
+export async function getFirstUnpaidInstallmentForLead(leadId: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const plans = await db.select().from(installmentPlans).where(eq(installmentPlans.leadId, leadId));
+  if (plans.length === 0) return null;
+  for (const plan of plans) {
+    const items = await db
+      .select()
+      .from(installmentItems)
+      .where(eq(installmentItems.planId, plan.id))
+      .orderBy(asc(installmentItems.installmentNumber));
+    const unpaid = items.find(item => item.isPaid === 0);
+    if (unpaid) return unpaid;
+  }
+  return null;
+}
+
+/** Returns the payment row linked to a specific installment item id. */
+export async function getPaymentByLinkedInstallment(installmentId: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db
+    .select()
+    .from(payments)
+    .where(eq(payments.linkedInstallmentId, installmentId))
+    .limit(1);
+  return result[0] ?? null;
+}

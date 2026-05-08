@@ -1,0 +1,1 @@
+ALTER TABLE `payments` ADD `linkedInstallmentId` varchar(36);

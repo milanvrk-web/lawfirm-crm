@@ -159,9 +159,21 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
   const updateLeadMut = trpc.leads.update.useMutation({ onSuccess: () => utils.leads.list.invalidate() });
   const deleteLeadMut = trpc.leads.delete.useMutation({ onSuccess: () => utils.leads.list.invalidate() });
 
-  const createPaymentMut = trpc.payments.create.useMutation({ onSuccess: () => utils.payments.list.invalidate() });
+  const createPaymentMut = trpc.payments.create.useMutation({
+    onSuccess: () => {
+      utils.payments.list.invalidate();
+      // Invalidate installment plans so the Payments tab reflects the auto-linked installment
+      utils.getInstallmentPlans.invalidate();
+    },
+  });
   const updatePaymentMut = trpc.payments.update.useMutation({ onSuccess: () => utils.payments.list.invalidate() });
-  const deletePaymentMut = trpc.payments.delete.useMutation({ onSuccess: () => utils.payments.list.invalidate() });
+  const deletePaymentMut = trpc.payments.delete.useMutation({
+    onSuccess: () => {
+      utils.payments.list.invalidate();
+      // Invalidate installment plans so the unlinked installment reverts to unpaid
+      utils.getInstallmentPlans.invalidate();
+    },
+  });
 
   const closeDayMut = trpc.dayCloses.close.useMutation({ onSuccess: () => utils.dayCloses.list.invalidate() });
 

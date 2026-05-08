@@ -66,6 +66,7 @@ export interface Payment {
   amount: number;
   receivedFor: string; // what the payment was for
   notes: string;
+  linkedInstallmentId?: string | null; // auto-linked installment item id
 }
 
 export interface DayClose {

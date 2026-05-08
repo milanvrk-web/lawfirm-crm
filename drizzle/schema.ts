@@ -84,6 +84,7 @@ export const payments = mysqlTable("payments", {
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   receivedFor: varchar("receivedFor", { length: 500 }).default("").notNull(),
   notes: text("notes").notNull(),
+  linkedInstallmentId: varchar("linkedInstallmentId", { length: 36 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
