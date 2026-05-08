@@ -390,3 +390,21 @@ export async function getOverdueInstallments() {
     };
   });
 }
+
+/** Updates all overdue (unpaid, past due) installment items to have today's date. */
+export async function bulkRescheduleOverdueInstallments(newDate: string): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  const today = new Date().toISOString().slice(0, 10);
+  // Find all unpaid items with a due date strictly before today
+  const overdueItems = await db
+    .select()
+    .from(installmentItems)
+    .where(and(eq(installmentItems.isPaid, 0), lt(installmentItems.dueDate, today)));
+  if (overdueItems.length === 0) return 0;
+  // Update each one individually (TiDB-safe, avoids IN clause issues)
+  for (const item of overdueItems) {
+    await db.update(installmentItems).set({ dueDate: newDate }).where(eq(installmentItems.id, item.id));
+  }
+  return overdueItems.length;
+}

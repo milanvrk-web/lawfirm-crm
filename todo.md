@@ -55,3 +55,11 @@
 - [x] Add alert card to Dashboard showing overdue count and per-lead breakdown
 - [x] Clicking a lead name in the alert opens the Lead Detail panel on the Payments tab
 - [x] Card is hidden when there are no overdue installments
+
+## Bulk Reschedule Overdue Installments
+
+- [x] Add bulkRescheduleOverdueInstallments tRPC mutation (updates all overdue items to today's date)
+- [x] Add "Reschedule All to Today" button in the overdue installment alert strip on Dashboard
+- [x] Show loading spinner on button while mutation is in progress
+- [x] Refresh overdue installments query after mutation completes
+- [x] Add test for bulk reschedule mutation

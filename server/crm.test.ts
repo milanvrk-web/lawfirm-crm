@@ -27,7 +27,8 @@ vi.mock("./db", () => ({
   addFollowUpComment: vi.fn().mockResolvedValue(undefined),
   getAllDayCloses: vi.fn().mockResolvedValue([]),
   upsertDayClose: vi.fn().mockResolvedValue(undefined),
-  getInstallmentPlansForLead: vi.fn().mockResolvedValue([]),
+  getOverdueInstallments: vi.fn().mockResolvedValue([]),
+  bulkRescheduleOverdueInstallments: vi.fn().mockResolvedValue(0),
   createInstallmentPlan: vi.fn().mockResolvedValue(undefined),
   updateInstallmentPlan: vi.fn().mockResolvedValue(undefined),
   deleteInstallmentPlan: vi.fn().mockResolvedValue(undefined),
@@ -216,6 +217,26 @@ describe("CRM Router", () => {
       await caller.payments.delete({ id: "pay-del" });
       expect(dbModule.updateInstallmentItem).toHaveBeenCalledWith("item-2", { isPaid: 0, paidDate: undefined });
       expect(dbModule.deletePayment).toHaveBeenCalledWith("pay-del");
+    });
+  });
+
+  describe("installments", () => {
+    it("bulkRescheduleOverdue returns rescheduled count", async () => {
+      const { vi } = await import("vitest");
+      const dbModule = await import("./db");
+      vi.mocked(dbModule.bulkRescheduleOverdueInstallments).mockResolvedValueOnce(3);
+      const ctx = createAuthContext();
+      const caller = appRouter.createCaller(ctx);
+      const result = await caller.bulkRescheduleOverdue({ newDate: "2026-05-07" });
+      expect(result).toEqual({ rescheduled: 3 });
+      expect(dbModule.bulkRescheduleOverdueInstallments).toHaveBeenCalledWith("2026-05-07");
+    });
+
+    it("bulkRescheduleOverdue returns 0 when no overdue items", async () => {
+      const ctx = createAuthContext();
+      const caller = appRouter.createCaller(ctx);
+      const result = await caller.bulkRescheduleOverdue({ newDate: "2026-05-07" });
+      expect(result).toEqual({ rescheduled: 0 });
     });
   });
 

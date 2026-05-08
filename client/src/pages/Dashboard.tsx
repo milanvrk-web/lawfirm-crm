@@ -44,6 +44,7 @@ import {
   X,
   Phone,
   FileText,
+  Loader2,
 } from "lucide-react";
 import { Link } from "wouter";
 import LeadDetailPanel from "@/components/LeadDetailPanel";
@@ -173,8 +174,12 @@ export default function Dashboard() {
   }, [monthPayments, totalReceived]);
 
   // Overdue installments
+  const utils = trpc.useUtils();
   const { data: overdueInstallments = [] } = trpc.getOverdueInstallments.useQuery(undefined, {
     refetchInterval: 60_000, // refresh every minute
+  });
+  const bulkRescheduleMut = trpc.bulkRescheduleOverdue.useMutation({
+    onSuccess: () => utils.getOverdueInstallments.invalidate(),
   });
 
   // Today's stats
@@ -384,12 +389,25 @@ export default function Dashboard() {
                 <span className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>+{overdueInstallments.length - 4} more</span>
               )}
             </div>
-            <Link href="/leads">
-              <span className="text-xs font-medium px-3 py-1.5 rounded-lg transition-all hover:opacity-90 cursor-pointer"
-                style={{ background: "oklch(0.70 0.22 25 / 15%)", color: "oklch(0.70 0.22 25)", border: "1px solid oklch(0.70 0.22 25 / 35%)" }}>
-                View Leads
-              </span>
-            </Link>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => bulkRescheduleMut.mutate({ newDate: new Date().toISOString().slice(0, 10) })}
+                disabled={bulkRescheduleMut.isPending}
+                className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-all hover:opacity-90 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                style={{ background: "oklch(0.72 0.12 75 / 20%)", color: "oklch(0.72 0.12 75)", border: "1px solid oklch(0.72 0.12 75 / 40%)" }}
+              >
+                {bulkRescheduleMut.isPending ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : null}
+                Reschedule All to Today
+              </button>
+              <Link href="/leads">
+                <span className="text-xs font-medium px-3 py-1.5 rounded-lg transition-all hover:opacity-90 cursor-pointer"
+                  style={{ background: "oklch(0.70 0.22 25 / 15%)", color: "oklch(0.70 0.22 25)", border: "1px solid oklch(0.70 0.22 25 / 35%)" }}>
+                  View Leads
+                </span>
+              </Link>
+            </div>
           </div>
         </div>
       )}

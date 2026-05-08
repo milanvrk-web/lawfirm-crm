@@ -592,5 +592,13 @@ export const appRouter = router({
         amount: Number(item.amount),
       }));
     }),
+
+  // ─── Bulk Reschedule Overdue Installments ────────────────────────────────
+  bulkRescheduleOverdue: publicProcedure
+    .input(z.object({ newDate: z.string() }))
+    .mutation(async ({ input }) => {
+      const count = await db.bulkRescheduleOverdueInstallments(input.newDate);
+      return { rescheduled: count };
+    }),
 });
 export type AppRouter = typeof appRouter;
