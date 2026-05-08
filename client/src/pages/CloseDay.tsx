@@ -202,7 +202,7 @@ export default function CloseDay() {
                     <span className="px-1.5 py-0.5 rounded" style={{ background: "oklch(0.72 0.12 75 / 15%)", color: "oklch(0.72 0.12 75)" }}>{l.caseType}</span>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${l.stage === "Retained" ? "badge-retained" : l.stage === "Lost" ? "badge-lost" : l.stage === "Consultation" ? "badge-consultation" : "badge-new"}`}>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${l.stage === "Retained" ? "badge-retained" : l.stage === "Lost" ? "badge-lost" : l.stage === "Consultation" ? "badge-consultation" : l.stage === "Follow-Up" ? "badge-follow-up" : "badge-new"}`}>
                       {l.stage}
                     </span>
                   </td>

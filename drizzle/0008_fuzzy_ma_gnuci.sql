@@ -1,0 +1,2 @@
+ALTER TABLE `leads` MODIFY COLUMN `stage` enum('New Lead','Consultation','Follow-Up','Retained','Lost') NOT NULL DEFAULT 'New Lead';--> statement-breakpoint
+ALTER TABLE `day_closes` ADD `closedBy` varchar(100);

@@ -178,3 +178,25 @@
 
 - [x] Show assignedTo badge on follow-up task cards in the main Follow-Ups page
 - [x] Pass active member name in StaleLeadsDrawer addFollowUp calls
+
+## Daily Close Attribution
+
+- [ ] Add closedBy column to daily_closes table in schema.ts
+- [ ] Run DB migration to add closedBy column
+- [ ] Update createDailyClose DB helper to accept closedBy
+- [ ] Update dailyClose.create tRPC input schema to accept closedBy
+- [ ] Pass active member name when submitting a daily close in the UI
+- [ ] Show closedBy column in the daily close history table
+
+## Follow-Up Bucket
+
+- [x] Build FollowUpBucket page showing all Consulted/post-consultation leads with their pending follow-up task
+- [x] Each row shows: lead name, case type, days since consultation, current follow-up due date, status badge
+- [x] Inline quick-push buttons: +1 Day, +3 Days, +7 Days, and a custom date picker
+- [x] Pushing a date updates the follow-up task due date in the DB and refreshes the row immediately
+- [x] If a lead has no follow-up task yet, show an "Add Follow-Up" button that creates one inline
+- [x] Sort by most overdue / soonest due first
+- [x] Add "Bucket" nav item to sidebar with a badge count of overdue/due-today items
+- [x] Auto-create a follow-up task when a lead's stage changes to "Consulted" (if none exists)
+- [x] Show a "Retained" green badge on leads that have been retained so they can be dismissed from the bucket
+- [x] Add a "Mark as Retained" quick action button per row

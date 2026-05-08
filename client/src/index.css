@@ -182,6 +182,7 @@
   .badge-consultation { @apply bg-amber-500/20 text-amber-300 border border-amber-500/30; }
   .badge-retained { @apply bg-emerald-500/20 text-emerald-300 border border-emerald-500/30; }
   .badge-lost { @apply bg-red-500/20 text-red-300 border border-red-500/30; }
+  .badge-follow-up { @apply bg-purple-500/20 text-purple-300 border border-purple-500/30; }
 
   /* Target badges */
   .badge-green { @apply bg-emerald-500/20 text-emerald-300 border border-emerald-500/30; }

@@ -9,7 +9,7 @@ import { ENV } from "./_core/env";
 
 // ─── Shared Zod schemas ──────────────────────────────────────
 
-const LeadStageEnum = z.enum(["New Lead", "Consultation", "Retained", "Lost"]);
+const LeadStageEnum = z.enum(["New Lead", "Consultation", "Follow-Up", "Retained", "Lost"]);
 const CaseTypeEnum = z.enum(["DA", "SIJS", "AOS", "AO", "K1/K2", "U-Visa", "Green Card", "BIA", "Other"]);
 const PaymentTypeEnum = z.enum(["New Client", "Existing Client"]);
 const FollowUpStatusEnum = z.enum(["Pending", "Done", "Snoozed"]);

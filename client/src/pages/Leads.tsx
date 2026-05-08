@@ -23,6 +23,7 @@ import {
   CalendarClock, FileText, Circle, CheckCircle2
 } from "lucide-react";
 import LeadDetailPanel from "@/components/LeadDetailPanel";
+import { useActiveMember } from "@/contexts/ActiveMemberContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,12 +31,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 
-const STAGES: LeadStage[] = ["New Lead", "Consultation", "Retained", "Lost"];
+const STAGES: LeadStage[] = ["New Lead", "Consultation", "Follow-Up", "Retained", "Lost"];
 const CASE_TYPES: CaseType[] = ["DA", "SIJS", "AOS", "AO", "K1/K2", "U-Visa", "Green Card", "BIA", "Other"];
 
 const stageColor: Record<LeadStage, string> = {
   "New Lead": "oklch(0.55 0.18 250)",
   "Consultation": "oklch(0.72 0.15 80)",
+  "Follow-Up": "oklch(0.65 0.20 300)",  // purple — needs follow-up
   "Retained": "oklch(0.55 0.18 145)",
   "Lost": "oklch(0.60 0.22 25)",
 };
@@ -89,7 +91,8 @@ function LeadAgeBadge({ dateStr }: { dateStr: string }) {
 
 // ── Main Component ─────────────────────────────────────────
 export default function Leads() {
-  const { leads, payments, followUps, addLead, updateLead, deleteLead, addPayment, updateFollowUp } = useCRM();
+  const { leads, payments, followUps, addLead, updateLead, deleteLead, addPayment, updateFollowUp, addFollowUp } = useCRM();
+  const { activeMember } = useActiveMember();
   const [showAdd, setShowAdd] = useState(false);
   const [editLead, setEditLead] = useState<Lead | null>(null);
   const [convertLead, setConvertLead] = useState<Lead | null>(null);
@@ -114,13 +117,13 @@ export default function Leads() {
   }, [leads, search, filterStage]);
 
   const byStage = useMemo(() => {
-    const map: Record<LeadStage, Lead[]> = { "New Lead": [], "Consultation": [], "Retained": [], "Lost": [] };
+    const map: Record<LeadStage, Lead[]> = { "New Lead": [], "Consultation": [], "Follow-Up": [], "Retained": [], "Lost": [] };
     filtered.forEach(l => map[l.stage].push(l));
     return map;
   }, [filtered]);
 
   const stageValue = useMemo(() => {
-    const map: Record<LeadStage, number> = { "New Lead": 0, "Consultation": 0, "Retained": 0, "Lost": 0 };
+    const map: Record<LeadStage, number> = { "New Lead": 0, "Consultation": 0, "Follow-Up": 0, "Retained": 0, "Lost": 0 };
     leads.forEach(l => { map[l.stage] = (map[l.stage] || 0) + (l.retainerBooked || l.quotedAmount || 0); });
     return map;
   }, [leads]);
@@ -144,6 +147,23 @@ export default function Leads() {
     } else {
       updateLead(leadId, { stage: targetStage });
       toast.success(`Moved to ${targetStage}`);
+      // Auto-create a follow-up task when a lead moves to Consultation with no pending tasks
+      if (targetStage === "Consultation") {
+        const hasPending = followUps.some(f => f.leadId === leadId && f.status === "Pending");
+        if (!hasPending) {
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, "0")}-${String(tomorrow.getDate()).padStart(2, "0")}`;
+          addFollowUp({
+            leadId,
+            dueDate: tomorrowStr,
+            title: "Follow up after consultation",
+            status: "Pending",
+            assignedTo: activeMember?.name ?? null,
+          });
+          toast.info("Follow-up task auto-created for tomorrow");
+        }
+      }
     }
     setDragOverStage(null);
   };
@@ -661,6 +681,39 @@ function LeadCard({
               <AlarmClock className="w-3 h-3" />
             </button>
           </div>
+        </div>
+      )}
+
+      {/* ── Follow-Up Bucket Quick-Push Buttons (Follow-Up stage only) ── */}
+      {lead.stage === "Follow-Up" && (
+        <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+          <span className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>Push due date:</span>
+          {[1, 3, 7].map(days => (
+            <button
+              key={days}
+              onClick={() => {
+                const d = new Date();
+                d.setDate(d.getDate() + days);
+                const newDate = d.toISOString().split("T")[0];
+                if (nextFU) {
+                  onReschedule(nextFU, newDate);
+                } else {
+                  // No task yet — show a hint
+                  const hint = document.createElement("div");
+                  hint.textContent = "No pending task — open detail to add one";
+                  // just toast
+                }
+              }}
+              className="text-xs px-2 py-0.5 rounded font-medium transition-all hover:opacity-90"
+              style={{ background: "oklch(0.65 0.20 300 / 15%)", color: "oklch(0.75 0.18 300)", border: "1px solid oklch(0.65 0.20 300 / 30%)" }}
+              title={`Push due date +${days} day${days > 1 ? "s" : ""}`}
+            >
+              +{days}d
+            </button>
+          ))}
+          {!nextFU && (
+            <span className="text-xs italic" style={{ color: "oklch(0.45 0.01 250)" }}>No task yet</span>
+          )}
         </div>
       )}
 

@@ -8,7 +8,7 @@ import { nanoid } from "nanoid";
 
 // ─── Types ──────────────────────────────────────────────────
 
-export type LeadStage = "New Lead" | "Consultation" | "Retained" | "Lost";
+export type LeadStage = "New Lead" | "Consultation" | "Follow-Up" | "Retained" | "Lost";
 export type FollowUpStatus = "Pending" | "Done" | "Snoozed";
 
 export interface FollowUpComment {

@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Link } from "wouter";
 
-const STAGES: LeadStage[] = ["New Lead", "Consultation", "Retained", "Lost"];
+const STAGES: LeadStage[] = ["New Lead", "Consultation", "Follow-Up", "Retained", "Lost"];
 
 export default function AllData() {
   const { leads, payments, deleteLead, deletePayment } = useCRM();
@@ -57,6 +57,7 @@ export default function AllData() {
   const stageColor: Record<LeadStage, string> = {
     "New Lead": "badge-new",
     "Consultation": "badge-consultation",
+    "Follow-Up": "badge-consultation",
     "Retained": "badge-retained",
     "Lost": "badge-lost",
   };

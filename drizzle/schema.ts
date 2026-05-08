@@ -43,7 +43,7 @@ export const leads = mysqlTable("leads", {
   caseType: varchar("caseType", { length: 50 }).notNull(),
   caseNumber: varchar("caseNumber", { length: 100 }).default("").notNull(),
   source: varchar("source", { length: 100 }).default("").notNull(),
-  stage: mysqlEnum("stage", ["New Lead", "Consultation", "Retained", "Lost"]).default("New Lead").notNull(),
+  stage: mysqlEnum("stage", ["New Lead", "Consultation", "Follow-Up", "Retained", "Lost"]).default("New Lead").notNull(),
   notes: text("notes").notNull(),
   date: varchar("date", { length: 10 }).notNull(),
   retainerBooked: decimal("retainerBooked", { precision: 10, scale: 2 }).default("0").notNull(),
@@ -103,6 +103,7 @@ export const dayCloses = mysqlTable("day_closes", {
   totalNew: decimal("totalNew", { precision: 10, scale: 2 }).notNull(),
   totalExisting: decimal("totalExisting", { precision: 10, scale: 2 }).notNull(),
   totalRevenue: decimal("totalRevenue", { precision: 10, scale: 2 }).notNull(),
+  closedBy: varchar("closedBy", { length: 100 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
