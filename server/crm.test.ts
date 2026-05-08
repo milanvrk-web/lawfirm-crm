@@ -167,7 +167,7 @@ describe("CRM Router", () => {
       expect(result).toEqual([]);
     });
 
-    it("creates a payment", async () => {
+    it("creates a payment without installment link when no plan exists", async () => {
       const ctx = createAuthContext();
       const caller = appRouter.createCaller(ctx);
       const payment = await caller.payments.create({
@@ -181,7 +181,41 @@ describe("CRM Router", () => {
         receivedFor: "Retainer",
         notes: "",
       });
-      expect(payment).toMatchObject({ id: expect.any(String) });
+      expect(payment).toMatchObject({ id: expect.any(String), linkedInstallmentId: null });
+    });
+
+    it("auto-links payment to earliest unpaid installment when plan exists", async () => {
+      const { vi } = await import("vitest");
+      const dbModule = await import("./db");
+      const mockUnpaidItem = { id: "item-1", planId: "plan-1", installmentNumber: 1, amount: "500", isPaid: 0, dueDate: "2026-05-01", paidDate: null };
+      vi.mocked(dbModule.getFirstUnpaidInstallmentForLead).mockResolvedValueOnce(mockUnpaidItem as never);
+      const ctx = createAuthContext();
+      const caller = appRouter.createCaller(ctx);
+      const payment = await caller.payments.create({
+        leadId: "lead-1",
+        clientName: "Jane Doe",
+        caseType: "AOS",
+        caseNumber: "",
+        date: "2026-05-04",
+        amount: 500,
+        paymentType: "Existing Client",
+        receivedFor: "Installment 1",
+        notes: "",
+      });
+      expect(payment.linkedInstallmentId).toBe("item-1");
+      expect(dbModule.updateInstallmentItem).toHaveBeenCalledWith("item-1", { isPaid: 1, paidDate: "2026-05-04" });
+    });
+
+    it("auto-unlinks installment when payment is deleted", async () => {
+      const { vi } = await import("vitest");
+      const dbModule = await import("./db");
+      const linkedPayment = { id: "pay-del", linkedInstallmentId: "item-2", amount: "500", date: "2026-05-04" };
+      vi.mocked(dbModule.getAllPayments).mockResolvedValueOnce([linkedPayment as never]);
+      const ctx = createAuthContext();
+      const caller = appRouter.createCaller(ctx);
+      await caller.payments.delete({ id: "pay-del" });
+      expect(dbModule.updateInstallmentItem).toHaveBeenCalledWith("item-2", { isPaid: 0, paidDate: undefined });
+      expect(dbModule.deletePayment).toHaveBeenCalledWith("pay-del");
     });
   });
 

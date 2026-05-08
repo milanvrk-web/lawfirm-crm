@@ -43,8 +43,8 @@
 
 ## Auto-Link Installment Payments
 
-- [ ] When a payment is created for a lead with an active plan, auto-mark the earliest unpaid installment as paid
-- [ ] When a payment is deleted, unmark the linked installment (if any) back to unpaid
-- [ ] Add linkedInstallmentId column to payments table to track the link
-- [ ] Show a "Linked to installment #N" badge on the payment row in the Payments tab
-- [ ] Write tests covering auto-link and auto-unlink logic
+- [x] When a payment is created for a lead with an active plan, auto-mark the earliest unpaid installment as paid
+- [x] When a payment is deleted, unmark the linked installment (if any) back to unpaid
+- [x] Add linkedInstallmentId column to payments table to track the link
+- [x] Show a "Linked to installment #N" badge on the payment row in the Payments tab
+- [x] Write tests covering auto-link and auto-unlink logic
