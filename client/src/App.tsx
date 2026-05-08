@@ -11,6 +11,7 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { CRMProvider } from "./contexts/CRMContext";
+import { ActiveMemberProvider } from "./contexts/ActiveMemberContext";
 import Layout from "./components/Layout";
 import LockScreen from "./components/LockScreen";
 import Dashboard from "./pages/Dashboard";
@@ -21,6 +22,7 @@ import CloseDay from "./pages/CloseDay";
 import AllData from "./pages/AllData";
 import FollowUps from "./pages/FollowUps";
 import Settings from "./pages/Settings";
+import Members from "./pages/Members";
 import NotFound from "./pages/NotFound";
 import { trpc } from "@/lib/trpc";
 
@@ -36,6 +38,7 @@ function Router() {
         <Route path="/all-data" component={AllData} />
         <Route path="/follow-ups" component={FollowUps} />
         <Route path="/settings" component={Settings} />
+        <Route path="/members" component={Members} />
         <Route component={NotFound} />
       </Switch>
     </Layout>
@@ -74,12 +77,14 @@ function AppGate() {
   }
 
   return (
-    <CRMProvider>
-      <TooltipProvider>
-        <Toaster richColors position="top-right" />
-        <Router />
-      </TooltipProvider>
-    </CRMProvider>
+    <ActiveMemberProvider>
+      <CRMProvider>
+        <TooltipProvider>
+          <Toaster richColors position="top-right" />
+          <Router />
+        </TooltipProvider>
+      </CRMProvider>
+    </ActiveMemberProvider>
   );
 }
 

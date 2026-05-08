@@ -66,6 +66,7 @@ export const leadNotes = mysqlTable("lead_notes", {
   leadId: varchar("leadId", { length: 36 }).notNull(),
   text: text("text").notNull(),
   timestamp: varchar("timestamp", { length: 30 }).notNull(),
+  authorName: varchar("authorName", { length: 100 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
@@ -169,3 +170,15 @@ export const installmentItems = mysqlTable("installment_items", {
 
 export type DbInstallmentItem = typeof installmentItems.$inferSelect;
 export type InsertInstallmentItem = typeof installmentItems.$inferInsert;
+// ─── CRM: Team Members ─────────────────────────────────────────
+
+export const crmMembers = mysqlTable("crm_members", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(),
+  role: varchar("role", { length: 50 }).notNull().default("Staff"),
+  color: varchar("color", { length: 30 }).notNull().default("oklch(0.55 0.18 250)"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type DbCrmMember = typeof crmMembers.$inferSelect;
+export type InsertCrmMember = typeof crmMembers.$inferInsert;

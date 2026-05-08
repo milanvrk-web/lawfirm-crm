@@ -5,6 +5,8 @@
    ============================================================ */
 
 import { useState, useMemo } from "react";
+import { useActiveMember } from "@/contexts/ActiveMemberContext";
+import { trpc } from "@/lib/trpc";
 import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard,
@@ -19,6 +21,7 @@ import {
   ChevronRight,
   Bell,
   Settings2,
+  UserCog,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCRM } from "@/contexts/CRMContext";
@@ -32,6 +35,7 @@ const BASE_NAV = [
   { path: "/follow-ups", icon: Bell, label: "Follow-Ups" },
   { path: "/close-day", icon: CalendarCheck, label: "Close Day" },
   { path: "/all-data", icon: Database, label: "All Data" },
+  { path: "/members", icon: UserCog, label: "Members" },
   { path: "/settings", icon: Settings2, label: "Settings" },
 ];
 
@@ -39,6 +43,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const { followUps, leads } = useCRM();
+  const { activeMember, setActiveMember } = useActiveMember();
+  const [memberPickerOpen, setMemberPickerOpen] = useState(false);
+  const { data: members = [] } = trpc.members.list.useQuery();
 
   const urgentCount = useMemo(() => {
     const today = new Date().toISOString().split("T")[0];
@@ -140,8 +147,75 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
+        {/* Active Member Selector */}
+        <div className="px-4 py-3 border-t relative" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
+          <button
+            onClick={() => setMemberPickerOpen(p => !p)}
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors hover:opacity-80"
+            style={{ background: activeMember ? "oklch(0.20 0.025 250)" : "oklch(0.55 0.18 250 / 15%)", border: "1px solid oklch(1 0 0 / 10%)" }}
+          >
+            {activeMember ? (
+              <>
+                <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0" style={{ background: activeMember.color, color: "oklch(0.10 0 0)" }}>
+                  {activeMember.name.trim().split(/\s+/).map((w: string) => w[0]?.toUpperCase() ?? "").slice(0, 2).join("")}
+                </div>
+                <div className="flex-1 min-w-0 text-left">
+                  <div className="text-xs font-semibold truncate" style={{ color: "oklch(0.88 0.005 250)" }}>{activeMember.name}</div>
+                  <div className="text-xs" style={{ color: "oklch(0.50 0.01 250)" }}>{activeMember.role}</div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "oklch(0.55 0.18 250 / 20%)", border: "1px dashed oklch(0.55 0.18 250 / 50%)" }}>
+                  <span className="text-xs" style={{ color: "oklch(0.55 0.18 250)" }}>?</span>
+                </div>
+                <div className="flex-1 text-left">
+                  <div className="text-xs font-semibold" style={{ color: "oklch(0.55 0.18 250)" }}>Select your name</div>
+                  <div className="text-xs" style={{ color: "oklch(0.45 0.01 250)" }}>Notes will be signed</div>
+                </div>
+              </>
+            )}
+          </button>
+
+          {/* Dropdown */}
+          {memberPickerOpen && (
+            <div className="absolute bottom-full left-4 right-4 mb-1 rounded-xl overflow-hidden shadow-xl z-50" style={{ background: "oklch(0.18 0.025 250)", border: "1px solid oklch(1 0 0 / 12%)" }}>
+              {members.length === 0 ? (
+                <div className="px-4 py-3 text-xs text-center" style={{ color: "oklch(0.50 0.01 250)" }}>No members yet — add them in Members page</div>
+              ) : (
+                members.map(m => (
+                  <button
+                    key={m.id}
+                    onClick={() => { setActiveMember({ id: m.id, name: m.name, color: m.color, role: m.role }); setMemberPickerOpen(false); }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:opacity-80 transition-opacity"
+                    style={{ background: activeMember?.id === m.id ? "oklch(0.55 0.18 250 / 15%)" : "transparent" }}
+                  >
+                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0" style={{ background: m.color, color: "oklch(0.10 0 0)" }}>
+                      {m.name.trim().split(/\s+/).map((w: string) => w[0]?.toUpperCase() ?? "").slice(0, 2).join("")}
+                    </div>
+                    <div className="flex-1 text-left">
+                      <div className="text-xs font-semibold" style={{ color: "oklch(0.88 0.005 250)" }}>{m.name}</div>
+                      <div className="text-xs" style={{ color: "oklch(0.50 0.01 250)" }}>{m.role}</div>
+                    </div>
+                    {activeMember?.id === m.id && <span className="text-xs" style={{ color: "oklch(0.55 0.18 250)" }}>✓</span>}
+                  </button>
+                ))
+              )}
+              {activeMember && (
+                <button
+                  onClick={() => { setActiveMember(null); setMemberPickerOpen(false); }}
+                  className="w-full px-3 py-2 text-xs text-left border-t hover:opacity-80 transition-opacity"
+                  style={{ color: "oklch(0.55 0.22 25)", borderColor: "oklch(1 0 0 / 8%)" }}
+                >
+                  Sign out
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* Footer */}
-        <div className="px-6 py-4 border-t" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
+        <div className="px-6 py-3 border-t" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
           <div className="text-xs" style={{ color: "oklch(0.40 0.01 250)" }}>
             Law Firm CRM v2.0
           </div>

@@ -10,6 +10,7 @@ import {
   followUpComments,
   installmentPlans,
   installmentItems,
+  crmMembers,
   type InsertUser,
   type InsertLead,
   type InsertLeadNote,
@@ -19,6 +20,7 @@ import {
   type InsertFollowUpComment,
   type InsertInstallmentPlan,
   type InsertInstallmentItem,
+  type InsertCrmMember,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -155,6 +157,12 @@ export async function createLeadNote(data: InsertLeadNote) {
   if (!db) throw new Error("Database not available");
   await db.insert(leadNotes).values(data);
   return data;
+}
+
+export async function deleteLeadNote(id: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(leadNotes).where(eq(leadNotes.id, id));
 }
 
 // ─── Payments ───────────────────────────────────────────────────────────────────────────
@@ -451,4 +459,25 @@ export async function bulkRescheduleOverdueInstallments(newDate: string): Promis
     await db.update(installmentItems).set({ dueDate: newDate }).where(eq(installmentItems.id, item.id));
   }
   return overdueItems.length;
+}
+
+// ─── CRM Members ────────────────────────────────────────────────────────────
+
+export async function getCrmMembers() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(crmMembers).orderBy(asc(crmMembers.createdAt));
+}
+
+export async function createCrmMember(data: InsertCrmMember) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.insert(crmMembers).values(data);
+  return data;
+}
+
+export async function deleteCrmMember(id: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(crmMembers).where(eq(crmMembers.id, id));
 }

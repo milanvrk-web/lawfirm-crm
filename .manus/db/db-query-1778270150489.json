@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS `crm_members` (\n  `id` varchar(36) NOT NULL,\n  `name` varchar(100) NOT NULL,\n  `role` varchar(50) NOT NULL DEFAULT 'Staff',\n  `color` varchar(30) NOT NULL DEFAULT 'oklch(0.55 0.18 250)',\n  `createdAt` timestamp NOT NULL DEFAULT (now()),\n  CONSTRAINT `crm_members_id` PRIMARY KEY(`id`)\n);\nALTER TABLE `lead_notes` ADD COLUMN IF NOT EXISTS `authorName` varchar(100);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute CREATE TABLE IF NOT EXISTS `crm_members` (\n  `id` varchar(36) NOT NULL,\n  `name` varchar(100) NOT NULL,\n  `role` varchar(50) NOT NULL DEFAULT 'Staff',\n  `color` varchar(30) NOT NULL DEFAULT 'oklch(0.55 0.18 250)',\n  `createdAt` timestamp NOT NULL DEFAULT (now()),\n  CONSTRAINT `crm_members_id` PRIMARY KEY(`id`)\n);\nALTER TABLE `lead_notes` ADD COLUMN IF NOT EXISTS `authorName` varchar(100);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 571
+}

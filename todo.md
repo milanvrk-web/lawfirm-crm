@@ -150,3 +150,26 @@
 ## Bug Fixes
 
 - [x] Fix lead notes: notes save successfully but do not display in the Lead Detail panel notes tab
+
+## Delete Note Feature
+
+- [x] Add deleteLeadNote DB helper in server/db.ts
+- [x] Add leads.deleteNote tRPC mutation in server/routers.ts
+- [x] Add trash icon button on each note row in LeadDetailPanel (visible on hover)
+- [x] Clicking trash shows inline confirmation ("Delete?" Yes/Cancel) to prevent accidental deletion
+- [x] On confirm, call deleteNote mutation, invalidate getNotes query, show toast
+
+## Team Members Feature
+
+- [x] Add crmMembers table to drizzle/schema.ts (id, name, role, color, createdAt)
+- [x] Run pnpm db:push to migrate the new table
+- [x] Add getCrmMembers, createCrmMember, deleteCrmMember DB helpers in server/db.ts
+- [x] Add members tRPC router (list, add, remove) in server/routers.ts
+- [x] Build Members page (list members, add form, remove button)
+- [x] Add Members nav item to sidebar
+- [x] Add active member selector in sidebar footer (persisted in localStorage)
+- [x] Show "Who are you?" prompt on first load if no active member is set
+- [x] Add authorName field to lead_notes table (DB migration)
+- [x] When saving a note, attach the active member's name as authorName
+- [x] Show author name badge on each note row in LeadDetailPanel
+- [ ] Add authorName to follow-up tasks table and show it on task cards

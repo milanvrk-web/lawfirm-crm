@@ -43,6 +43,13 @@
       "when": 1778216121133,
       "tag": "0005_complex_human_cannonball",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1778270122836,
+      "tag": "0006_regular_stryfe",
+      "breakpoints": true
     }
   ]
 }

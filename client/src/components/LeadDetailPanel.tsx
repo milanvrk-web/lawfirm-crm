@@ -8,6 +8,7 @@
 import { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { useCRM } from "@/contexts/CRMContext";
+import { useActiveMember } from "@/contexts/ActiveMemberContext";
 import {
   type Lead, type FollowUp, type FollowUpStatus,
   formatCurrency, formatDate, getLeadTotalReceived, getLeadFollowUps,
@@ -73,6 +74,7 @@ export default function LeadDetailPanel({
   const [noteText, setNoteText] = useState("");
   const [commentText, setCommentText] = useState<Record<string, string>>({});
   const [editingDueDateId, setEditingDueDateId] = useState<string | null>(null);
+  const [confirmDeleteNoteId, setConfirmDeleteNoteId] = useState<string | null>(null);
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -101,6 +103,16 @@ export default function LeadDetailPanel({
     { enabled: !!lead?.id }
   );
   const [isSavingNote, setIsSavingNote] = useState(false);
+  const { activeMember } = useActiveMember();
+
+  const deleteNoteMut = trpc.leads.deleteNote.useMutation({
+    onSuccess: (_data, variables) => {
+      utils.leads.getNotes.invalidate({ leadId: variables.leadId });
+      setConfirmDeleteNoteId(null);
+      toast.success("Note deleted");
+    },
+    onError: () => toast.error("Failed to delete note"),
+  });
 
   if (!lead) return null;
 
@@ -118,7 +130,7 @@ export default function LeadDetailPanel({
     if (!noteText.trim() || isSavingNote) return;
     setIsSavingNote(true);
     try {
-      await addLeadNote(lead.id, noteText.trim());
+      await addLeadNote(lead.id, noteText.trim(), activeMember?.name ?? undefined);
       await utils.leads.getNotes.invalidate({ leadId: lead.id });
       setNoteText("");
       toast.success("Note saved");
@@ -498,9 +510,49 @@ export default function LeadDetailPanel({
               ) : (
                 <div className="space-y-2">
                   {[...dbNotes].reverse().map(n => (
-                    <div key={n.id} className="px-3 py-2.5 rounded-lg text-sm" style={{ background: "oklch(0.18 0.025 250)", borderLeft: "2px solid oklch(0.55 0.18 250 / 50%)" }}>
-                      <div className="text-xs mb-1" style={{ color: "oklch(0.40 0.01 250)" }}>{formatTimestamp(n.timestamp)}</div>
-                      <div style={{ color: "oklch(0.82 0.005 250)" }}>{n.text}</div>
+                    <div key={n.id} className="group relative px-3 py-2.5 rounded-lg text-sm" style={{ background: "oklch(0.18 0.025 250)", borderLeft: "2px solid oklch(0.55 0.18 250 / 50%)" }}>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs" style={{ color: "oklch(0.40 0.01 250)" }}>{formatTimestamp(n.timestamp)}</span>
+                            {n.authorName && (
+                              <span className="text-xs px-1.5 py-0.5 rounded-full font-medium" style={{ background: "oklch(0.55 0.18 250 / 20%)", color: "oklch(0.70 0.12 250)" }}>
+                                {n.authorName}
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ color: "oklch(0.82 0.005 250)" }}>{n.text}</div>
+                        </div>
+                        {confirmDeleteNoteId === n.id ? (
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <span className="text-xs" style={{ color: "oklch(0.70 0.22 25)" }}>Delete?</span>
+                            <button
+                              onClick={() => deleteNoteMut.mutate({ id: n.id, leadId: lead.id })}
+                              disabled={deleteNoteMut.isPending}
+                              className="px-2 py-0.5 rounded text-xs font-semibold disabled:opacity-50"
+                              style={{ background: "oklch(0.55 0.22 25)", color: "oklch(0.98 0 0)" }}
+                            >
+                              {deleteNoteMut.isPending ? "…" : "Yes"}
+                            </button>
+                            <button
+                              onClick={() => setConfirmDeleteNoteId(null)}
+                              className="px-2 py-0.5 rounded text-xs font-semibold"
+                              style={{ background: "oklch(0.25 0.025 250)", color: "oklch(0.65 0.01 250)" }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setConfirmDeleteNoteId(n.id)}
+                            className="opacity-0 group-hover:opacity-100 flex-shrink-0 p-1 rounded transition-opacity hover:opacity-100"
+                            style={{ color: "oklch(0.55 0.22 25)" }}
+                            title="Delete note"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>

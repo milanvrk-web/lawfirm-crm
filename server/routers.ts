@@ -129,7 +129,7 @@ export const appRouter = router({
     }),
 
     addNote: publicProcedure
-      .input(z.object({ leadId: z.string(), text: z.string() }))
+      .input(z.object({ leadId: z.string(), text: z.string(), authorName: z.string().optional() }))
       .mutation(async ({ input }) => {
         const id = nanoid();
         await db.createLeadNote({
@@ -137,8 +137,16 @@ export const appRouter = router({
           leadId: input.leadId,
           text: input.text,
           timestamp: new Date().toISOString(),
+          authorName: input.authorName ?? null,
         });
         return { id };
+      }),
+
+    deleteNote: publicProcedure
+      .input(z.object({ id: z.string(), leadId: z.string() }))
+      .mutation(async ({ input }) => {
+        await db.deleteLeadNote(input.id);
+        return { ok: true };
       }),
   }),
 
@@ -604,12 +612,38 @@ export const appRouter = router({
       }));
     }),
 
-  // ─── Bulk Reschedule Overdue Installments ──────────────────────────────────────────
+  // ─── Bulk Reschedule Overdue Installments ──────────────────────────────────────────────
   bulkRescheduleOverdue: publicProcedure
     .input(z.object({ newDate: z.string() }))
     .mutation(async ({ input }) => {
       const count = await db.bulkRescheduleOverdueInstallments(input.newDate);
       return { rescheduled: count };
     }),
+
+  // ─── Team Members ────────────────────────────────────────────────────────
+  members: router({
+    list: publicProcedure.query(async () => {
+      return db.getCrmMembers();
+    }),
+
+    add: publicProcedure
+      .input(z.object({
+        name: z.string().min(1),
+        role: z.string().default("Staff"),
+        color: z.string().default("oklch(0.55 0.18 250)"),
+      }))
+      .mutation(async ({ input }) => {
+        const id = nanoid();
+        await db.createCrmMember({ id, name: input.name, role: input.role, color: input.color });
+        return { id };
+      }),
+
+    remove: publicProcedure
+      .input(z.object({ id: z.string() }))
+      .mutation(async ({ input }) => {
+        await db.deleteCrmMember(input.id);
+        return { ok: true };
+      }),
+  }),
 });
 export type AppRouter = typeof appRouter;

@@ -45,7 +45,7 @@ interface CRMContextValue {
   deleteFollowUp: (id: string) => Promise<void>;
   addFollowUpComment: (followUpId: string, initial: string, text: string) => Promise<void>;
   // Lead Notes (stored separately, fetched per-lead by LeadDetailPanel)
-  addLeadNote: (leadId: string, text: string) => Promise<void>;
+  addLeadNote: (leadId: string, text: string, authorName?: string) => Promise<void>;
 }
 
 const CRMContext = createContext<CRMContextValue | null>(null);
@@ -286,8 +286,8 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
     await addCommentMut.mutateAsync({ followUpId, initial, text });
   }, [addCommentMut]);
 
-  const handleAddLeadNote = useCallback(async (leadId: string, text: string) => {
-    await addLeadNoteMut.mutateAsync({ leadId, text });
+  const handleAddLeadNote = useCallback(async (leadId: string, text: string, authorName?: string) => {
+    await addLeadNoteMut.mutateAsync({ leadId, text, authorName });
   }, [addLeadNoteMut]);
 
   return (

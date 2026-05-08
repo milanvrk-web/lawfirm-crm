@@ -1,0 +1,9 @@
+{
+  "query": "INSERT IGNORE INTO `__drizzle_migrations` (`hash`, `created_at`) VALUES\n  ('0003_migration_placeholder_lostReason', UNIX_TIMESTAMP() * 1000),\n  ('0004_migration_placeholder_natural_speed_demon', UNIX_TIMESTAMP() * 1000),\n  ('0005_migration_placeholder_complex_human_cannonball', UNIX_TIMESTAMP() * 1000),\n  ('0006_migration_placeholder_regular_stryfe', UNIX_TIMESTAMP() * 1000);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute INSERT IGNORE INTO `__drizzle_migrations` (`hash`, `created_at`) VALUES\n  ('0003_migration_placeholder_lostReason', UNIX_TIMESTAMP() * 1000),\n  ('0004_migration_placeholder_natural_speed_demon', UNIX_TIMESTAMP() * 1000),\n  ('0005_migration_placeholder_complex_human_cannonball', UNIX_TIMESTAMP() * 1000),\n  ('0006_migration_placeholder_regular_stryfe', UNIX_TIMESTAMP() * 1000);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 357
+}
