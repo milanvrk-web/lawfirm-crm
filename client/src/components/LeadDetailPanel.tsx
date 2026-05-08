@@ -53,7 +53,7 @@ interface LeadDetailPanelProps {
   /** Optional: open the convert-to-retained dialog */
   onConvertLead?: (lead: Lead) => void;
   /** Initial tab to show when opening */
-  initialTab?: "followups" | "notes" | "info" | "installments";
+  initialTab?: "followups" | "notes" | "info" | "installments" | "onboarding";
 }
 
 export default function LeadDetailPanel({
@@ -67,7 +67,7 @@ export default function LeadDetailPanel({
 
   const utils = trpc.useUtils();
 
-  const [detailTab, setDetailTab] = useState<"followups" | "notes" | "info" | "installments">(initialTab);
+  const [detailTab, setDetailTab] = useState<"followups" | "notes" | "info" | "installments" | "onboarding">(initialTab);
   const [fuTitle, setFuTitle] = useState("Call back");
   const [fuDate, setFuDate] = useState(new Date().toISOString().split("T")[0]);
   const [showFuForm, setShowFuForm] = useState(false);
@@ -260,6 +260,7 @@ export default function LeadDetailPanel({
             { id: "followups" as const, label: "Follow-Ups", icon: Bell, count: pendingCount },
             { id: "notes" as const, label: "Notes", icon: MessageSquare, count: dbNotes.length },
             { id: "info" as const, label: "Info", icon: FileText, count: 0 },
+            ...(lead.stage === "Onboarding" ? [{ id: "onboarding" as const, label: "Onboarding", icon: CheckCircle2, count: 0 }] : []),
             { id: "installments" as const, label: "Payments", icon: CreditCard, count: 0 },
           ]).map(tab => (
             <button
@@ -655,6 +656,10 @@ export default function LeadDetailPanel({
           {detailTab === "installments" && leadId && (
             <InstallmentsTab leadId={leadId} />
           )}
+          {/* ── Onboarding Tab ── */}
+          {detailTab === "onboarding" && leadId && (
+            <OnboardingTab leadId={leadId} activeMemberName={activeMember?.name ?? "Staff"} />
+          )}
 
         </div>
       </div>
@@ -934,6 +939,142 @@ function InstallmentsTab({ leadId }: { leadId: string }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Onboarding Tab — isolated component for onboarding checklist
+// ─────────────────────────────────────────────────────────────────────────────
+
+const ONBOARDING_STEPS = [
+  { key: "consultation_booked" as const, label: "Consultation Booked", description: "Attorney consultation has been scheduled and confirmed with the client" },
+  { key: "case_notes_created" as const, label: "Case Notes Created", description: "Initial case notes and intake information documented in the system" },
+  { key: "task_added_cerenade" as const, label: "Task Added in Cerenade", description: "Case task created and assigned in Cerenade case management" },
+  { key: "task_added_planner" as const, label: "Task Added in Planner", description: "Task added to team planner for workflow tracking" },
+];
+
+function OnboardingTab({ leadId, activeMemberName }: { leadId: string; activeMemberName: string }) {
+  const utils = trpc.useUtils();
+  const { data: checklistData = [], isLoading } = trpc.onboarding.getByLead.useQuery({ leadId });
+
+  const toggleStep = trpc.onboarding.toggleStep.useMutation({
+    onSuccess: () => utils.onboarding.getByLead.invalidate({ leadId }),
+    onError: () => toast.error("Failed to update step"),
+  });
+
+  const completedSteps = new Set(checklistData.filter(c => c.completedAt).map(c => c.step));
+  const completedCount = completedSteps.size;
+  const allDone = completedCount === 4;
+
+  const handleToggle = (step: typeof ONBOARDING_STEPS[number]["key"]) => {
+    const isCompleted = completedSteps.has(step);
+    toggleStep.mutate({
+      leadId,
+      step,
+      completedAt: isCompleted ? null : new Date().toISOString(),
+      completedBy: isCompleted ? null : activeMemberName,
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="p-6 flex items-center justify-center">
+        <div className="text-sm" style={{ color: "oklch(0.45 0.01 250)" }}>Loading checklist…</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4 space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-semibold" style={{ color: "oklch(0.93 0.005 250)" }}>Onboarding Checklist</h3>
+          <p className="text-xs mt-0.5" style={{ color: "oklch(0.45 0.01 250)" }}>Track onboarding steps for this client</p>
+        </div>
+        {allDone ? (
+          <span className="text-xs font-semibold px-2 py-1 rounded-full" style={{ background: "oklch(0.55 0.18 145 / 20%)", color: "oklch(0.55 0.18 145)", border: "1px solid oklch(0.55 0.18 145 / 40%)" }}>
+            ✓ All Complete
+          </span>
+        ) : (
+          <span className="text-xs font-medium px-2 py-1 rounded-full" style={{ background: "oklch(0.65 0.18 200 / 15%)", color: "oklch(0.65 0.18 200)", border: "1px solid oklch(0.65 0.18 200 / 30%)" }}>
+            {completedCount} / 4 done
+          </span>
+        )}
+      </div>
+
+      {/* Progress bar */}
+      <div className="h-2 rounded-full overflow-hidden" style={{ background: "oklch(0.22 0.025 250)" }}>
+        <div
+          className="h-full rounded-full transition-all duration-500"
+          style={{
+            width: `${(completedCount / 4) * 100}%`,
+            background: allDone ? "oklch(0.55 0.18 145)" : "oklch(0.65 0.18 200)",
+          }}
+        />
+      </div>
+
+      {/* Steps */}
+      <div className="space-y-2">
+        {ONBOARDING_STEPS.map(({ key, label, description }) => {
+          const done = completedSteps.has(key);
+          const stepData = checklistData.find(c => c.step === key && c.completedAt);
+          return (
+            <button
+              key={key}
+              onClick={() => handleToggle(key)}
+              disabled={toggleStep.isPending}
+              className="w-full text-left rounded-lg p-3 transition-all hover:opacity-90 active:scale-[0.99]"
+              style={{
+                background: done ? "oklch(0.55 0.18 145 / 10%)" : "oklch(0.18 0.025 250)",
+                border: `1px solid ${done ? "oklch(0.55 0.18 145 / 30%)" : "oklch(1 0 0 / 8%)"}`,
+              }}
+            >
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 flex-shrink-0">
+                  {done
+                    ? <CheckCircle2 className="w-5 h-5" style={{ color: "oklch(0.55 0.18 145)" }} />
+                    : <Circle className="w-5 h-5" style={{ color: "oklch(0.35 0.01 250)" }} />
+                  }
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <span
+                      className="text-sm font-medium"
+                      style={{
+                        color: done ? "oklch(0.55 0.18 145)" : "oklch(0.82 0.005 250)",
+                        textDecoration: done ? "line-through" : "none",
+                      }}
+                    >
+                      {label}
+                    </span>
+                  </div>
+                  <p className="text-xs mt-0.5" style={{ color: "oklch(0.45 0.01 250)" }}>{description}</p>
+                  {done && stepData && (
+                    <div className="flex items-center gap-1.5 mt-1.5">
+                      <Check className="w-3 h-3" style={{ color: "oklch(0.55 0.18 145)" }} />
+                      <span className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>
+                        Completed by <strong style={{ color: "oklch(0.65 0.01 250)" }}>{stepData.completedBy}</strong>
+                        {stepData.completedAt && (
+                          <> · {new Date(stepData.completedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</>
+                        )}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {allDone && (
+        <div className="rounded-lg p-3 text-center" style={{ background: "oklch(0.55 0.18 145 / 10%)", border: "1px solid oklch(0.55 0.18 145 / 25%)" }}>
+          <p className="text-sm font-semibold" style={{ color: "oklch(0.55 0.18 145)" }}>🎉 Onboarding Complete</p>
+          <p className="text-xs mt-0.5" style={{ color: "oklch(0.45 0.01 250)" }}>All onboarding steps have been completed for this client.</p>
+        </div>
+      )}
     </div>
   );
 }

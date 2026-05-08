@@ -9,7 +9,7 @@
      - Follow-up strip on card: next due date, one-tap Done/Snooze/Reschedule
      - Overdue red border highlight
    ============================================================ */
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useCRM } from "@/contexts/CRMContext";
 import {
   type Lead, type LeadStage, type CaseType, type FollowUp, type FollowUpStatus,
@@ -25,13 +25,14 @@ import {
 import LeadDetailPanel from "@/components/LeadDetailPanel";
 import { useActiveMember } from "@/contexts/ActiveMemberContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 
-const STAGES: LeadStage[] = ["New Lead", "Consultation", "Follow-Up", "Retained", "Lost"];
+const STAGES: LeadStage[] = ["New Lead", "Consultation", "Follow-Up", "Retained", "Onboarding", "Lost"];
 const CASE_TYPES: CaseType[] = ["DA", "SIJS", "AOS", "AO", "K1/K2", "U-Visa", "Green Card", "BIA", "Other"];
 
 const stageColor: Record<LeadStage, string> = {
@@ -39,6 +40,7 @@ const stageColor: Record<LeadStage, string> = {
   "Consultation": "oklch(0.72 0.15 80)",
   "Follow-Up": "oklch(0.65 0.20 300)",  // purple — needs follow-up
   "Retained": "oklch(0.55 0.18 145)",
+  "Onboarding": "oklch(0.65 0.18 200)",  // teal — active onboarding
   "Lost": "oklch(0.60 0.22 25)",
 };
 
@@ -117,13 +119,13 @@ export default function Leads() {
   }, [leads, search, filterStage]);
 
   const byStage = useMemo(() => {
-    const map: Record<LeadStage, Lead[]> = { "New Lead": [], "Consultation": [], "Follow-Up": [], "Retained": [], "Lost": [] };
+    const map: Record<LeadStage, Lead[]> = { "New Lead": [], "Consultation": [], "Follow-Up": [], "Retained": [], "Onboarding": [], "Lost": [] };
     filtered.forEach(l => map[l.stage].push(l));
     return map;
   }, [filtered]);
 
   const stageValue = useMemo(() => {
-    const map: Record<LeadStage, number> = { "New Lead": 0, "Consultation": 0, "Follow-Up": 0, "Retained": 0, "Lost": 0 };
+    const map: Record<LeadStage, number> = { "New Lead": 0, "Consultation": 0, "Follow-Up": 0, "Retained": 0, "Onboarding": 0, "Lost": 0 };
     leads.forEach(l => { map[l.stage] = (map[l.stage] || 0) + (l.retainerBooked || l.quotedAmount || 0); });
     return map;
   }, [leads]);
@@ -624,6 +626,33 @@ function LeadCard({
 }) {
   const [editingDueDate, setEditingDueDate] = useState(false);
   const { payments: allPayments, followUps: allFollowUps } = useCRM();
+  const { activeMember } = useActiveMember();
+
+  // ── Onboarding checklist ──────────────────────────────────
+  const ONBOARDING_STEPS = [
+    { key: "consultation_booked" as const, label: "Consultation Booked" },
+    { key: "case_notes_created" as const, label: "Case Notes Created" },
+    { key: "task_added_cerenade" as const, label: "Task Added in Cerenade" },
+    { key: "task_added_planner" as const, label: "Task Added in Planner" },
+  ];
+  const { data: checklistData, refetch: refetchChecklist } = trpc.onboarding.getByLead.useQuery(
+    { leadId: lead.id },
+    { enabled: lead.stage === "Onboarding" }
+  );
+  const toggleStepMut = trpc.onboarding.toggleStep.useMutation({ onSuccess: () => refetchChecklist() });
+  const completedSteps = new Set((checklistData ?? []).filter(c => c.completedAt).map(c => c.step));
+  const completedCount = completedSteps.size;
+  const allDone = completedCount === 4;
+
+  const handleToggleStep = useCallback((step: "consultation_booked" | "case_notes_created" | "task_added_cerenade" | "task_added_planner") => {
+    const isCompleted = completedSteps.has(step);
+    toggleStepMut.mutate({
+      leadId: lead.id,
+      step,
+      completedAt: isCompleted ? null : new Date().toISOString(),
+      completedBy: isCompleted ? null : (activeMember?.name ?? "Staff"),
+    });
+  }, [completedSteps, lead.id, activeMember, toggleStepMut]);
   const totalReceived = allPayments.filter(p => p.leadId === lead.id).reduce((s, p) => s + p.amount, 0);
   const outstanding = lead.retainerBooked > 0 ? lead.retainerBooked - totalReceived : 0;
   const pct = lead.retainerBooked > 0 ? Math.min(100, (totalReceived / lead.retainerBooked) * 100) : 0;
@@ -793,6 +822,49 @@ function LeadCard({
               Quoted: {formatCurrency(lead.quotedAmount)}
             </span>
           )}
+        </div>
+      )}
+
+      {/* Onboarding Checklist (Onboarding stage only) */}
+      {lead.stage === "Onboarding" && (
+        <div className="mt-2.5 rounded-lg p-2.5" style={{ background: "oklch(0.22 0.03 200 / 40%)", border: "1px solid oklch(0.65 0.18 200 / 25%)" }}>
+          {/* Header with progress */}
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold" style={{ color: "oklch(0.65 0.18 200)" }}>Onboarding Checklist</span>
+            {allDone ? (
+              <span className="text-xs font-semibold px-1.5 py-0.5 rounded" style={{ background: "oklch(0.55 0.18 145 / 20%)", color: "oklch(0.55 0.18 145)", border: "1px solid oklch(0.55 0.18 145 / 40%)" }}>✓ Onboarding Complete</span>
+            ) : (
+              <span className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>{completedCount}/4</span>
+            )}
+          </div>
+          {/* Progress bar */}
+          <div className="h-1 rounded-full mb-2.5 overflow-hidden" style={{ background: "oklch(0.22 0.025 250)" }}>
+            <div className="h-full rounded-full transition-all duration-300" style={{ width: `${(completedCount / 4) * 100}%`, background: allDone ? "oklch(0.55 0.18 145)" : "oklch(0.65 0.18 200)" }} />
+          </div>
+          {/* Steps */}
+          <div className="space-y-1.5">
+            {ONBOARDING_STEPS.map(({ key, label }) => {
+              const done = completedSteps.has(key);
+              const stepData = (checklistData ?? []).find(c => c.step === key && c.completedAt);
+              return (
+                <button
+                  key={key}
+                  onClick={() => handleToggleStep(key)}
+                  className="w-full flex items-center gap-2 text-left transition-opacity hover:opacity-80"
+                  disabled={toggleStepMut.isPending}
+                >
+                  {done
+                    ? <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "oklch(0.55 0.18 145)" }} />
+                    : <Circle className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "oklch(0.40 0.01 250)" }} />
+                  }
+                  <span className="text-xs flex-1" style={{ color: done ? "oklch(0.55 0.01 250)" : "oklch(0.80 0.005 250)", textDecoration: done ? "line-through" : "none" }}>{label}</span>
+                  {done && stepData?.completedBy && (
+                    <span className="text-xs flex-shrink-0" style={{ color: "oklch(0.45 0.01 250)" }}>{stepData.completedBy}</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
 

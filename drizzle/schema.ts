@@ -43,7 +43,7 @@ export const leads = mysqlTable("leads", {
   caseType: varchar("caseType", { length: 50 }).notNull(),
   caseNumber: varchar("caseNumber", { length: 100 }).default("").notNull(),
   source: varchar("source", { length: 100 }).default("").notNull(),
-  stage: mysqlEnum("stage", ["New Lead", "Consultation", "Follow-Up", "Retained", "Lost"]).default("New Lead").notNull(),
+  stage: mysqlEnum("stage", ["New Lead", "Consultation", "Follow-Up", "Retained", "Onboarding", "Lost"]).default("New Lead").notNull(),
   notes: text("notes").notNull(),
   date: varchar("date", { length: 10 }).notNull(),
   retainerBooked: decimal("retainerBooked", { precision: 10, scale: 2 }).default("0").notNull(),
@@ -59,6 +59,26 @@ export const leads = mysqlTable("leads", {
 
 export type DbLead = typeof leads.$inferSelect;
 export type InsertLead = typeof leads.$inferInsert;
+
+// ─── CRM: Onboarding Checklist ───────────────────────────────
+
+export const onboardingChecklist = mysqlTable("onboarding_checklist", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  leadId: varchar("leadId", { length: 36 }).notNull(),
+  step: mysqlEnum("step", [
+    "consultation_booked",
+    "case_notes_created",
+    "task_added_cerenade",
+    "task_added_planner",
+  ]).notNull(),
+  completedAt: varchar("completedAt", { length: 30 }),  // ISO string or null
+  completedBy: varchar("completedBy", { length: 100 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type DbOnboardingChecklist = typeof onboardingChecklist.$inferSelect;
+export type InsertOnboardingChecklist = typeof onboardingChecklist.$inferInsert;
 
 // ─── CRM: Lead Notes ─────────────────────────────────────────
 

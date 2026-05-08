@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE `onboarding_checklist` (\n\t`id` varchar(36) NOT NULL,\n\t`leadId` varchar(36) NOT NULL,\n\t`step` enum('consultation_booked','case_notes_created','task_added_cerenade','task_added_planner') NOT NULL,\n\t`completedAt` varchar(30),\n\t`completedBy` varchar(100),\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\t`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,\n\tCONSTRAINT `onboarding_checklist_id` PRIMARY KEY(`id`)\n);\nALTER TABLE `leads` MODIFY COLUMN `stage` enum('New Lead','Consultation','Follow-Up','Retained','Onboarding','Lost') NOT NULL DEFAULT 'New Lead';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute CREATE TABLE `onboarding_checklist` (\n\t`id` varchar(36) NOT NULL,\n\t`leadId` varchar(36) NOT NULL,\n\t`step` enum('consultation_booked','case_notes_created','task_added_cerenade','task_added_planner') NOT NULL,\n\t`completedAt` varchar(30),\n\t`completedBy` varchar(100),\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\t`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,\n\tCONSTRAINT `onboarding_checklist_id` PRIMARY KEY(`id`)\n);\nALTER TABLE `leads` MODIFY COLUMN `stage` enum('New Lead','Consultation','Follow-Up','Retained','Onboarding','Lost') NOT NULL DEFAULT 'New Lead';",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 575
+}

@@ -11,6 +11,8 @@ import {
   installmentPlans,
   installmentItems,
   crmMembers,
+  onboardingChecklist,
+  type InsertOnboardingChecklist,
   type InsertUser,
   type InsertLead,
   type InsertLeadNote,
@@ -481,4 +483,26 @@ export async function deleteCrmMember(id: string) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.delete(crmMembers).where(eq(crmMembers.id, id));
+}
+
+// ─── Onboarding Checklist ────────────────────────────────────────────────────
+export async function getOnboardingChecklist(leadId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(onboardingChecklist).where(eq(onboardingChecklist.leadId, leadId));
+}
+
+export async function upsertOnboardingStep(data: InsertOnboardingChecklist) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  // Try insert first; if duplicate (leadId+step), update completedAt/completedBy
+  const existing = await db.select().from(onboardingChecklist)
+    .where(and(eq(onboardingChecklist.leadId, data.leadId), eq(onboardingChecklist.step, data.step)));
+  if (existing.length > 0) {
+    await db.update(onboardingChecklist)
+      .set({ completedAt: data.completedAt ?? null, completedBy: data.completedBy ?? null })
+      .where(eq(onboardingChecklist.id, existing[0].id));
+  } else {
+    await db.insert(onboardingChecklist).values(data);
+  }
 }

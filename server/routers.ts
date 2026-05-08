@@ -9,7 +9,7 @@ import { ENV } from "./_core/env";
 
 // ─── Shared Zod schemas ──────────────────────────────────────
 
-const LeadStageEnum = z.enum(["New Lead", "Consultation", "Follow-Up", "Retained", "Lost"]);
+const LeadStageEnum = z.enum(["New Lead", "Consultation", "Follow-Up", "Retained", "Onboarding", "Lost"]);
 const CaseTypeEnum = z.enum(["DA", "SIJS", "AOS", "AO", "K1/K2", "U-Visa", "Green Card", "BIA", "Other"]);
 const PaymentTypeEnum = z.enum(["New Client", "Existing Client"]);
 const FollowUpStatusEnum = z.enum(["Pending", "Done", "Snoozed"]);
@@ -321,6 +321,35 @@ export const appRouter = router({
       await db.deleteFollowUpComment(input.id);
       return { success: true };
     }),
+  }),
+
+  // ─── Onboarding Checklist ──────────────────────────────────
+
+  onboarding: router({
+    getByLead: publicProcedure
+      .input(z.object({ leadId: z.string() }))
+      .query(async ({ input }) => {
+        return db.getOnboardingChecklist(input.leadId);
+      }),
+
+    toggleStep: publicProcedure
+      .input(z.object({
+        leadId: z.string(),
+        step: z.enum(["consultation_booked", "case_notes_created", "task_added_cerenade", "task_added_planner"]),
+        completedAt: z.string().nullable(),
+        completedBy: z.string().nullable(),
+      }))
+      .mutation(async ({ input }) => {
+        const { nanoid } = await import("nanoid");
+        await db.upsertOnboardingStep({
+          id: nanoid(),
+          leadId: input.leadId,
+          step: input.step,
+          completedAt: input.completedAt ?? undefined,
+          completedBy: input.completedBy ?? undefined,
+        });
+        return { success: true };
+      }),
   }),
 
   // ─── Data migration: import localStorage data ─────────────

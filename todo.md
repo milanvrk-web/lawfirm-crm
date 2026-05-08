@@ -234,3 +234,19 @@
 - [x] Show quoted amount on Consultation and Follow-Up stage cards
 - [x] In the Lost Reason modal, show a summary: consultation fee collected and quoted retainer amount
 - [x] In the Lead Detail panel Info tab, show consultation fee and quoted amount clearly
+
+## Onboarding Stage
+
+- [x] Add "Onboarding" to LeadStage enum in store.ts (between Retained and Lost)
+- [x] Add "Onboarding" to leads.stage MySQL enum in drizzle/schema.ts and run DB migration
+- [x] Add "Onboarding" to LeadStageEnum in routers.ts
+- [x] Add "Onboarding" to all stage arrays/maps in Leads.tsx (STAGES, byStage, stageValue, columns)
+- [x] Add onboarding_checklist table to schema: id, leadId, step (enum), completedAt, completedBy
+- [x] Add tRPC procedures: onboarding.getByLead, onboarding.toggleStep
+- [x] Add CRMContext handlers: onboardingSteps, toggleOnboardingStep
+- [x] Onboarding Kanban card shows mini checklist with 4 steps: Consultation Booked, Case Notes Created, Task Added in Cerenade, Task Added in Planner
+- [x] Each step shows a checkbox; clicking toggles completion and records who completed it and when
+- [x] Progress ring or bar on card showing X/4 steps done
+- [x] Lead Detail panel Onboarding tab shows the same checklist with timestamps and completed-by info
+- [x] When all 4 steps are done, card shows a green "Onboarding Complete" badge
+- [x] Dragging a lead to Onboarding from Retained does NOT open Convert modal (already retained)
