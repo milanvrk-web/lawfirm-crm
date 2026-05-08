@@ -269,3 +269,12 @@
 - [x] Wire LeadDetailPanel Onboarding tab to show checklist for any stage that has templates
 - [x] Preserve Onboarding-specific checklist behavior for the built-in Onboarding stage
 - [x] Add Pipeline Editor link to sidebar navigation
+
+## Inline Pipeline Management on Kanban Board
+
+- [x] Add left/right reorder arrows on each Kanban column header to move stages
+- [x] Add inline rename on column header (click name → input field → save on Enter/blur)
+- [x] Add gear/settings popover on each column header with: color picker, add checklist item, manage checklist items, delete stage
+- [x] Checklist items in popover: add new, edit label, delete
+- [x] Add new stage button at the end of the Kanban columns (+ Add Stage)
+- [x] Remove Pipeline Editor from sidebar nav (or hide it)

@@ -20,7 +20,8 @@ import {
   Plus, Phone,
   Edit2, Trash2, CheckCircle, Search, Filter, Bell, Clock,
   MessageSquare, CheckCheck, AlarmClock, AlertCircle, X,
-  CalendarClock, FileText, Circle, CheckCircle2
+  CalendarClock, FileText, Circle, CheckCircle2,
+  ChevronLeft, ChevronRight, Settings2, GripVertical
 } from "lucide-react";
 import LeadDetailPanel from "@/components/LeadDetailPanel";
 import { useActiveMember } from "@/contexts/ActiveMemberContext";
@@ -154,6 +155,93 @@ export default function Leads() {
   }, [leads, pipelineStageNames]);
 
   const [dragOverStage, setDragOverStage] = useState<LeadStage | null>(null);
+
+  // ── Inline pipeline management state ─────────────────────
+  const pipelineUtils = trpc.useUtils();
+  const [editingStageId, setEditingStageId] = useState<string | null>(null);
+  const [editingStageName, setEditingStageName] = useState("");
+  const [openGearStageId, setOpenGearStageId] = useState<string | null>(null);
+  const [newChecklistLabel, setNewChecklistLabel] = useState("");
+  const [editingChecklistId, setEditingChecklistId] = useState<string | null>(null);
+  const [editingChecklistLabel, setEditingChecklistLabel] = useState("");
+  const [showAddStage, setShowAddStage] = useState(false);
+  const [newStageName, setNewStageName] = useState("");
+  const [newStageColor, setNewStageColor] = useState("oklch(0.55 0.18 250)");
+  const [deleteConfirmStageId, setDeleteConfirmStageId] = useState<string | null>(null);
+
+  const PRESET_COLORS = [
+    "oklch(0.55 0.18 250)", // blue
+    "oklch(0.72 0.15 80)",  // gold
+    "oklch(0.65 0.20 300)", // purple
+    "oklch(0.55 0.18 145)", // green
+    "oklch(0.65 0.18 200)", // teal
+    "oklch(0.60 0.22 25)",  // red
+    "oklch(0.65 0.18 160)", // mint
+    "oklch(0.60 0.20 340)", // pink
+    "oklch(0.55 0.15 220)", // indigo
+    "oklch(0.65 0.15 60)",  // orange
+  ];
+
+  const reorderMut = trpc.pipeline.reorderStages.useMutation({ onSuccess: () => pipelineUtils.pipeline.getStages.invalidate() });
+  const updateStageMut = trpc.pipeline.updateStage.useMutation({ onSuccess: () => pipelineUtils.pipeline.getStages.invalidate() });
+  const deleteStageMut = trpc.pipeline.deleteStage.useMutation({ onSuccess: () => pipelineUtils.pipeline.getStages.invalidate() });
+  const createStageMut = trpc.pipeline.createStage.useMutation({ onSuccess: () => pipelineUtils.pipeline.getStages.invalidate() });
+  const createChecklistMut = trpc.pipeline.createChecklistTemplate.useMutation({ onSuccess: () => pipelineUtils.pipeline.getAllChecklistTemplates.invalidate() });
+  const updateChecklistMut = trpc.pipeline.updateChecklistTemplate.useMutation({ onSuccess: () => pipelineUtils.pipeline.getAllChecklistTemplates.invalidate() });
+  const deleteChecklistMut = trpc.pipeline.deleteChecklistTemplate.useMutation({ onSuccess: () => pipelineUtils.pipeline.getAllChecklistTemplates.invalidate() });
+
+  const handleMoveStage = (stageId: string, direction: "left" | "right") => {
+    const sorted = [...dbStages].sort((a, b) => a.order - b.order);
+    const idx = sorted.findIndex(s => s.id === stageId);
+    if (direction === "left" && idx === 0) return;
+    if (direction === "right" && idx === sorted.length - 1) return;
+    const swapIdx = direction === "left" ? idx - 1 : idx + 1;
+    const newOrder = sorted.map((s, i) => {
+      if (i === idx) return { id: s.id, order: sorted[swapIdx].order };
+      if (i === swapIdx) return { id: s.id, order: sorted[idx].order };
+      return { id: s.id, order: s.order };
+    });
+    reorderMut.mutate(newOrder);
+  };
+
+  const handleRenameStage = (stageId: string) => {
+    if (!editingStageName.trim()) return;
+    updateStageMut.mutate({ id: stageId, name: editingStageName.trim() });
+    setEditingStageId(null);
+    setEditingStageName("");
+  };
+
+  const handleAddStage = () => {
+    if (!newStageName.trim()) return;
+    const maxOrder = dbStages.length > 0 ? Math.max(...dbStages.map(s => s.order)) + 1 : 1;
+    createStageMut.mutate({ name: newStageName.trim(), color: newStageColor, order: maxOrder });
+    setNewStageName("");
+    setNewStageColor("oklch(0.55 0.18 250)");
+    setShowAddStage(false);
+    toast.success("Stage added");
+  };
+
+  const handleDeleteStage = (stageId: string) => {
+    deleteStageMut.mutate({ id: stageId });
+    setDeleteConfirmStageId(null);
+    setOpenGearStageId(null);
+    toast.success("Stage deleted");
+  };
+
+  const handleAddChecklistItem = (stageId: string) => {
+    if (!newChecklistLabel.trim()) return;
+    const stageTemplatesForStage = allChecklistTemplates.filter(t => t.stageId === stageId);
+    createChecklistMut.mutate({ stageId, label: newChecklistLabel.trim(), order: stageTemplatesForStage.length });
+    setNewChecklistLabel("");
+    toast.success("Checklist item added");
+  };
+
+  const handleSaveChecklistItem = (id: string) => {
+    if (!editingChecklistLabel.trim()) return;
+    updateChecklistMut.mutate({ id, label: editingChecklistLabel.trim() });
+    setEditingChecklistId(null);
+    setEditingChecklistLabel("");
+  };
 
   const handleDragStart = (e: React.DragEvent, leadId: string) => {
     e.dataTransfer.setData("leadId", leadId);
@@ -363,13 +451,16 @@ export default function Leads() {
 
       {/* Pipeline columns — dynamic from DB */}
       <div className="flex gap-4 overflow-x-auto pb-2" style={{ minHeight: 400 }}>
+        {/* Close gear popover when clicking outside */}
+        {openGearStageId && (
+          <div className="fixed inset-0 z-40" onClick={() => { setOpenGearStageId(null); setDeleteConfirmStageId(null); }} />
+        )}
+
         {pipelineStageNames.map(stage => {
           const color = dynamicStageColor[stage] ?? "oklch(0.55 0.18 250)";
           const stageLeads = byStage[stage] ?? [];
-          const stageTemplates = allChecklistTemplates.filter(t => {
-            const dbStage = dbStages.find(s => s.name === stage);
-            return dbStage && t.stageId === dbStage.id;
-          });
+          const dbStage = dbStages.find(s => s.name === stage);
+          const stageTemplates = allChecklistTemplates.filter(t => dbStage && t.stageId === dbStage.id);
           return (
             <div
               key={stage}
@@ -383,13 +474,170 @@ export default function Leads() {
               onDragLeave={() => setDragOverStage(null)}
               onDrop={e => handleDrop(e, stage as LeadStage)}
             >
-              <div className="px-4 py-3 border-b" style={{ borderColor: "oklch(1 0 0 / 8%)", borderLeft: `3px solid ${color}` }}>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold" style={{ color: "oklch(0.80 0.005 250)" }}>{stage}</span>
-                  <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: `${color}20`, color }}>
+              <div className="px-3 py-2.5 border-b" style={{ borderColor: "oklch(1 0 0 / 8%)", borderLeft: `3px solid ${color}` }}>
+                {/* Stage header row: arrows + name + count + gear */}
+                <div className="flex items-center gap-1">
+                  {/* Left arrow */}
+                  <button
+                    onClick={() => dbStage && handleMoveStage(dbStage.id, "left")}
+                    disabled={!dbStage || [...dbStages].sort((a,b)=>a.order-b.order)[0]?.id === dbStage?.id}
+                    className="p-0.5 rounded transition-opacity hover:opacity-80 disabled:opacity-20"
+                    style={{ color: "oklch(0.55 0.01 250)" }}
+                    title="Move stage left"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                  </button>
+
+                  {/* Stage name — click to rename inline */}
+                  <div className="flex-1 min-w-0">
+                    {editingStageId === dbStage?.id ? (
+                      <input
+                        autoFocus
+                        value={editingStageName}
+                        onChange={e => setEditingStageName(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === "Enter") handleRenameStage(dbStage!.id);
+                          if (e.key === "Escape") { setEditingStageId(null); setEditingStageName(""); }
+                        }}
+                        onBlur={() => handleRenameStage(dbStage!.id)}
+                        className="w-full text-sm font-semibold bg-transparent border-b outline-none"
+                        style={{ color: "oklch(0.93 0.005 250)", borderColor: color }}
+                      />
+                    ) : (
+                      <button
+                        onClick={() => { if (dbStage) { setEditingStageId(dbStage.id); setEditingStageName(stage); } }}
+                        className="text-sm font-semibold text-left w-full truncate hover:opacity-80 transition-opacity"
+                        style={{ color: "oklch(0.80 0.005 250)" }}
+                        title="Click to rename"
+                      >
+                        {stage}
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Lead count badge */}
+                  <span className="text-xs px-1.5 py-0.5 rounded-full font-medium flex-shrink-0" style={{ background: `${color}20`, color }}>
                     {stageLeads.length}
                   </span>
+
+                  {/* Right arrow */}
+                  <button
+                    onClick={() => dbStage && handleMoveStage(dbStage.id, "right")}
+                    disabled={!dbStage || [...dbStages].sort((a,b)=>a.order-b.order).at(-1)?.id === dbStage?.id}
+                    className="p-0.5 rounded transition-opacity hover:opacity-80 disabled:opacity-20"
+                    style={{ color: "oklch(0.55 0.01 250)" }}
+                    title="Move stage right"
+                  >
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+
+                  {/* Gear icon — opens checklist/delete popover */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setOpenGearStageId(openGearStageId === dbStage?.id ? null : (dbStage?.id ?? null))}
+                      className="p-0.5 rounded transition-opacity hover:opacity-80"
+                      style={{ color: openGearStageId === dbStage?.id ? color : "oklch(0.45 0.01 250)" }}
+                      title="Stage settings"
+                    >
+                      <Settings2 className="w-3.5 h-3.5" />
+                    </button>
+
+                    {/* Gear popover */}
+                    {openGearStageId === dbStage?.id && dbStage && (
+                      <div
+                        className="absolute right-0 top-7 z-50 rounded-lg shadow-xl p-3 w-64"
+                        style={{ background: "oklch(0.20 0.030 250)", border: "1px solid oklch(1 0 0 / 15%)", minWidth: 240 }}
+                      >
+                        {/* Color picker */}
+                        <div className="mb-3">
+                          <p className="text-xs font-semibold mb-1.5" style={{ color: "oklch(0.55 0.01 250)" }}>Stage Color</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {PRESET_COLORS.map(c => (
+                              <button
+                                key={c}
+                                onClick={() => updateStageMut.mutate({ id: dbStage.id, color: c })}
+                                className="w-5 h-5 rounded-full transition-transform hover:scale-110"
+                                style={{ background: c, outline: dbStage.color === c ? `2px solid oklch(0.93 0.005 250)` : "none", outlineOffset: 2 }}
+                              />
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Checklist items */}
+                        <div className="mb-3">
+                          <p className="text-xs font-semibold mb-1.5" style={{ color: "oklch(0.55 0.01 250)" }}>Checklist Steps</p>
+                          <div className="space-y-1 max-h-40 overflow-y-auto">
+                            {allChecklistTemplates.filter(t => t.stageId === dbStage.id).sort((a,b)=>a.order-b.order).map(t => (
+                              <div key={t.id} className="flex items-center gap-1.5">
+                                {editingChecklistId === t.id ? (
+                                  <>
+                                    <input
+                                      autoFocus
+                                      value={editingChecklistLabel}
+                                      onChange={e => setEditingChecklistLabel(e.target.value)}
+                                      onKeyDown={e => {
+                                        if (e.key === "Enter") handleSaveChecklistItem(t.id);
+                                        if (e.key === "Escape") { setEditingChecklistId(null); setEditingChecklistLabel(""); }
+                                      }}
+                                      onBlur={() => handleSaveChecklistItem(t.id)}
+                                      className="flex-1 text-xs bg-transparent border-b outline-none"
+                                      style={{ color: "oklch(0.93 0.005 250)", borderColor: color }}
+                                    />
+                                    <button onClick={() => handleSaveChecklistItem(t.id)} className="text-xs" style={{ color: "oklch(0.55 0.18 145)" }}>✓</button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span className="flex-1 text-xs truncate" style={{ color: "oklch(0.80 0.005 250)" }}>{t.label}</span>
+                                    <button onClick={() => { setEditingChecklistId(t.id); setEditingChecklistLabel(t.label); }} className="p-0.5 hover:opacity-80" style={{ color: "oklch(0.55 0.01 250)" }}><Edit2 className="w-3 h-3" /></button>
+                                    <button onClick={() => { deleteChecklistMut.mutate({ id: t.id }); toast.success("Step removed"); }} className="p-0.5 hover:opacity-80" style={{ color: "oklch(0.65 0.18 25)" }}><Trash2 className="w-3 h-3" /></button>
+                                  </>
+                                )}
+                              </div>
+                            ))}
+                            {allChecklistTemplates.filter(t => t.stageId === dbStage.id).length === 0 && (
+                              <p className="text-xs" style={{ color: "oklch(0.40 0.01 250)" }}>No steps yet</p>
+                            )}
+                          </div>
+                          {/* Add new checklist item */}
+                          <div className="flex gap-1 mt-2">
+                            <input
+                              value={newChecklistLabel}
+                              onChange={e => setNewChecklistLabel(e.target.value)}
+                              onKeyDown={e => { if (e.key === "Enter") handleAddChecklistItem(dbStage.id); }}
+                              placeholder="Add step..."
+                              className="flex-1 text-xs px-2 py-1 rounded outline-none"
+                              style={{ background: "oklch(0.16 0.025 250)", color: "oklch(0.93 0.005 250)", border: "1px solid oklch(1 0 0 / 15%)" }}
+                            />
+                            <button
+                              onClick={() => handleAddChecklistItem(dbStage.id)}
+                              className="px-2 py-1 rounded text-xs font-medium"
+                              style={{ background: `${color}25`, color }}
+                            >+</button>
+                          </div>
+                        </div>
+
+                        {/* Delete stage */}
+                        <div className="border-t pt-2" style={{ borderColor: "oklch(1 0 0 / 10%)" }}>
+                          {deleteConfirmStageId === dbStage.id ? (
+                            <div className="space-y-1.5">
+                              <p className="text-xs" style={{ color: "oklch(0.70 0.22 25)" }}>Delete this stage? This cannot be undone.</p>
+                              <div className="flex gap-2">
+                                <button onClick={() => handleDeleteStage(dbStage.id)} className="flex-1 text-xs py-1 rounded font-medium" style={{ background: "oklch(0.60 0.22 25 / 20%)", color: "oklch(0.70 0.22 25)" }}>Delete</button>
+                                <button onClick={() => setDeleteConfirmStageId(null)} className="flex-1 text-xs py-1 rounded" style={{ background: "oklch(0.16 0.025 250)", color: "oklch(0.55 0.01 250)" }}>Cancel</button>
+                              </div>
+                            </div>
+                          ) : (
+                            <button onClick={() => setDeleteConfirmStageId(dbStage.id)} className="w-full text-xs py-1 rounded transition-opacity hover:opacity-80" style={{ color: "oklch(0.65 0.18 25)" }}>
+                              <Trash2 className="w-3 h-3 inline mr-1" /> Delete Stage
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
+
+                {/* Pipeline value */}
                 {(stageValue[stage] ?? 0) > 0 && (
                   <div className="text-xs mt-1 font-medium" style={{ color: "oklch(0.72 0.12 75)" }}>
                     {formatCurrency(stageValue[stage])} pipeline
@@ -426,9 +674,52 @@ export default function Leads() {
             </div>
           );
         })}
+
+        {/* + Add Stage column */}
+        <div className="flex-shrink-0" style={{ width: 200 }}>
+          {showAddStage ? (
+            <div className="rounded-lg border p-3 space-y-2.5" style={{ background: "oklch(0.18 0.025 250)", borderColor: "oklch(1 0 0 / 15%)" }}>
+              <p className="text-xs font-semibold" style={{ color: "oklch(0.80 0.005 250)" }}>New Stage</p>
+              <input
+                autoFocus
+                value={newStageName}
+                onChange={e => setNewStageName(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") handleAddStage(); if (e.key === "Escape") setShowAddStage(false); }}
+                placeholder="Stage name..."
+                className="w-full text-sm px-2 py-1.5 rounded outline-none"
+                style={{ background: "oklch(0.16 0.025 250)", color: "oklch(0.93 0.005 250)", border: "1px solid oklch(1 0 0 / 15%)" }}
+              />
+              <div>
+                <p className="text-xs mb-1" style={{ color: "oklch(0.55 0.01 250)" }}>Color</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {PRESET_COLORS.map(c => (
+                    <button
+                      key={c}
+                      onClick={() => setNewStageColor(c)}
+                      className="w-5 h-5 rounded-full transition-transform hover:scale-110"
+                      style={{ background: c, outline: newStageColor === c ? "2px solid oklch(0.93 0.005 250)" : "none", outlineOffset: 2 }}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={handleAddStage} className="flex-1 text-xs py-1.5 rounded font-medium" style={{ background: newStageColor, color: "oklch(0.13 0.025 250)" }}>Add</button>
+                <button onClick={() => setShowAddStage(false)} className="flex-1 text-xs py-1.5 rounded" style={{ background: "oklch(0.16 0.025 250)", color: "oklch(0.55 0.01 250)" }}>Cancel</button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowAddStage(true)}
+              className="w-full h-16 rounded-lg border-2 border-dashed flex items-center justify-center gap-2 text-sm transition-opacity hover:opacity-80"
+              style={{ borderColor: "oklch(1 0 0 / 15%)", color: "oklch(0.45 0.01 250)" }}
+            >
+              <Plus className="w-4 h-4" /> Add Stage
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* ── Lead Detail Slide-Over ──────────────────────────── */}
+      {/* ── Lead Detail Slide-Overr ──────────────────────────── */}
       {detailLeadId && (
         <LeadDetailPanel
           leadId={detailLeadId}
