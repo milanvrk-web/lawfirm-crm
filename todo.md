@@ -31,3 +31,12 @@
 - [x] Color-code each day cell by revenue amount (none/low/mid/high)
 - [x] Show day's total revenue on hover/click with payment breakdown popover
 - [x] Add "Calendar View" toggle button on the Dashboard below the month selector
+
+## Installment Plan Tracker
+
+- [x] Add installment_plans and installment_items tables to schema
+- [x] Create DB migration for new tables
+- [x] Add tRPC procedures: create/get/update/delete plan, mark installment paid/unpaid
+- [x] Build installment plan tab in Lead Detail panel with schedule grid
+- [x] Show collected vs outstanding progress bar per plan
+- [x] Auto-generate installment schedule from total + count + start date

@@ -450,8 +450,114 @@ export const appRouter = router({
         }
       }
 
-      return { success: true, imported };
+       return { success: true, imported };
+    }),
+
+  // ─── Installment Plans ────────────────────────────────────────────
+
+  getInstallmentPlans: publicProcedure
+    .input(z.object({ leadId: z.string() }))
+    .query(async ({ input }) => {
+      const plans = await db.getInstallmentPlansForLead(input.leadId);
+      const result = [];
+      for (const plan of plans) {
+        const items = await db.getInstallmentItemsForPlan(plan.id);
+        result.push({
+          ...plan,
+          totalAmount: Number(plan.totalAmount),
+          items: items.map(item => ({
+            ...item,
+            amount: Number(item.amount),
+            isPaid: item.isPaid === 1,
+          })),
+        });
+      }
+      return result;
+    }),
+
+  createInstallmentPlan: publicProcedure
+    .input(z.object({
+      leadId: z.string(),
+      totalAmount: z.number(),
+      installmentCount: z.number().int().min(1).max(120),
+      startDate: z.string(),
+      notes: z.string().default(""),
+    }))
+    .mutation(async ({ input }) => {
+      const planId = nanoid();
+      await db.createInstallmentPlan({
+        id: planId,
+        leadId: input.leadId,
+        totalAmount: String(input.totalAmount),
+        installmentCount: input.installmentCount,
+        startDate: input.startDate,
+        notes: input.notes,
+      });
+      // Auto-generate installment items
+      // Use integer cents to avoid floating-point rounding errors
+      const totalCents = Math.round(input.totalAmount * 100);
+      const baseCents = Math.floor(totalCents / input.installmentCount);
+      const remainderCents = totalCents - baseCents * input.installmentCount;
+      const [startYear, startMonth, startDay] = input.startDate.split("-").map(Number);
+      for (let i = 0; i < input.installmentCount; i++) {
+        // Add remainder to last installment so total always sums exactly
+        const itemCents = i === input.installmentCount - 1 ? baseCents + remainderCents : baseCents;
+        // Handle month-end overflow: if startDay=31 and target month has fewer days,
+        // clamp to the last day of that month
+        const targetYear = startYear + Math.floor((startMonth - 1 + i) / 12);
+        const targetMonth = ((startMonth - 1 + i) % 12) + 1; // 1-based
+        const daysInMonth = new Date(targetYear, targetMonth, 0).getDate();
+        const targetDay = Math.min(startDay, daysInMonth);
+        const dueDateStr = `${targetYear}-${String(targetMonth).padStart(2, "0")}-${String(targetDay).padStart(2, "0")}`;
+        await db.createInstallmentItem({
+          id: nanoid(),
+          planId,
+          installmentNumber: i + 1,
+          dueDate: dueDateStr,
+          amount: String(itemCents / 100),
+          isPaid: 0,
+        });
+      }
+      return { id: planId };
+    }),
+
+  updateInstallmentPlan: publicProcedure
+    .input(z.object({
+      id: z.string(),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const { id, ...data } = input;
+      await db.updateInstallmentPlan(id, data);
+      return { success: true };
+    }),
+
+  deleteInstallmentPlan: publicProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ input }) => {
+      await db.deleteInstallmentPlan(input.id);
+      return { success: true };
+    }),
+
+  toggleInstallmentItemPaid: publicProcedure
+    .input(z.object({
+      id: z.string(),
+      isPaid: z.boolean(),
+      paidDate: z.string().optional().nullable(),
+    }))
+    .mutation(async ({ input }) => {
+      await db.updateInstallmentItem(input.id, {
+        isPaid: input.isPaid ? 1 : 0,
+        paidDate: input.isPaid ? (input.paidDate ?? undefined) : undefined,
+      });
+      return { success: true };
+    }),
+
+  updateInstallmentItemDueDate: publicProcedure
+    .input(z.object({ id: z.string(), dueDate: z.string() }))
+    .mutation(async ({ input }) => {
+      await db.updateInstallmentItem(input.id, { dueDate: input.dueDate });
+      return { success: true };
     }),
 });
-
 export type AppRouter = typeof appRouter;

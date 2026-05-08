@@ -6,6 +6,7 @@
    Self-contained: calls useCRM() directly.
    ============================================================ */
 import { useState, useMemo } from "react";
+import { trpc } from "@/lib/trpc";
 import { useCRM } from "@/contexts/CRMContext";
 import {
   type Lead, type FollowUp, type FollowUpStatus,
@@ -15,7 +16,7 @@ import { toast } from "sonner";
 import {
   Bell, MessageSquare, FileText, X, Plus, CalendarClock,
   Phone, Edit2, CheckCircle, CheckCircle2, Circle, Clock,
-  CheckCheck, AlarmClock, Trash2,
+  CheckCheck, AlarmClock, Trash2, CreditCard, Check,
 } from "lucide-react";
 
 // ── Helpers ────────────────────────────────────────────────
@@ -51,7 +52,7 @@ interface LeadDetailPanelProps {
   /** Optional: open the convert-to-retained dialog */
   onConvertLead?: (lead: Lead) => void;
   /** Initial tab to show when opening */
-  initialTab?: "followups" | "notes" | "info";
+  initialTab?: "followups" | "notes" | "info" | "installments";
 }
 
 export default function LeadDetailPanel({
@@ -63,7 +64,7 @@ export default function LeadDetailPanel({
 }: LeadDetailPanelProps) {
   const { leads, payments, followUps: allFollowUps, addFollowUp, updateFollowUp, deleteFollowUp, addFollowUpComment, addLeadNote } = useCRM();
 
-  const [detailTab, setDetailTab] = useState<"followups" | "notes" | "info">(initialTab);
+  const [detailTab, setDetailTab] = useState<"followups" | "notes" | "info" | "installments">(initialTab);
   const [fuTitle, setFuTitle] = useState("Call back");
   const [fuDate, setFuDate] = useState(new Date().toISOString().split("T")[0]);
   const [showFuForm, setShowFuForm] = useState(false);
@@ -231,6 +232,7 @@ export default function LeadDetailPanel({
             { id: "followups" as const, label: "Follow-Ups", icon: Bell, count: pendingCount },
             { id: "notes" as const, label: "Notes", icon: MessageSquare, count: (lead.leadLog || []).length },
             { id: "info" as const, label: "Info", icon: FileText, count: 0 },
+            { id: "installments" as const, label: "Payments", icon: CreditCard, count: 0 },
           ]).map(tab => (
             <button
               key={tab.id}
@@ -525,8 +527,289 @@ export default function LeadDetailPanel({
               )}
             </div>
           )}
+          {/* ── Installments Tab ── */}
+          {detailTab === "installments" && leadId && (
+            <InstallmentsTab leadId={leadId} />
+          )}
+
         </div>
       </div>
     </>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Installments Tab — separate component to isolate tRPC hooks
+// ─────────────────────────────────────────────────────────────────────────────
+
+function InstallmentsTab({ leadId }: { leadId: string }) {
+  const utils = trpc.useUtils();
+  const { data: plans = [], isLoading } = trpc.getInstallmentPlans.useQuery({ leadId });
+
+  const createPlan = trpc.createInstallmentPlan.useMutation({
+    onSuccess: () => { utils.getInstallmentPlans.invalidate({ leadId }); toast.success("Payment plan created"); setShowForm(false); },
+    onError: () => toast.error("Failed to create plan"),
+  });
+  const deletePlan = trpc.deleteInstallmentPlan.useMutation({
+    onSuccess: () => { utils.getInstallmentPlans.invalidate({ leadId }); toast.success("Plan deleted"); },
+  });
+  const togglePaid = trpc.toggleInstallmentItemPaid.useMutation({
+    onSuccess: () => utils.getInstallmentPlans.invalidate({ leadId }),
+  });
+  const updateDueDate = trpc.updateInstallmentItemDueDate.useMutation({
+    onSuccess: () => utils.getInstallmentPlans.invalidate({ leadId }),
+  });
+
+  const [showForm, setShowForm] = useState(false);
+  const [formTotal, setFormTotal] = useState("");
+  const [formCount, setFormCount] = useState("6");
+  const [formStart, setFormStart] = useState(new Date().toISOString().split("T")[0]);
+  const [formNotes, setFormNotes] = useState("");
+  const [editingDueDateItemId, setEditingDueDateItemId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  const today = new Date().toISOString().split("T")[0];
+
+  const handleCreatePlan = () => {
+    const total = parseFloat(formTotal);
+    const count = parseInt(formCount);
+    if (!total || total <= 0) { toast.error("Enter a valid total amount"); return; }
+    if (!count || count < 1 || count > 120) { toast.error("Enter installment count (1–120)"); return; }
+    if (!formStart) { toast.error("Select a start date"); return; }
+    createPlan.mutate({ leadId, totalAmount: total, installmentCount: count, startDate: formStart, notes: formNotes });
+  };
+
+  if (isLoading) return (
+    <div className="flex items-center justify-center py-12">
+      <div className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: "oklch(0.72 0.12 75)" }} />
+    </div>
+  );
+
+  return (
+    <div className="p-4 space-y-4">
+      {/* Add plan button */}
+      {!showForm ? (
+        <button
+          onClick={() => setShowForm(true)}
+          className="w-full flex items-center gap-2 px-4 py-2.5 rounded-lg border border-dashed text-sm font-medium transition-all hover:border-solid hover:bg-white/5"
+          style={{ borderColor: "oklch(0.72 0.12 75 / 40%)", color: "oklch(0.72 0.12 75)" }}
+        >
+          <Plus className="w-4 h-4" />
+          New Installment Plan
+        </button>
+      ) : (
+        <div className="rounded-lg border p-4 space-y-3" style={{ background: "oklch(0.18 0.025 250)", borderColor: "oklch(0.72 0.12 75 / 35%)" }}>
+          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "oklch(0.72 0.12 75)" }}>New Payment Plan</p>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-xs mb-1 block" style={{ color: "oklch(0.55 0.01 250)" }}>Total Amount ($)</label>
+              <input
+                type="number" value={formTotal} onChange={e => setFormTotal(e.target.value)}
+                placeholder="e.g. 3000" min="1"
+                className="w-full px-3 py-2 rounded text-sm outline-none"
+                style={{ background: "oklch(0.22 0.025 250)", border: "1px solid oklch(0.72 0.12 75 / 30%)", color: "oklch(0.90 0.005 250)" }}
+              />
+            </div>
+            <div>
+              <label className="text-xs mb-1 block" style={{ color: "oklch(0.55 0.01 250)" }}>No. of Installments</label>
+              <input
+                type="number" value={formCount} onChange={e => setFormCount(e.target.value)}
+                placeholder="e.g. 6" min="1" max="120"
+                className="w-full px-3 py-2 rounded text-sm outline-none"
+                style={{ background: "oklch(0.22 0.025 250)", border: "1px solid oklch(0.72 0.12 75 / 30%)", color: "oklch(0.90 0.005 250)" }}
+              />
+            </div>
+          </div>
+          <div>
+            <label className="text-xs mb-1 block" style={{ color: "oklch(0.55 0.01 250)" }}>First Payment Date</label>
+            <input
+              type="date" value={formStart} onChange={e => setFormStart(e.target.value)}
+              className="w-full px-3 py-2 rounded text-sm outline-none"
+              style={{ background: "oklch(0.22 0.025 250)", border: "1px solid oklch(0.72 0.12 75 / 30%)", color: "oklch(0.90 0.005 250)", colorScheme: "dark" }}
+            />
+          </div>
+          <div>
+            <label className="text-xs mb-1 block" style={{ color: "oklch(0.55 0.01 250)" }}>Notes (optional)</label>
+            <input
+              type="text" value={formNotes} onChange={e => setFormNotes(e.target.value)}
+              placeholder="e.g. Monthly payments"
+              className="w-full px-3 py-2 rounded text-sm outline-none"
+              style={{ background: "oklch(0.22 0.025 250)", border: "1px solid oklch(0.72 0.12 75 / 30%)", color: "oklch(0.90 0.005 250)" }}
+            />
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={handleCreatePlan}
+              disabled={createPlan.isPending}
+              className="flex-1 py-2 rounded text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
+              style={{ background: "oklch(0.72 0.12 75)", color: "oklch(0.13 0.025 250)" }}
+            >
+              {createPlan.isPending ? "Creating..." : "Create Plan"}
+            </button>
+            <button onClick={() => setShowForm(false)} className="px-3 py-2 rounded hover:bg-white/8" style={{ color: "oklch(0.50 0.01 250)" }}>
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Plans list */}
+      {plans.length === 0 && !showForm && (
+        <div className="text-center py-10">
+          <CreditCard className="w-8 h-8 mx-auto mb-2" style={{ color: "oklch(0.30 0.01 250)" }} />
+          <p className="text-sm" style={{ color: "oklch(0.45 0.01 250)" }}>No installment plans yet.</p>
+          <p className="text-xs mt-1" style={{ color: "oklch(0.35 0.01 250)" }}>Click “New Installment Plan” to create one.</p>
+        </div>
+      )}
+
+      {plans.map(plan => {
+        const collected = plan.items.filter(i => i.isPaid).reduce((s, i) => s + i.amount, 0);
+        const outstanding = plan.totalAmount - collected;
+        const pct = plan.totalAmount > 0 ? Math.min(100, (collected / plan.totalAmount) * 100) : 0;
+        const paidCount = plan.items.filter(i => i.isPaid).length;
+        const overdueCount = plan.items.filter(i => !i.isPaid && i.dueDate < today).length;
+
+        return (
+          <div key={plan.id} className="rounded-xl border overflow-hidden" style={{ background: "oklch(0.17 0.025 250)", borderColor: "oklch(1 0 0 / 10%)" }}>
+            {/* Plan header */}
+            <div className="px-4 py-3 border-b" style={{ borderColor: "oklch(1 0 0 / 8%)", background: "oklch(0.19 0.025 250)" }}>
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold" style={{ color: "oklch(0.93 0.005 250)" }}>{formatCurrency(plan.totalAmount)}</span>
+                    <span className="text-xs" style={{ color: "oklch(0.50 0.01 250)" }}>· {plan.installmentCount} installments</span>
+                    {overdueCount > 0 && (
+                      <span className="text-xs px-1.5 py-0.5 rounded font-semibold" style={{ background: "oklch(0.65 0.22 25 / 20%)", color: "oklch(0.65 0.22 25)" }}>
+                        {overdueCount} overdue
+                      </span>
+                    )}
+                  </div>
+                  {plan.notes && <p className="text-xs mt-0.5" style={{ color: "oklch(0.50 0.01 250)" }}>{plan.notes}</p>}
+                </div>
+                {confirmDeleteId === plan.id ? (
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => deletePlan.mutate({ id: plan.id })} className="text-xs px-2 py-1 rounded font-semibold" style={{ background: "oklch(0.65 0.22 25 / 20%)", color: "oklch(0.65 0.22 25)" }}>Delete</button>
+                    <button onClick={() => setConfirmDeleteId(null)} className="text-xs px-2 py-1 rounded" style={{ color: "oklch(0.50 0.01 250)" }}>Cancel</button>
+                  </div>
+                ) : (
+                  <button onClick={() => setConfirmDeleteId(plan.id)} className="p-1 rounded hover:bg-white/8" style={{ color: "oklch(0.45 0.01 250)" }}>
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Progress bar */}
+              <div className="mt-3">
+                <div className="flex justify-between text-xs mb-1">
+                  <span style={{ color: "oklch(0.55 0.01 250)" }}>Collected: <strong style={{ color: "oklch(0.65 0.18 145)" }}>{formatCurrency(collected)}</strong></span>
+                  <span style={{ color: "oklch(0.55 0.01 250)" }}>
+                    {outstanding <= 0
+                      ? <strong style={{ color: "oklch(0.65 0.18 145)" }}>PAID IN FULL ✓</strong>
+                      : <strong style={{ color: "oklch(0.70 0.22 25)" }}>Outstanding: {formatCurrency(outstanding)}</strong>
+                    }
+                  </span>
+                </div>
+                <div className="h-2 rounded-full overflow-hidden" style={{ background: "oklch(0.22 0.025 250)" }}>
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{ width: `${pct}%`, background: outstanding <= 0 ? "oklch(0.55 0.18 145)" : "oklch(0.72 0.12 75)" }}
+                  />
+                </div>
+                <div className="text-xs mt-1" style={{ color: "oklch(0.45 0.01 250)" }}>
+                  {paidCount} of {plan.installmentCount} paid
+                </div>
+              </div>
+            </div>
+
+            {/* Installment schedule */}
+            <div className="divide-y divide-white/[0.06]">
+              {plan.items.map(item => {
+                const isOverdue = !item.isPaid && item.dueDate < today;
+                const isDueToday = !item.isPaid && item.dueDate === today;
+                const isEditingDate = editingDueDateItemId === item.id;
+
+                return (
+                  <div
+                    key={item.id}
+                    className="flex items-center gap-3 px-4 py-2.5"
+                    style={{
+                      background: item.isPaid ? "oklch(0.55 0.18 145 / 5%)" : isOverdue ? "oklch(0.65 0.22 25 / 5%)" : "transparent",
+                      borderLeft: `3px solid ${
+                        item.isPaid ? "oklch(0.55 0.18 145)" : isOverdue ? "oklch(0.65 0.22 25)" : isDueToday ? "oklch(0.72 0.15 80)" : "transparent"
+                      }`,
+                    }}
+                  >
+                    {/* Paid toggle */}
+                    <button
+                      onClick={() => togglePaid.mutate({ id: item.id, isPaid: !item.isPaid, paidDate: !item.isPaid ? today : null })}
+                      className="flex-shrink-0 w-5 h-5 rounded border flex items-center justify-center transition-all"
+                      style={{
+                        background: item.isPaid ? "oklch(0.55 0.18 145)" : "transparent",
+                        borderColor: item.isPaid ? "oklch(0.55 0.18 145)" : "oklch(0.40 0.01 250)",
+                      }}
+                      title={item.isPaid ? "Mark as unpaid" : "Mark as paid"}
+                    >
+                      {item.isPaid && <Check className="w-3 h-3" style={{ color: "oklch(0.13 0.025 250)" }} />}
+                    </button>
+
+                    {/* Installment number */}
+                    <span className="text-xs font-mono flex-shrink-0 w-5 text-center" style={{ color: "oklch(0.45 0.01 250)" }}>#{item.installmentNumber}</span>
+
+                    {/* Due date (clickable to edit) */}
+                    <div className="flex-1 min-w-0">
+                      {isEditingDate ? (
+                        <input
+                          type="date"
+                          defaultValue={item.dueDate}
+                          autoFocus
+                          className="px-2 py-0.5 rounded text-xs outline-none"
+                          style={{ background: "oklch(0.22 0.025 250)", border: "1px solid oklch(0.72 0.12 75 / 50%)", color: "oklch(0.90 0.005 250)", colorScheme: "dark" }}
+                          onChange={e => {
+                            if (e.target.value) {
+                              updateDueDate.mutate({ id: item.id, dueDate: e.target.value });
+                              setEditingDueDateItemId(null);
+                            }
+                          }}
+                          onBlur={() => setEditingDueDateItemId(null)}
+                          onKeyDown={e => { if (e.key === "Escape") setEditingDueDateItemId(null); }}
+                        />
+                      ) : (
+                        <button
+                          onClick={() => !item.isPaid && setEditingDueDateItemId(item.id)}
+                          className="text-xs text-left transition-colors"
+                          style={{
+                            color: item.isPaid ? "oklch(0.50 0.01 250)" : isOverdue ? "oklch(0.65 0.22 25)" : isDueToday ? "oklch(0.72 0.15 80)" : "oklch(0.65 0.01 250)",
+                            textDecoration: item.isPaid ? "line-through" : "none",
+                            cursor: item.isPaid ? "default" : "pointer",
+                          }}
+                          title={item.isPaid ? undefined : "Click to change due date"}
+                        >
+                          {new Date(item.dueDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                          {isOverdue && <span className="ml-1 text-[10px]">(overdue)</span>}
+                          {isDueToday && <span className="ml-1 text-[10px]">(today)</span>}
+                        </button>
+                      )}
+                      {item.isPaid && item.paidDate && (
+                        <div className="text-[10px]" style={{ color: "oklch(0.45 0.01 250)" }}>
+                          Paid {new Date(item.paidDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Amount */}
+                    <span
+                      className="text-sm font-bold flex-shrink-0"
+                      style={{ color: item.isPaid ? "oklch(0.55 0.18 145)" : "oklch(0.72 0.12 75)" }}
+                    >
+                      {formatCurrency(item.amount)}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }

@@ -8,6 +8,8 @@ import {
   dayCloses,
   followUps,
   followUpComments,
+  installmentPlans,
+  installmentItems,
   type InsertUser,
   type InsertLead,
   type InsertLeadNote,
@@ -15,6 +17,8 @@ import {
   type InsertDayClose,
   type InsertFollowUp,
   type InsertFollowUpComment,
+  type InsertInstallmentPlan,
+  type InsertInstallmentItem,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -265,4 +269,51 @@ export async function deleteFollowUpComment(id: string) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.delete(followUpComments).where(eq(followUpComments.id, id));
+}
+
+// ─── Installment Plans ────────────────────────────────────────────────────────
+export async function getInstallmentPlansForLead(leadId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(installmentPlans).where(eq(installmentPlans.leadId, leadId)).orderBy(asc(installmentPlans.createdAt));
+}
+export async function createInstallmentPlan(data: InsertInstallmentPlan) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.insert(installmentPlans).values(data);
+  return data;
+}
+export async function updateInstallmentPlan(id: string, data: Partial<InsertInstallmentPlan>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(installmentPlans).set(data).where(eq(installmentPlans.id, id));
+}
+export async function deleteInstallmentPlan(id: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(installmentItems).where(eq(installmentItems.planId, id));
+  await db.delete(installmentPlans).where(eq(installmentPlans.id, id));
+}
+
+// ─── Installment Items ────────────────────────────────────────────────────────
+export async function getInstallmentItemsForPlan(planId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(installmentItems).where(eq(installmentItems.planId, planId)).orderBy(asc(installmentItems.installmentNumber));
+}
+export async function createInstallmentItem(data: InsertInstallmentItem) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.insert(installmentItems).values(data);
+  return data;
+}
+export async function updateInstallmentItem(id: string, data: Partial<InsertInstallmentItem>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(installmentItems).set(data).where(eq(installmentItems.id, id));
+}
+export async function deleteInstallmentItem(id: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(installmentItems).where(eq(installmentItems.id, id));
 }

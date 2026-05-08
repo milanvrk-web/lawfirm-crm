@@ -134,3 +134,36 @@ export const followUpComments = mysqlTable("follow_up_comments", {
 
 export type DbFollowUpComment = typeof followUpComments.$inferSelect;
 export type InsertFollowUpComment = typeof followUpComments.$inferInsert;
+
+// ─── CRM: Installment Plans ─────────────────────────────────────
+
+export const installmentPlans = mysqlTable("installment_plans", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  leadId: varchar("leadId", { length: 36 }).notNull(),
+  totalAmount: decimal("totalAmount", { precision: 10, scale: 2 }).notNull(),
+  installmentCount: int("installmentCount").notNull(),
+  startDate: varchar("startDate", { length: 10 }).notNull(),
+  notes: text("notes").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type DbInstallmentPlan = typeof installmentPlans.$inferSelect;
+export type InsertInstallmentPlan = typeof installmentPlans.$inferInsert;
+
+// ─── CRM: Installment Items ────────────────────────────────────
+
+export const installmentItems = mysqlTable("installment_items", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  planId: varchar("planId", { length: 36 }).notNull(),
+  installmentNumber: int("installmentNumber").notNull(),
+  dueDate: varchar("dueDate", { length: 10 }).notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  paidDate: varchar("paidDate", { length: 10 }),
+  isPaid: int("isPaid").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type DbInstallmentItem = typeof installmentItems.$inferSelect;
+export type InsertInstallmentItem = typeof installmentItems.$inferInsert;

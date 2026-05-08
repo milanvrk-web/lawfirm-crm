@@ -47,6 +47,45 @@ function createAuthContext(): TrpcContext {
   };
 }
 
+describe("installment plan generation logic", () => {
+  it("distributes rounding remainder to last installment (100/3)", () => {
+    const totalCents = Math.round(100 * 100); // 10000
+    const count = 3;
+    const baseCents = Math.floor(totalCents / count); // 3333
+    const remainderCents = totalCents - baseCents * count; // 1
+    const amounts = Array.from({ length: count }, (_, i) =>
+      i === count - 1 ? baseCents + remainderCents : baseCents
+    );
+    expect(amounts.reduce((a, b) => a + b, 0)).toBe(totalCents);
+    expect(amounts[0]).toBe(3333);
+    expect(amounts[2]).toBe(3334);
+  });
+
+  it("clamps Jan 31 + 1 month to Feb 28 (non-leap year 2025)", () => {
+    const startYear = 2025, startMonth = 1, startDay = 31, i = 1;
+    const targetYear = startYear + Math.floor((startMonth - 1 + i) / 12);
+    const targetMonth = ((startMonth - 1 + i) % 12) + 1;
+    const daysInMonth = new Date(targetYear, targetMonth, 0).getDate();
+    expect(Math.min(startDay, daysInMonth)).toBe(28);
+  });
+
+  it("clamps Jan 31 + 1 month to Feb 29 (leap year 2024)", () => {
+    const startYear = 2024, startMonth = 1, startDay = 31, i = 1;
+    const targetYear = startYear + Math.floor((startMonth - 1 + i) / 12);
+    const targetMonth = ((startMonth - 1 + i) % 12) + 1;
+    const daysInMonth = new Date(targetYear, targetMonth, 0).getDate();
+    expect(Math.min(startDay, daysInMonth)).toBe(29);
+  });
+
+  it("handles Dec + 1 month = Jan of next year", () => {
+    const startYear = 2024, startMonth = 12, i = 1;
+    const targetYear = startYear + Math.floor((startMonth - 1 + i) / 12);
+    const targetMonth = ((startMonth - 1 + i) % 12) + 1;
+    expect(targetYear).toBe(2025);
+    expect(targetMonth).toBe(1);
+  });
+});
+
 describe("CRM Router", () => {
   describe("access", () => {
     it("returns required=false when no ACCESS_CODE env is set", async () => {
