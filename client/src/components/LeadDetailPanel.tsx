@@ -64,6 +64,8 @@ export default function LeadDetailPanel({
 }: LeadDetailPanelProps) {
   const { leads, payments, followUps: allFollowUps, addFollowUp, updateFollowUp, deleteFollowUp, addFollowUpComment, addLeadNote } = useCRM();
 
+  const utils = trpc.useUtils();
+
   const [detailTab, setDetailTab] = useState<"followups" | "notes" | "info" | "installments">(initialTab);
   const [fuTitle, setFuTitle] = useState("Call back");
   const [fuDate, setFuDate] = useState(new Date().toISOString().split("T")[0]);
@@ -92,6 +94,14 @@ export default function LeadDetailPanel({
     lead ? payments.filter(p => p.leadId === lead.id) : [],
     [lead, payments]
   );
+
+  // ── Notes from DB ──────────────────────────────────────────
+  const { data: dbNotes = [], isLoading: notesLoading } = trpc.leads.getNotes.useQuery(
+    { leadId: lead?.id ?? "" },
+    { enabled: !!lead?.id }
+  );
+  const [isSavingNote, setIsSavingNote] = useState(false);
+
   if (!lead) return null;
 
   const handleSaveFollowUp = () => {
@@ -104,11 +114,17 @@ export default function LeadDetailPanel({
     toast.success("Follow-up added");
   };
 
-  const handleSaveNote = () => {
-    if (!noteText.trim()) return;
-    addLeadNote(lead.id, noteText.trim());
-    setNoteText("");
-    toast.success("Note saved");
+  const handleSaveNote = async () => {
+    if (!noteText.trim() || isSavingNote) return;
+    setIsSavingNote(true);
+    try {
+      await addLeadNote(lead.id, noteText.trim());
+      await utils.leads.getNotes.invalidate({ leadId: lead.id });
+      setNoteText("");
+      toast.success("Note saved");
+    } finally {
+      setIsSavingNote(false);
+    }
   };
 
   const handleAddComment = (fuId: string) => {
@@ -230,7 +246,7 @@ export default function LeadDetailPanel({
         <div className="flex border-b flex-shrink-0" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
           {([
             { id: "followups" as const, label: "Follow-Ups", icon: Bell, count: pendingCount },
-            { id: "notes" as const, label: "Notes", icon: MessageSquare, count: (lead.leadLog || []).length },
+            { id: "notes" as const, label: "Notes", icon: MessageSquare, count: dbNotes.length },
             { id: "info" as const, label: "Info", icon: FileText, count: 0 },
             { id: "installments" as const, label: "Payments", icon: CreditCard, count: 0 },
           ]).map(tab => (
@@ -461,18 +477,27 @@ export default function LeadDetailPanel({
                   style={{ background: "oklch(0.20 0.025 250)", border: "1px solid oklch(0.55 0.18 250 / 30%)", color: "oklch(0.90 0.005 250)" }}
                   onKeyDown={e => { if (e.key === "Enter") handleSaveNote(); }}
                 />
-                <button onClick={handleSaveNote} className="px-3 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity" style={{ background: "oklch(0.55 0.18 250)", color: "oklch(0.98 0 0)" }}>
-                  Save
+                <button
+                  onClick={handleSaveNote}
+                  disabled={isSavingNote}
+                  className="px-3 py-2 rounded-lg text-sm font-semibold transition-opacity disabled:opacity-50"
+                  style={{ background: "oklch(0.55 0.18 250)", color: "oklch(0.98 0 0)" }}
+                >
+                  {isSavingNote ? "Saving…" : "Save"}
                 </button>
               </div>
-              {(lead.leadLog || []).length === 0 ? (
+              {notesLoading ? (
+                <div className="text-center py-8">
+                  <div className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin mx-auto" style={{ borderColor: "oklch(0.55 0.18 250 / 40%)", borderTopColor: "transparent" }} />
+                </div>
+              ) : dbNotes.length === 0 ? (
                 <div className="text-center py-8">
                   <MessageSquare className="w-8 h-8 mx-auto mb-2" style={{ color: "oklch(0.30 0.01 250)" }} />
                   <p className="text-sm" style={{ color: "oklch(0.45 0.01 250)" }}>No notes yet.</p>
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {[...(lead.leadLog || [])].reverse().map(n => (
+                  {[...dbNotes].reverse().map(n => (
                     <div key={n.id} className="px-3 py-2.5 rounded-lg text-sm" style={{ background: "oklch(0.18 0.025 250)", borderLeft: "2px solid oklch(0.55 0.18 250 / 50%)" }}>
                       <div className="text-xs mb-1" style={{ color: "oklch(0.40 0.01 250)" }}>{formatTimestamp(n.timestamp)}</div>
                       <div style={{ color: "oklch(0.82 0.005 250)" }}>{n.text}</div>

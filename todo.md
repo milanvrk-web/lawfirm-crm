@@ -146,3 +146,7 @@
 - [x] Saving creates a follow-up task via addFollowUp and shows a success toast
 - [x] Make Stale Leads stat card on Dashboard clickable to open the drawer
 - [x] Drawer closes on overlay click or Escape key
+
+## Bug Fixes
+
+- [x] Fix lead notes: notes save successfully but do not display in the Lead Detail panel notes tab
