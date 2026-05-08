@@ -514,8 +514,8 @@ export default function LeadDetailPanel({
               {lead.stage === "Retained" && lead.retainerBooked > 0 && (() => {
                 const outstanding = lead.retainerBooked - totalReceived;
                 const pct = Math.min(100, totalReceived > 0 ? Math.round((totalReceived / lead.retainerBooked) * 100) : 0);
-                const balanceColor = outstanding <= 0 ? "oklch(0.65 0.18 145)" : pct >= 50 ? "oklch(0.72 0.12 75)" : "oklch(0.70 0.22 25)";
-                const balanceLabel = outstanding <= 0 ? "Fully Paid" : pct >= 50 ? "Partially Paid" : "Mostly Outstanding";
+                const balanceColor = outstanding <= 0 ? "oklch(0.65 0.18 145)" : totalReceived === 0 ? "oklch(0.70 0.22 25)" : "oklch(0.72 0.12 75)";
+                const balanceLabel = outstanding <= 0 ? "Fully Paid" : totalReceived === 0 ? "Nothing Collected" : "Partially Paid";
                 return (
                   <div className="rounded-lg p-4 border" style={{ background: "oklch(0.18 0.025 250)", borderColor: `${balanceColor} / 30%` }}>
                     <div className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "oklch(0.45 0.01 250)" }}>Retainer Balance</div>

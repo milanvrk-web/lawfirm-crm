@@ -158,14 +158,14 @@ export default function Payments() {
           <table className="w-full text-sm">
             <thead>
               <tr style={{ borderBottom: "1px solid oklch(1 0 0 / 8%)" }}>
-                {["Date", "Client", "Case", "Type", "Amount", "Received For", ""].map(h => (
+                {["Date", "Client", "Case", "Type", "Amount", "Outstanding", "Received For", ""].map(h => (
                   <th key={h} className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider" style={{ color: "oklch(0.55 0.01 250)" }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 && (
-                <tr><td colSpan={7} className="text-center py-10 text-sm" style={{ color: "oklch(0.40 0.01 250)" }}>No payments found</td></tr>
+                <tr><td colSpan={8} className="text-center py-10 text-sm" style={{ color: "oklch(0.40 0.01 250)" }}>No payments found</td></tr>
               )}
               {filtered.map(p => (
                 <tr key={p.id} className="border-b transition-colors hover:bg-white/2" style={{ borderColor: "oklch(1 0 0 / 5%)" }}>
@@ -185,6 +185,21 @@ export default function Payments() {
                   </td>
                   <td className="px-4 py-3 font-bold" style={{ color: "oklch(0.72 0.12 75)", fontFamily: "'Playfair Display', serif" }}>
                     {formatCurrency(p.amount)}
+                  </td>
+                  <td className="px-4 py-3">
+                    {(() => {
+                      if (!p.leadId) return <span className="text-xs" style={{ color: "oklch(0.40 0.01 250)" }}>—</span>;
+                      const lead = leads.find(l => l.id === p.leadId);
+                      if (!lead || !lead.retainerBooked) return <span className="text-xs" style={{ color: "oklch(0.40 0.01 250)" }}>—</span>;
+                      const collected = payments.filter(x => x.leadId === p.leadId).reduce((s, x) => s + x.amount, 0);
+                      const outstanding = lead.retainerBooked - collected;
+                      const color = outstanding <= 0 ? "oklch(0.65 0.18 145)" : outstanding < lead.retainerBooked * 0.5 ? "oklch(0.72 0.12 75)" : "oklch(0.70 0.22 25)";
+                      return (
+                        <span className="text-xs font-semibold" style={{ color }}>
+                          {outstanding <= 0 ? "Paid" : formatCurrency(outstanding)}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="px-4 py-3 text-xs max-w-48 truncate" style={{ color: "oklch(0.65 0.01 250)" }}>{p.receivedFor}</td>
                   <td className="px-4 py-3">

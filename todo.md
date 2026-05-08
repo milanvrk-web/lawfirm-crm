@@ -74,14 +74,14 @@
 
 - [x] Add age badge to each lead card showing days since creation (green <7d, yellow 7–14d, red >14d)
 - [x] Add age column/badge to Leads page list view
-- [ ] Add "Stale Leads" count to Dashboard stat cards (leads with no activity >14 days)
+- [x] Add "Stale Leads" count to Dashboard stat cards (leads with no activity >14 days)
 
 ## Lost Lead Reason Tracking
 
 - [x] Add lostReason field to leads table (DB migration)
 - [x] When marking a lead as Lost, show a modal requiring a reason (price, competitor, not qualified, no response, other)
 - [x] Show lost reason on lead detail Info tab
-- [ ] Add Lost Reasons breakdown chart to Dashboard (pie or bar)
+- [x] Add Lost Reasons breakdown chart to Dashboard (pie or bar)
 
 ## Kanban Board View
 
@@ -100,9 +100,9 @@
 
 ## Retainer Balance Tracker
 
-- [ ] In Lead Detail panel Payments tab, show retainer booked vs. total collected vs. outstanding balance
-- [ ] Color-code outstanding balance (green = fully paid, yellow = partially paid, red = nothing collected)
-- [ ] Add "Outstanding Balance" column to Payments page table
+- [x] In Lead Detail panel Payments tab, show retainer booked vs. total collected vs. outstanding balance
+- [x] Color-code outstanding balance (green = fully paid, yellow = partially paid, red = nothing collected)
+- [x] Add "Outstanding Balance" column to Payments page table
 
 ## Revenue Velocity Chart
 
@@ -130,7 +130,7 @@
 
 - [x] Add a "This Week's Follow-Ups" section to the Follow-Ups page showing all tasks due Mon–Sun of current week grouped by day
 - [x] Highlight today's tasks with a gold border
-- [ ] Show completion count vs. total per day (e.g., "3 / 5 done")
+- [x] Show completion count vs. total per day (e.g., "3 / 5 done")
 
 ## Overdue Follow-Up Escalation
 

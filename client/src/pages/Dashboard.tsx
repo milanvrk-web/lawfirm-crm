@@ -268,6 +268,27 @@ export default function Dashboard() {
   const todayExisting = todayPayments.filter(p => p.paymentType === "Existing Client").reduce((s, p) => s + p.amount, 0);
   const todayTotal = todayNew + todayExisting;
   const todayLeads = leads.filter(l => l.date === todayStr).length;
+
+  // Stale leads: active (non-lost, non-retained) leads with no payment or follow-up activity in 14+ days
+  // Activity = latest payment date OR latest follow-up date OR lead creation date
+  const staleLeads = useMemo(() => {
+    const cutoffMs = Date.now() - 14 * 24 * 60 * 60 * 1000;
+    return leads.filter(l => {
+      if (l.stage === "Lost" || l.stage === "Retained") return false;
+      // Find latest activity: last payment or last follow-up for this lead
+      const lastPaymentDate = payments
+        .filter(p => p.leadId === l.id)
+        .map(p => new Date(p.date + "T12:00:00").getTime())
+        .reduce((max, t) => Math.max(max, t), 0);
+      const lastFollowUpDate = followUps
+        .filter(f => f.leadId === l.id)
+        .map(f => new Date(f.dueDate + "T12:00:00").getTime())
+        .reduce((max, t) => Math.max(max, t), 0);
+      const createdMs = new Date(l.date + "T12:00:00").getTime();
+      const lastActivity = Math.max(createdMs, lastPaymentDate, lastFollowUpDate);
+      return lastActivity < cutoffMs;
+    }).length;
+  }, [leads, payments, followUps]);
   // Use convertedDate for today's conversion count so same-day converts show immediately
   const todayConverted = leads.filter(l => l.stage === "Retained" && (l.convertedDate === todayStr || (!l.convertedDate && l.date === todayStr))).length;
 
@@ -676,7 +697,7 @@ export default function Dashboard() {
       })()}
 
             {/* ── 7 Stat Cards ────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 xl:grid-cols-8 gap-3">
         <StatCard icon={<Users className="w-4 h-4" />} label="Leads In" value={totalLeads} sub="this month" onClick={() => setDrillDown("leads")} />
         <StatCard icon={<UserCheck className="w-4 h-4" />} label="Converted" value={converted} sub={`${convRate}% conv. rate`} onClick={() => setDrillDown("converted")} />
         <StatCard icon={<TrendingUp className="w-4 h-4" />} label="Conv. Rate" value={`${convRate}%`} sub={`${converted} of ${totalLeads}`} onClick={() => setDrillDown("converted")} />
@@ -693,6 +714,16 @@ export default function Dashboard() {
           statusBorder={sc.border}
           statusLabel={sc.label}
           onClick={() => setDrillDown("totalReceived")}
+        />
+        <StatCard
+          icon={<AlertTriangle className="w-4 h-4" />}
+          label="Stale Leads"
+          value={staleLeads}
+          sub="active, >14 days old"
+          statusColor={staleLeads > 0 ? "oklch(0.70 0.22 25)" : "oklch(0.65 0.18 145)"}
+          statusBg={staleLeads > 0 ? "oklch(0.70 0.22 25 / 10%)" : "oklch(0.65 0.18 145 / 10%)"}
+          statusBorder={staleLeads > 0 ? "oklch(0.70 0.22 25 / 30%)" : "oklch(0.65 0.18 145 / 30%)"}
+          statusLabel={staleLeads > 0 ? `${staleLeads} need attention` : "All fresh"}
         />
       </div>
 
