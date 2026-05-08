@@ -23,6 +23,7 @@ import AllData from "./pages/AllData";
 import FollowUps from "./pages/FollowUps";
 import Settings from "./pages/Settings";
 import Members from "./pages/Members";
+import PipelineEditor from "./pages/PipelineEditor";
 import NotFound from "./pages/NotFound";
 import { trpc } from "@/lib/trpc";
 
@@ -39,6 +40,7 @@ function Router() {
         <Route path="/follow-ups" component={FollowUps} />
         <Route path="/settings" component={Settings} />
         <Route path="/members" component={Members} />
+        <Route path="/pipeline-editor" component={PipelineEditor} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

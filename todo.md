@@ -250,3 +250,22 @@
 - [x] Lead Detail panel Onboarding tab shows the same checklist with timestamps and completed-by info
 - [x] When all 4 steps are done, card shows a green "Onboarding Complete" badge
 - [x] Dragging a lead to Onboarding from Retained does NOT open Convert modal (already retained)
+
+## Pipeline Editor (Self-Service Stage Management)
+
+- [x] Add pipeline_stages table: id, name, color, order, isDefault (bool), createdAt
+- [x] Add stage_checklist_templates table: id, stageId, label, description, order
+- [x] Seed default stages (New Lead, Consultation, Follow-Up, Retained, Onboarding, Lost) on first load if table is empty
+- [x] Add DB helpers: getPipelineStages, createStage, updateStage, deleteStage, reorderStages
+- [x] Add DB helpers: getStageChecklistTemplates, createChecklistTemplate, updateChecklistTemplate, deleteChecklistTemplate, reorderChecklistTemplates
+- [x] Add tRPC router: pipeline.getStages, pipeline.createStage, pipeline.updateStage, pipeline.deleteStage, pipeline.reorderStages
+- [x] Add tRPC router: pipeline.getChecklistTemplates, pipeline.createChecklistTemplate, pipeline.updateChecklistTemplate, pipeline.deleteChecklistTemplate
+- [x] Build Pipeline Editor page accessible from sidebar Settings or a gear icon on the Leads page
+- [x] Stage list: show all stages in order with drag-to-reorder, edit name/color, delete (with confirmation if leads exist in that stage)
+- [x] Add Stage form: name, color picker (preset palette), position
+- [x] Per-stage checklist section: show sub-task templates for that stage, add/edit/delete/reorder
+- [x] Wire Kanban board to load stages dynamically from DB (replace hardcoded STAGES array)
+- [x] Wire LeadCard checklist to use dynamic templates from DB (replace hardcoded ONBOARDING_STEPS)
+- [x] Wire LeadDetailPanel Onboarding tab to show checklist for any stage that has templates
+- [x] Preserve Onboarding-specific checklist behavior for the built-in Onboarding stage
+- [x] Add Pipeline Editor link to sidebar navigation

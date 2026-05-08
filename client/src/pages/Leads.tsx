@@ -109,6 +109,23 @@ export default function Leads() {
   // ── Lead Detail Slide-Over ─────────────────────────────────
   const [detailLeadId, setDetailLeadId] = useState<string | null>(null);
 
+  // ── Dynamic pipeline stages from DB ──────────────────────
+  const { data: dbStages = [] } = trpc.pipeline.getStages.useQuery();
+  const { data: allChecklistTemplates = [] } = trpc.pipeline.getAllChecklistTemplates.useQuery();
+
+  // Build a color map from DB stages (fallback to static map for stages not yet in DB)
+  const dynamicStageColor = useMemo(() => {
+    const map: Record<string, string> = { ...stageColor };
+    dbStages.forEach(s => { map[s.name] = s.color; });
+    return map;
+  }, [dbStages]);
+
+  // Ordered stage names from DB (fallback to STAGES if DB not loaded yet)
+  const pipelineStageNames = useMemo(() => {
+    if (dbStages.length === 0) return STAGES as string[];
+    return [...dbStages].sort((a, b) => a.order - b.order).map(s => s.name);
+  }, [dbStages]);
+
   const filtered = useMemo(() => {
     return leads.filter(l => {
       const matchSearch = !search || l.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -119,16 +136,22 @@ export default function Leads() {
   }, [leads, search, filterStage]);
 
   const byStage = useMemo(() => {
-    const map: Record<LeadStage, Lead[]> = { "New Lead": [], "Consultation": [], "Follow-Up": [], "Retained": [], "Onboarding": [], "Lost": [] };
-    filtered.forEach(l => map[l.stage].push(l));
+    const map: Record<string, Lead[]> = {};
+    pipelineStageNames.forEach(s => { map[s] = []; });
+    // Catch leads in stages not yet in the map (e.g. renamed stages)
+    filtered.forEach(l => {
+      if (!map[l.stage]) map[l.stage] = [];
+      map[l.stage].push(l);
+    });
     return map;
-  }, [filtered]);
+  }, [filtered, pipelineStageNames]);
 
   const stageValue = useMemo(() => {
-    const map: Record<LeadStage, number> = { "New Lead": 0, "Consultation": 0, "Follow-Up": 0, "Retained": 0, "Onboarding": 0, "Lost": 0 };
+    const map: Record<string, number> = {};
+    pipelineStageNames.forEach(s => { map[s] = 0; });
     leads.forEach(l => { map[l.stage] = (map[l.stage] || 0) + (l.retainerBooked || l.quotedAmount || 0); });
     return map;
-  }, [leads]);
+  }, [leads, pipelineStageNames]);
 
   const [dragOverStage, setDragOverStage] = useState<LeadStage | null>(null);
 
@@ -338,61 +361,71 @@ export default function Leads() {
         </Select>
       </div>
 
-      {/* Pipeline columns */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-        {STAGES.map(stage => (
-          <div
-            key={stage}
-            className="rounded-lg border overflow-hidden transition-all"
-            style={{
-              background: dragOverStage === stage ? "oklch(0.20 0.035 250)" : "oklch(0.16 0.025 250)",
-              borderColor: dragOverStage === stage ? stageColor[stage] : "oklch(1 0 0 / 8%)",
-            }}
-            onDragOver={e => { e.preventDefault(); setDragOverStage(stage); }}
-            onDragLeave={() => setDragOverStage(null)}
-            onDrop={e => handleDrop(e, stage)}
-          >
-            <div className="px-4 py-3 border-b" style={{ borderColor: "oklch(1 0 0 / 8%)", borderLeft: `3px solid ${stageColor[stage]}` }}>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold" style={{ color: "oklch(0.80 0.005 250)" }}>{stage}</span>
-                <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: `${stageColor[stage]}20`, color: stageColor[stage] }}>
-                  {byStage[stage].length}
-                </span>
+      {/* Pipeline columns — dynamic from DB */}
+      <div className="flex gap-4 overflow-x-auto pb-2" style={{ minHeight: 400 }}>
+        {pipelineStageNames.map(stage => {
+          const color = dynamicStageColor[stage] ?? "oklch(0.55 0.18 250)";
+          const stageLeads = byStage[stage] ?? [];
+          const stageTemplates = allChecklistTemplates.filter(t => {
+            const dbStage = dbStages.find(s => s.name === stage);
+            return dbStage && t.stageId === dbStage.id;
+          });
+          return (
+            <div
+              key={stage}
+              className="rounded-lg border overflow-hidden transition-all flex-shrink-0"
+              style={{
+                width: 280,
+                background: dragOverStage === stage ? "oklch(0.20 0.035 250)" : "oklch(0.16 0.025 250)",
+                borderColor: dragOverStage === stage ? color : "oklch(1 0 0 / 8%)",
+              }}
+              onDragOver={e => { e.preventDefault(); setDragOverStage(stage as LeadStage); }}
+              onDragLeave={() => setDragOverStage(null)}
+              onDrop={e => handleDrop(e, stage as LeadStage)}
+            >
+              <div className="px-4 py-3 border-b" style={{ borderColor: "oklch(1 0 0 / 8%)", borderLeft: `3px solid ${color}` }}>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold" style={{ color: "oklch(0.80 0.005 250)" }}>{stage}</span>
+                  <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: `${color}20`, color }}>
+                    {stageLeads.length}
+                  </span>
+                </div>
+                {(stageValue[stage] ?? 0) > 0 && (
+                  <div className="text-xs mt-1 font-medium" style={{ color: "oklch(0.72 0.12 75)" }}>
+                    {formatCurrency(stageValue[stage])} pipeline
+                  </div>
+                )}
               </div>
-              {stageValue[stage] > 0 && (
-                <div className="text-xs mt-1 font-medium" style={{ color: "oklch(0.72 0.12 75)" }}>
-                  {formatCurrency(stageValue[stage])} pipeline
-                </div>
-              )}
+              <div className="p-2 space-y-2 max-h-[600px] overflow-y-auto">
+                {stageLeads.length === 0 && (
+                  <div className="text-center py-8 text-xs" style={{ color: dragOverStage === stage ? color : "oklch(0.40 0.01 250)" }}>
+                    {dragOverStage === stage ? "Drop here" : "No leads"}
+                  </div>
+                )}
+                {stageLeads.map(lead => (
+                  <div
+                    key={lead.id}
+                    draggable
+                    onDragStart={e => handleDragStart(e, lead.id)}
+                    style={{ cursor: "grab" }}
+                  >
+                    <LeadCard
+                      lead={lead}
+                      stageTemplates={stageTemplates}
+                      onOpenDetail={() => openDetail(lead)}
+                      onEdit={() => openEdit(lead)}
+                      onDelete={() => { deleteLead(lead.id); toast.success("Lead deleted"); }}
+                      onConvert={() => setConvertLead(lead)}
+                      onMarkDone={handleMarkDone}
+                      onSnooze={handleSnooze}
+                      onReschedule={handleReschedule}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="p-2 space-y-2 max-h-[600px] overflow-y-auto">
-              {byStage[stage].length === 0 && (
-                <div className="text-center py-8 text-xs" style={{ color: dragOverStage === stage ? stageColor[stage] : "oklch(0.40 0.01 250)" }}>
-                  {dragOverStage === stage ? "Drop here" : "No leads"}
-                </div>
-              )}
-              {byStage[stage].map(lead => (
-                <div
-                  key={lead.id}
-                  draggable
-                  onDragStart={e => handleDragStart(e, lead.id)}
-                  style={{ cursor: "grab" }}
-                >
-                  <LeadCard
-                    lead={lead}
-                    onOpenDetail={() => openDetail(lead)}
-                    onEdit={() => openEdit(lead)}
-                    onDelete={() => { deleteLead(lead.id); toast.success("Lead deleted"); }}
-                    onConvert={() => setConvertLead(lead)}
-                    onMarkDone={handleMarkDone}
-                    onSnooze={handleSnooze}
-                    onReschedule={handleReschedule}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* ── Lead Detail Slide-Over ──────────────────────────── */}
@@ -612,10 +645,13 @@ export default function Leads() {
 }
 
 // ── LeadCard Component (compact — click name to open detail panel) ──
+type ChecklistTemplate = { id: string; stageId: string; label: string; description: string | null; order: number; createdAt: Date; };
+
 function LeadCard({
-  lead, onOpenDetail, onEdit, onDelete, onConvert, onMarkDone, onSnooze, onReschedule,
+  lead, stageTemplates = [], onOpenDetail, onEdit, onDelete, onConvert, onMarkDone, onSnooze, onReschedule,
 }: {
   lead: Lead;
+  stageTemplates?: ChecklistTemplate[];
   onOpenDetail: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -628,31 +664,55 @@ function LeadCard({
   const { payments: allPayments, followUps: allFollowUps } = useCRM();
   const { activeMember } = useActiveMember();
 
-  // ── Onboarding checklist ──────────────────────────────────
+   // ── Dynamic stage checklist (works for any stage with templates) ──────
+  const hasTemplates = stageTemplates.length > 0;
+  const utils = trpc.useUtils();
+  const { data: completionData, refetch: refetchCompletions } = trpc.pipeline.getCompletions.useQuery(
+    { leadId: lead.id },
+    { enabled: hasTemplates }
+  );
+  const toggleCompletionMut = trpc.pipeline.toggleCompletion.useMutation({
+    onSuccess: () => { refetchCompletions(); utils.pipeline.getCompletions.invalidate({ leadId: lead.id }); }
+  });
+  const completedTemplateIds = new Set((completionData ?? []).filter(c => c.completedAt).map(c => c.templateItemId));
+  const completedCount = completedTemplateIds.size;
+  const totalSteps = stageTemplates.length;
+  const allDone = totalSteps > 0 && completedCount === totalSteps;
+
+  // Legacy Onboarding checklist (for leads using the old onboarding_checklist table)
+  const { data: legacyChecklistData, refetch: refetchLegacy } = trpc.onboarding.getByLead.useQuery(
+    { leadId: lead.id },
+    { enabled: lead.stage === "Onboarding" && !hasTemplates }
+  );
   const ONBOARDING_STEPS = [
     { key: "consultation_booked" as const, label: "Consultation Booked" },
     { key: "case_notes_created" as const, label: "Case Notes Created" },
     { key: "task_added_cerenade" as const, label: "Task Added in Cerenade" },
     { key: "task_added_planner" as const, label: "Task Added in Planner" },
   ];
-  const { data: checklistData, refetch: refetchChecklist } = trpc.onboarding.getByLead.useQuery(
-    { leadId: lead.id },
-    { enabled: lead.stage === "Onboarding" }
-  );
-  const toggleStepMut = trpc.onboarding.toggleStep.useMutation({ onSuccess: () => refetchChecklist() });
-  const completedSteps = new Set((checklistData ?? []).filter(c => c.completedAt).map(c => c.step));
-  const completedCount = completedSteps.size;
-  const allDone = completedCount === 4;
+  const toggleStepMut = trpc.onboarding.toggleStep.useMutation({ onSuccess: () => refetchLegacy() });
+  const legacyCompletedSteps = new Set((legacyChecklistData ?? []).filter(c => c.completedAt).map(c => c.step));
+  const legacyAllDone = legacyCompletedSteps.size === 4;
 
   const handleToggleStep = useCallback((step: "consultation_booked" | "case_notes_created" | "task_added_cerenade" | "task_added_planner") => {
-    const isCompleted = completedSteps.has(step);
+    const isCompleted = legacyCompletedSteps.has(step);
     toggleStepMut.mutate({
       leadId: lead.id,
       step,
       completedAt: isCompleted ? null : new Date().toISOString(),
       completedBy: isCompleted ? null : (activeMember?.name ?? "Staff"),
     });
-  }, [completedSteps, lead.id, activeMember, toggleStepMut]);
+  }, [legacyCompletedSteps, lead.id, activeMember, toggleStepMut]);
+
+  const handleToggleCompletion = useCallback((templateItemId: string) => {
+    const isCompleted = completedTemplateIds.has(templateItemId);
+    toggleCompletionMut.mutate({
+      leadId: lead.id,
+      templateItemId,
+      completedAt: isCompleted ? null : new Date().toISOString(),
+      completedBy: isCompleted ? null : (activeMember?.name ?? "Staff"),
+    });
+  }, [completedTemplateIds, lead.id, activeMember, toggleCompletionMut]);
   const totalReceived = allPayments.filter(p => p.leadId === lead.id).reduce((s, p) => s + p.amount, 0);
   const outstanding = lead.retainerBooked > 0 ? lead.retainerBooked - totalReceived : 0;
   const pct = lead.retainerBooked > 0 ? Math.min(100, (totalReceived / lead.retainerBooked) * 100) : 0;
@@ -825,27 +885,64 @@ function LeadCard({
         </div>
       )}
 
-      {/* Onboarding Checklist (Onboarding stage only) */}
-      {lead.stage === "Onboarding" && (
+      {/* Dynamic Stage Checklist (any stage with templates) */}
+      {hasTemplates && (
         <div className="mt-2.5 rounded-lg p-2.5" style={{ background: "oklch(0.22 0.03 200 / 40%)", border: "1px solid oklch(0.65 0.18 200 / 25%)" }}>
-          {/* Header with progress */}
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold" style={{ color: "oklch(0.65 0.18 200)" }}>Onboarding Checklist</span>
+            <span className="text-xs font-semibold" style={{ color: "oklch(0.65 0.18 200)" }}>Checklist</span>
             {allDone ? (
-              <span className="text-xs font-semibold px-1.5 py-0.5 rounded" style={{ background: "oklch(0.55 0.18 145 / 20%)", color: "oklch(0.55 0.18 145)", border: "1px solid oklch(0.55 0.18 145 / 40%)" }}>✓ Onboarding Complete</span>
+              <span className="text-xs font-semibold px-1.5 py-0.5 rounded" style={{ background: "oklch(0.55 0.18 145 / 20%)", color: "oklch(0.55 0.18 145)", border: "1px solid oklch(0.55 0.18 145 / 40%)" }}>✓ Complete</span>
             ) : (
-              <span className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>{completedCount}/4</span>
+              <span className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>{completedCount}/{totalSteps}</span>
             )}
           </div>
-          {/* Progress bar */}
           <div className="h-1 rounded-full mb-2.5 overflow-hidden" style={{ background: "oklch(0.22 0.025 250)" }}>
-            <div className="h-full rounded-full transition-all duration-300" style={{ width: `${(completedCount / 4) * 100}%`, background: allDone ? "oklch(0.55 0.18 145)" : "oklch(0.65 0.18 200)" }} />
+            <div className="h-full rounded-full transition-all duration-300" style={{ width: `${totalSteps > 0 ? (completedCount / totalSteps) * 100 : 0}%`, background: allDone ? "oklch(0.55 0.18 145)" : "oklch(0.65 0.18 200)" }} />
           </div>
-          {/* Steps */}
+          <div className="space-y-1.5">
+            {stageTemplates.map(t => {
+              const done = completedTemplateIds.has(t.id);
+              const comp = (completionData ?? []).find(c => c.templateItemId === t.id && c.completedAt);
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => handleToggleCompletion(t.id)}
+                  className="w-full flex items-center gap-2 text-left transition-opacity hover:opacity-80"
+                  disabled={toggleCompletionMut.isPending}
+                >
+                  {done
+                    ? <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "oklch(0.55 0.18 145)" }} />
+                    : <Circle className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "oklch(0.40 0.01 250)" }} />
+                  }
+                  <span className="text-xs flex-1" style={{ color: done ? "oklch(0.55 0.01 250)" : "oklch(0.80 0.005 250)", textDecoration: done ? "line-through" : "none" }}>{t.label}</span>
+                  {done && comp?.completedBy && (
+                    <span className="text-xs flex-shrink-0" style={{ color: "oklch(0.45 0.01 250)" }}>{comp.completedBy}</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Legacy Onboarding Checklist (Onboarding stage, no templates yet) */}
+      {lead.stage === "Onboarding" && !hasTemplates && (
+        <div className="mt-2.5 rounded-lg p-2.5" style={{ background: "oklch(0.22 0.03 200 / 40%)", border: "1px solid oklch(0.65 0.18 200 / 25%)" }}>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold" style={{ color: "oklch(0.65 0.18 200)" }}>Onboarding Checklist</span>
+            {legacyAllDone ? (
+              <span className="text-xs font-semibold px-1.5 py-0.5 rounded" style={{ background: "oklch(0.55 0.18 145 / 20%)", color: "oklch(0.55 0.18 145)", border: "1px solid oklch(0.55 0.18 145 / 40%)" }}>✓ Onboarding Complete</span>
+            ) : (
+              <span className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>{legacyCompletedSteps.size}/4</span>
+            )}
+          </div>
+          <div className="h-1 rounded-full mb-2.5 overflow-hidden" style={{ background: "oklch(0.22 0.025 250)" }}>
+            <div className="h-full rounded-full transition-all duration-300" style={{ width: `${(legacyCompletedSteps.size / 4) * 100}%`, background: legacyAllDone ? "oklch(0.55 0.18 145)" : "oklch(0.65 0.18 200)" }} />
+          </div>
           <div className="space-y-1.5">
             {ONBOARDING_STEPS.map(({ key, label }) => {
-              const done = completedSteps.has(key);
-              const stepData = (checklistData ?? []).find(c => c.step === key && c.completedAt);
+              const done = legacyCompletedSteps.has(key);
+              const stepData = (legacyChecklistData ?? []).find(c => c.step === key && c.completedAt);
               return (
                 <button
                   key={key}

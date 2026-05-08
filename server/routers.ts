@@ -680,5 +680,130 @@ export const appRouter = router({
         return { ok: true };
       }),
   }),
+
+  // ─── Pipeline Stage Editor ─────────────────────────────────
+
+  pipeline: router({
+    /** Returns all stages ordered by `order`. Seeds defaults on first call. */
+    getStages: publicProcedure.query(async () => {
+      await db.seedDefaultPipelineStages();
+      return db.getPipelineStages();
+    }),
+
+    createStage: publicProcedure
+      .input(z.object({
+        name: z.string().min(1),
+        color: z.string().default("oklch(0.55 0.18 250)"),
+        order: z.number().int().default(99),
+      }))
+      .mutation(async ({ input }) => {
+        const { nanoid } = await import("nanoid");
+        const id = nanoid();
+        await db.createPipelineStage({ id, name: input.name, color: input.color, order: input.order, isDefault: 0 });
+        return { id };
+      }),
+
+    updateStage: publicProcedure
+      .input(z.object({
+        id: z.string(),
+        name: z.string().min(1).optional(),
+        color: z.string().optional(),
+        order: z.number().int().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...updates } = input;
+        await db.updatePipelineStage(id, updates);
+        return { ok: true };
+      }),
+
+    deleteStage: publicProcedure
+      .input(z.object({ id: z.string() }))
+      .mutation(async ({ input }) => {
+        await db.deletePipelineStage(input.id);
+        return { ok: true };
+      }),
+
+    reorderStages: publicProcedure
+      .input(z.array(z.object({ id: z.string(), order: z.number().int() })))
+      .mutation(async ({ input }) => {
+        for (const { id, order } of input) {
+          await db.updatePipelineStage(id, { order });
+        }
+        return { ok: true };
+      }),
+
+    /** Returns all checklist templates for a given stage */
+    getChecklistTemplates: publicProcedure
+      .input(z.object({ stageId: z.string() }))
+      .query(async ({ input }) => {
+        return db.getStageChecklistTemplates(input.stageId);
+      }),
+
+    /** Returns ALL checklist templates across all stages (used by Kanban) */
+    getAllChecklistTemplates: publicProcedure.query(async () => {
+      return db.getAllStageChecklistTemplates();
+    }),
+
+    createChecklistTemplate: publicProcedure
+      .input(z.object({
+        stageId: z.string(),
+        label: z.string().min(1),
+        description: z.string().optional(),
+        order: z.number().int().default(0),
+      }))
+      .mutation(async ({ input }) => {
+        const { nanoid } = await import("nanoid");
+        const id = nanoid();
+        await db.createStageChecklistTemplate({ id, stageId: input.stageId, label: input.label, description: input.description ?? null, order: input.order });
+        return { id };
+      }),
+
+    updateChecklistTemplate: publicProcedure
+      .input(z.object({
+        id: z.string(),
+        label: z.string().min(1).optional(),
+        description: z.string().optional(),
+        order: z.number().int().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...updates } = input;
+        await db.updateStageChecklistTemplate(id, updates);
+        return { ok: true };
+      }),
+
+    deleteChecklistTemplate: publicProcedure
+      .input(z.object({ id: z.string() }))
+      .mutation(async ({ input }) => {
+        await db.deleteStageChecklistTemplate(input.id);
+        return { ok: true };
+      }),
+
+    /** Toggle completion of a checklist template item for a specific lead */
+    toggleCompletion: publicProcedure
+      .input(z.object({
+        leadId: z.string(),
+        templateItemId: z.string(),
+        completedAt: z.string().nullable(),
+        completedBy: z.string().nullable(),
+      }))
+      .mutation(async ({ input }) => {
+        const { nanoid } = await import("nanoid");
+        await db.upsertStageChecklistCompletion({
+          id: nanoid(),
+          leadId: input.leadId,
+          templateItemId: input.templateItemId,
+          completedAt: input.completedAt ?? undefined,
+          completedBy: input.completedBy ?? undefined,
+        });
+        return { ok: true };
+      }),
+
+    /** Get all completions for a lead */
+    getCompletions: publicProcedure
+      .input(z.object({ leadId: z.string() }))
+      .query(async ({ input }) => {
+        return db.getStageChecklistCompletions(input.leadId);
+      }),
+  }),
 });
 export type AppRouter = typeof appRouter;

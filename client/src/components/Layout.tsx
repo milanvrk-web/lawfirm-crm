@@ -22,6 +22,7 @@ import {
   Bell,
   Settings2,
   UserCog,
+  Workflow,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCRM } from "@/contexts/CRMContext";
@@ -36,6 +37,7 @@ const BASE_NAV = [
   { path: "/close-day", icon: CalendarCheck, label: "Close Day" },
   { path: "/all-data", icon: Database, label: "All Data" },
   { path: "/members", icon: UserCog, label: "Members" },
+  { path: "/pipeline-editor", icon: Workflow, label: "Pipeline Editor" },
   { path: "/settings", icon: Settings2, label: "Settings" },
 ];
 

@@ -12,7 +12,13 @@ import {
   installmentItems,
   crmMembers,
   onboardingChecklist,
+  pipelineStages,
+  stageChecklistTemplates,
+  stageChecklistCompletions,
   type InsertOnboardingChecklist,
+  type InsertPipelineStage,
+  type InsertStageChecklistTemplate,
+  type InsertStageChecklistCompletion,
   type InsertUser,
   type InsertLead,
   type InsertLeadNote,
@@ -504,5 +510,116 @@ export async function upsertOnboardingStep(data: InsertOnboardingChecklist) {
       .where(eq(onboardingChecklist.id, existing[0].id));
   } else {
     await db.insert(onboardingChecklist).values(data);
+  }
+}
+
+// ─── Pipeline Stages ─────────────────────────────────────────────────────────
+export async function getPipelineStages() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(pipelineStages).orderBy(asc(pipelineStages.order));
+}
+
+export async function createPipelineStage(data: InsertPipelineStage) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.insert(pipelineStages).values(data);
+  return data;
+}
+
+export async function updatePipelineStage(id: string, updates: Partial<InsertPipelineStage>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(pipelineStages).set(updates).where(eq(pipelineStages.id, id));
+}
+
+export async function deletePipelineStage(id: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(pipelineStages).where(eq(pipelineStages.id, id));
+}
+
+// ─── Stage Checklist Templates ───────────────────────────────────────────────
+export async function getStageChecklistTemplates(stageId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(stageChecklistTemplates)
+    .where(eq(stageChecklistTemplates.stageId, stageId))
+    .orderBy(asc(stageChecklistTemplates.order));
+}
+
+export async function getAllStageChecklistTemplates() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(stageChecklistTemplates).orderBy(asc(stageChecklistTemplates.stageId), asc(stageChecklistTemplates.order));
+}
+
+export async function createStageChecklistTemplate(data: InsertStageChecklistTemplate) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.insert(stageChecklistTemplates).values(data);
+  return data;
+}
+
+export async function updateStageChecklistTemplate(id: string, updates: Partial<InsertStageChecklistTemplate>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(stageChecklistTemplates).set(updates).where(eq(stageChecklistTemplates.id, id));
+}
+
+export async function deleteStageChecklistTemplate(id: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(stageChecklistTemplates).where(eq(stageChecklistTemplates.id, id));
+}
+
+// ─── Stage Checklist Completions (per-lead, per-template-item) ───────────────
+export async function getStageChecklistCompletions(leadId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(stageChecklistCompletions).where(eq(stageChecklistCompletions.leadId, leadId));
+}
+
+export async function upsertStageChecklistCompletion(data: InsertStageChecklistCompletion) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const existing = await db.select().from(stageChecklistCompletions)
+    .where(and(eq(stageChecklistCompletions.leadId, data.leadId), eq(stageChecklistCompletions.templateItemId, data.templateItemId)));
+  if (existing.length > 0) {
+    await db.update(stageChecklistCompletions)
+      .set({ completedAt: data.completedAt ?? null, completedBy: data.completedBy ?? null })
+      .where(eq(stageChecklistCompletions.id, existing[0].id));
+  } else {
+    await db.insert(stageChecklistCompletions).values(data);
+  }
+}
+
+export async function seedDefaultPipelineStages() {
+  const db = await getDb();
+  if (!db) return;
+  const existing = await db.select().from(pipelineStages);
+  if (existing.length > 0) return; // already seeded
+  const { nanoid } = await import("nanoid");
+  const defaults = [
+    { id: nanoid(), name: "New Lead",     color: "oklch(0.55 0.18 250)", order: 0, isDefault: 1 },
+    { id: nanoid(), name: "Consultation", color: "oklch(0.72 0.15 80)",  order: 1, isDefault: 1 },
+    { id: nanoid(), name: "Follow-Up",    color: "oklch(0.65 0.20 300)", order: 2, isDefault: 1 },
+    { id: nanoid(), name: "Retained",     color: "oklch(0.55 0.18 145)", order: 3, isDefault: 1 },
+    { id: nanoid(), name: "Onboarding",   color: "oklch(0.65 0.18 200)", order: 4, isDefault: 1 },
+    { id: nanoid(), name: "Lost",         color: "oklch(0.60 0.22 25)",  order: 5, isDefault: 1 },
+  ];
+  for (const stage of defaults) {
+    await db.insert(pipelineStages).values(stage);
+  }
+  // Seed Onboarding checklist templates
+  const onboardingStage = defaults.find(s => s.name === "Onboarding")!;
+  const checklistItems = [
+    { id: nanoid(), stageId: onboardingStage.id, label: "Consultation Booked",     description: "Attorney consultation has been scheduled and confirmed with the client", order: 0 },
+    { id: nanoid(), stageId: onboardingStage.id, label: "Case Notes Created",       description: "Initial case notes and intake information documented in the system",    order: 1 },
+    { id: nanoid(), stageId: onboardingStage.id, label: "Task Added in Cerenade",   description: "Case task created and assigned in Cerenade case management",            order: 2 },
+    { id: nanoid(), stageId: onboardingStage.id, label: "Task Added in Planner",    description: "Task added to team planner for workflow tracking",                     order: 3 },
+  ];
+  for (const item of checklistItems) {
+    await db.insert(stageChecklistTemplates).values(item);
   }
 }

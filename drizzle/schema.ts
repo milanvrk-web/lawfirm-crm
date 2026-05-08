@@ -205,3 +205,42 @@ export const crmMembers = mysqlTable("crm_members", {
 
 export type DbCrmMember = typeof crmMembers.$inferSelect;
 export type InsertCrmMember = typeof crmMembers.$inferInsert;
+
+// ─── Pipeline Stages (dynamic, user-editable) ──────────────────
+export const pipelineStages = mysqlTable("pipeline_stages", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(),
+  color: varchar("color", { length: 60 }).notNull().default("oklch(0.55 0.18 250)"),
+  /** Sort order — lower = further left in Kanban */
+  order: int("order").notNull().default(0),
+  /** True for system stages that cannot be deleted */
+  isDefault: int("isDefault").notNull().default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type DbPipelineStage = typeof pipelineStages.$inferSelect;
+export type InsertPipelineStage = typeof pipelineStages.$inferInsert;
+
+// ─── Stage Checklist Templates (sub-tasks per stage) ───────────
+export const stageChecklistTemplates = mysqlTable("stage_checklist_templates", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  stageId: varchar("stageId", { length: 36 }).notNull(),
+  label: varchar("label", { length: 200 }).notNull(),
+  description: text("description"),
+  /** Sort order within the stage */
+  order: int("order").notNull().default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type DbStageChecklistTemplate = typeof stageChecklistTemplates.$inferSelect;
+export type InsertStageChecklistTemplate = typeof stageChecklistTemplates.$inferInsert;
+
+// ─── Stage Checklist Completions (per-lead, per-template-item) ─
+export const stageChecklistCompletions = mysqlTable("stage_checklist_completions", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  leadId: varchar("leadId", { length: 36 }).notNull(),
+  templateItemId: varchar("templateItemId", { length: 36 }).notNull(),
+  completedAt: varchar("completedAt", { length: 30 }),
+  completedBy: varchar("completedBy", { length: 100 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type DbStageChecklistCompletion = typeof stageChecklistCompletions.$inferSelect;
+export type InsertStageChecklistCompletion = typeof stageChecklistCompletions.$inferInsert;
