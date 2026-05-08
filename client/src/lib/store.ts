@@ -77,6 +77,7 @@ export interface DayClose {
   totalNew: number;
   totalExisting: number;
   totalRevenue: number;
+  closedBy?: string;
 }
 
 export interface CRMData {

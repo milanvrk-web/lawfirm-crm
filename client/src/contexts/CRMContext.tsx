@@ -36,7 +36,7 @@ interface CRMContextValue {
   updatePayment: (id: string, updates: Partial<Payment>) => Promise<void>;
   deletePayment: (id: string) => Promise<void>;
   // Day Close
-  closeDay: (date: string) => Promise<void>;
+  closeDay: (date: string, closedBy?: string) => Promise<void>;
   isDayClosed: (date: string) => boolean;
   getDayClose: (date: string) => DayClose | undefined;
   // Follow-Ups
@@ -77,6 +77,7 @@ type DbFollowUp = {
 type DbDayClose = {
   id?: number; date: string; closedAt: string;
   totalNew: string | number; totalExisting: string | number; totalRevenue: string | number;
+  closedBy?: string | null;
   createdAt?: Date;
 };
 
@@ -132,6 +133,7 @@ function normalizeDayClose(r: DbDayClose): DayClose {
     totalNew: Number(r.totalNew),
     totalExisting: Number(r.totalExisting),
     totalRevenue: Number(r.totalRevenue),
+    closedBy: r.closedBy ?? undefined,
   };
 }
 
@@ -247,8 +249,8 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
     await deletePaymentMut.mutateAsync({ id });
   }, [deletePaymentMut]);
 
-  const handleCloseDay = useCallback(async (date: string) => {
-    await closeDayMut.mutateAsync({ date });
+  const handleCloseDay = useCallback(async (date: string, closedBy?: string) => {
+    await closeDayMut.mutateAsync({ date, closedBy });
   }, [closeDayMut]);
 
   const isDayClosed = useCallback((date: string) => {

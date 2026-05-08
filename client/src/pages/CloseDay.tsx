@@ -6,8 +6,9 @@
 
 import { useState, useMemo } from "react";
 import { useCRM } from "@/contexts/CRMContext";
+import { useActiveMember } from "@/contexts/ActiveMemberContext";
 import { formatCurrency, formatDate } from "@/lib/store";
-import { CalendarCheck, Lock, CheckCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarCheck, Lock, CheckCircle, ChevronLeft, ChevronRight, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
@@ -17,7 +18,8 @@ function todayStr() {
 }
 
 export default function CloseDay() {
-  const { leads, payments, closeDay, isDayClosed, getDayClose } = useCRM();
+  const { leads, payments, dayCloses, closeDay, isDayClosed, getDayClose } = useCRM();
+  const { activeMember } = useActiveMember();
   const [selectedDate, setSelectedDate] = useState(todayStr());
 
   const paymentsForDay = useMemo(() =>
@@ -52,8 +54,12 @@ export default function CloseDay() {
   };
 
   const handleClose = () => {
-    closeDay(selectedDate);
-    toast.success(`${formatDate(selectedDate)} closed successfully`);
+    closeDay(selectedDate, activeMember?.name);
+    toast.success(
+      activeMember
+        ? `${formatDate(selectedDate)} closed by ${activeMember.name}`
+        : `${formatDate(selectedDate)} closed successfully`
+    );
   };
 
   const displayDate = new Date(selectedDate + "T12:00:00").toLocaleDateString("en-US", {
@@ -101,8 +107,13 @@ export default function CloseDay() {
           <div>
             <div className="font-semibold text-sm" style={{ color: "oklch(0.55 0.18 145)" }}>Day Closed ✓</div>
             <div className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>
-              Closed at {new Date(closeRecord.closedAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })} ·
-              Total: {formatCurrency(closeRecord.totalRevenue)} ({formatCurrency(closeRecord.totalNew)} new + {formatCurrency(closeRecord.totalExisting)} existing)
+              Closed at {new Date(closeRecord.closedAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
+              {closeRecord.closedBy && (
+                <span className="inline-flex items-center gap-1 ml-2 px-1.5 py-0.5 rounded" style={{ background: "oklch(0.55 0.18 145 / 20%)", color: "oklch(0.55 0.18 145)" }}>
+                  <User className="w-3 h-3" />{closeRecord.closedBy}
+                </span>
+              )}
+              {" · "}Total: {formatCurrency(closeRecord.totalRevenue)} ({formatCurrency(closeRecord.totalNew)} new + {formatCurrency(closeRecord.totalExisting)} existing)
             </div>
           </div>
         </div>
@@ -251,6 +262,56 @@ export default function CloseDay() {
           </div>
         </div>
       )}
+      {/* Close History */}
+      {(() => {
+        const history = dayCloses.slice().sort((a, b) => b.date.localeCompare(a.date)).slice(0, 30);
+        if (history.length === 0) return null;
+        return (
+          <div className="rounded-lg border overflow-hidden" style={{ background: "oklch(0.18 0.025 250)", borderColor: "oklch(1 0 0 / 8%)" }}>
+            <div className="px-4 py-3 border-b flex items-center gap-2" style={{ borderColor: "oklch(1 0 0 / 8%)", background: "oklch(0.22 0.025 250)" }}>
+              <CalendarCheck className="w-4 h-4" style={{ color: "oklch(0.72 0.12 75)" }} />
+              <span className="text-sm font-semibold" style={{ color: "oklch(0.80 0.005 250)" }}>Close History</span>
+              <span className="text-xs ml-auto" style={{ color: "oklch(0.45 0.01 250)" }}>Last {history.length} closes</span>
+            </div>
+            <table className="w-full text-sm">
+              <thead>
+                <tr style={{ borderBottom: "1px solid oklch(1 0 0 / 8%)" }}>
+                  <th className="px-4 py-2.5 text-left text-xs font-semibold" style={{ color: "oklch(0.55 0.01 250)" }}>Date</th>
+                  <th className="px-4 py-2.5 text-right text-xs font-semibold" style={{ color: "oklch(0.55 0.18 145)" }}>New</th>
+                  <th className="px-4 py-2.5 text-right text-xs font-semibold" style={{ color: "oklch(0.55 0.15 200)" }}>Existing</th>
+                  <th className="px-4 py-2.5 text-right text-xs font-semibold" style={{ color: "oklch(0.72 0.12 75)" }}>Total</th>
+                  <th className="px-4 py-2.5 text-right text-xs font-semibold" style={{ color: "oklch(0.55 0.01 250)" }}>Closed By</th>
+                  <th className="px-4 py-2.5 text-right text-xs font-semibold" style={{ color: "oklch(0.55 0.01 250)" }}>Time</th>
+                </tr>
+              </thead>
+              <tbody>
+                {history.map(dc => (
+                  <tr key={dc.date} className="border-b" style={{ borderColor: "oklch(1 0 0 / 5%)", background: dc.date === selectedDate ? "oklch(0.72 0.12 75 / 5%)" : undefined }}>
+                    <td className="px-4 py-3 font-medium" style={{ color: "oklch(0.80 0.005 250)" }}>
+                      {new Date(dc.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+                    </td>
+                    <td className="px-4 py-3 text-right" style={{ color: "oklch(0.55 0.18 145)" }}>{formatCurrency(dc.totalNew)}</td>
+                    <td className="px-4 py-3 text-right" style={{ color: "oklch(0.55 0.15 200)" }}>{formatCurrency(dc.totalExisting)}</td>
+                    <td className="px-4 py-3 text-right font-bold" style={{ color: "oklch(0.72 0.12 75)" }}>{formatCurrency(dc.totalRevenue)}</td>
+                    <td className="px-4 py-3 text-right">
+                      {dc.closedBy ? (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs" style={{ background: "oklch(0.55 0.18 145 / 15%)", color: "oklch(0.55 0.18 145)" }}>
+                          <User className="w-3 h-3" />{dc.closedBy}
+                        </span>
+                      ) : (
+                        <span className="text-xs" style={{ color: "oklch(0.35 0.01 250)" }}>—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-right text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>
+                      {new Date(dc.closedAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
+      })()}
     </div>
   );
 }

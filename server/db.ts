@@ -215,6 +215,7 @@ export async function upsertDayClose(data: InsertDayClose) {
       totalNew: data.totalNew,
       totalExisting: data.totalExisting,
       totalRevenue: data.totalRevenue,
+      closedBy: data.closedBy,
     },
   });
 }

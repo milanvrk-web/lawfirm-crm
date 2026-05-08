@@ -181,12 +181,14 @@
 
 ## Daily Close Attribution
 
-- [ ] Add closedBy column to daily_closes table in schema.ts
-- [ ] Run DB migration to add closedBy column
-- [ ] Update createDailyClose DB helper to accept closedBy
-- [ ] Update dailyClose.create tRPC input schema to accept closedBy
-- [ ] Pass active member name when submitting a daily close in the UI
-- [ ] Show closedBy column in the daily close history table
+- [x] Add closedBy column to daily_closes table in schema.ts
+- [x] Run DB migration to add closedBy column (via SQL)
+- [x] Update upsertDayClose DB helper to include closedBy in upsert set
+- [x] Update dayCloses.close tRPC input schema to accept optional closedBy
+- [x] Add closedBy to DayClose type in store.ts and normalizeDayClose in CRMContext
+- [x] Pass active member name when submitting a daily close in CloseDay.tsx
+- [x] Show closedBy badge (user icon + name) in the Day Closed confirmation strip
+- [x] Update toast message to include member name when closing
 
 ## Follow-Up Bucket
 
@@ -200,3 +202,11 @@
 - [x] Auto-create a follow-up task when a lead's stage changes to "Consulted" (if none exists)
 - [x] Show a "Retained" green badge on leads that have been retained so they can be dismissed from the bucket
 - [x] Add a "Mark as Retained" quick action button per row
+
+## Close History Table
+
+- [x] Add Close History table at the bottom of CloseDay page showing last 30 closes
+- [x] Columns: Date, New, Existing, Total, Closed By, Time
+- [x] Highlight the currently selected date row in gold
+- [x] Show Closed By as a green badge with user icon
+- [x] Hidden when no closes have been recorded yet

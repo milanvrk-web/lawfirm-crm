@@ -226,7 +226,7 @@ export const appRouter = router({
     }),
 
     close: publicProcedure
-      .input(z.object({ date: z.string() }))
+      .input(z.object({ date: z.string(), closedBy: z.string().optional() }))
       .mutation(async ({ input }) => {
         // Compute totals from payments for that day
         const allPayments = await db.getAllPayments();
@@ -240,6 +240,7 @@ export const appRouter = router({
           totalNew: String(totalNew),
           totalExisting: String(totalExisting),
           totalRevenue: String(totalRevenue),
+          closedBy: input.closedBy ?? null,
         });
         return { success: true, totalNew, totalExisting, totalRevenue };
       }),
