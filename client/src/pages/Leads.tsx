@@ -147,17 +147,18 @@ export default function Leads() {
     } else {
       updateLead(leadId, { stage: targetStage });
       toast.success(`Moved to ${targetStage}`);
-      // Auto-create a follow-up task when a lead moves to Consultation with no pending tasks
-      if (targetStage === "Consultation") {
+      // Auto-create a follow-up task when a lead moves to Consultation or Follow-Up with no pending tasks
+      if (targetStage === "Consultation" || targetStage === "Follow-Up") {
         const hasPending = followUps.some(f => f.leadId === leadId && f.status === "Pending");
         if (!hasPending) {
           const tomorrow = new Date();
           tomorrow.setDate(tomorrow.getDate() + 1);
           const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, "0")}-${String(tomorrow.getDate()).padStart(2, "0")}`;
+          const title = targetStage === "Follow-Up" ? "Follow up with client" : "Follow up after consultation";
           addFollowUp({
             leadId,
             dueDate: tomorrowStr,
-            title: "Follow up after consultation",
+            title,
             status: "Pending",
             assignedTo: activeMember?.name ?? null,
           });
@@ -684,35 +685,34 @@ function LeadCard({
         </div>
       )}
 
-      {/* ── Follow-Up Bucket Quick-Push Buttons (Follow-Up stage only) ── */}
+      {/* ── Follow-Up Date Picker (Follow-Up stage only) ── */}
       {lead.stage === "Follow-Up" && (
-        <div className="mt-2 flex items-center gap-1.5 flex-wrap">
-          <span className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>Push due date:</span>
-          {[1, 3, 7].map(days => (
-            <button
-              key={days}
-              onClick={() => {
-                const d = new Date();
-                d.setDate(d.getDate() + days);
-                const newDate = d.toISOString().split("T")[0];
-                if (nextFU) {
-                  onReschedule(nextFU, newDate);
-                } else {
-                  // No task yet — show a hint
-                  const hint = document.createElement("div");
-                  hint.textContent = "No pending task — open detail to add one";
-                  // just toast
-                }
-              }}
-              className="text-xs px-2 py-0.5 rounded font-medium transition-all hover:opacity-90"
-              style={{ background: "oklch(0.65 0.20 300 / 15%)", color: "oklch(0.75 0.18 300)", border: "1px solid oklch(0.65 0.20 300 / 30%)" }}
-              title={`Push due date +${days} day${days > 1 ? "s" : ""}`}
-            >
-              +{days}d
-            </button>
-          ))}
+        <div className="mt-2 flex items-center gap-2">
+          <CalendarClock className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "oklch(0.65 0.20 300)" }} />
+          <span className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>Follow-up date:</span>
+          <input
+            type="date"
+            value={nextFU?.dueDate ?? ""}
+            min={new Date().toISOString().split("T")[0]}
+            onChange={e => {
+              const newDate = e.target.value;
+              if (!newDate) return;
+              if (nextFU) {
+                onReschedule(nextFU, newDate);
+              }
+            }}
+            onClick={e => e.stopPropagation()}
+            className="text-xs px-2 py-0.5 rounded border"
+            style={{
+              background: "oklch(0.22 0.025 250)",
+              borderColor: "oklch(0.65 0.20 300 / 40%)",
+              color: "oklch(0.80 0.005 250)",
+              colorScheme: "dark",
+              outline: "none",
+            }}
+          />
           {!nextFU && (
-            <span className="text-xs italic" style={{ color: "oklch(0.45 0.01 250)" }}>No task yet</span>
+            <span className="text-xs italic" style={{ color: "oklch(0.45 0.01 250)" }}>task pending…</span>
           )}
         </div>
       )}

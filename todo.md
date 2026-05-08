@@ -210,3 +210,9 @@
 - [x] Highlight the currently selected date row in gold
 - [x] Show Closed By as a green badge with user icon
 - [x] Hidden when no closes have been recorded yet
+
+## Follow-Up Stage UX Improvements
+
+- [x] Replace +1d/+3d/+7d push buttons on Follow-Up Kanban cards with an inline date picker input
+- [x] Auto-create a follow-up task when a lead is dragged/moved to the Follow-Up stage (same as Consultation stage)
+- [x] If a follow-up task already exists for the lead, update its due date when the date picker changes
