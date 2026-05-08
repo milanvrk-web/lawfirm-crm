@@ -36,6 +36,13 @@
       "when": 1778211331708,
       "tag": "0004_natural_speed_demon",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1778216121133,
+      "tag": "0005_complex_human_cannonball",
+      "breakpoints": true
     }
   ]
 }

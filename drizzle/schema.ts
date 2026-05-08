@@ -51,6 +51,7 @@ export const leads = mysqlTable("leads", {
   quotedAmount: decimal("quotedAmount", { precision: 10, scale: 2 }).default("0").notNull(),
   referredBy: varchar("referredBy", { length: 255 }).default("").notNull(),
   convertedDate: varchar("convertedDate", { length: 10 }),
+  lostReason: varchar("lostReason", { length: 255 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

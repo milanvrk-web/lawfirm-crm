@@ -29,6 +29,7 @@ const LeadInput = z.object({
   quotedAmount: z.number().default(0),
   referredBy: z.string().default(""),
   convertedDate: z.string().optional().nullable(),
+  lostReason: z.string().optional().nullable(),
 });
 
 const PaymentInput = z.object({
@@ -101,6 +102,7 @@ export const appRouter = router({
         downpayment: String(input.downpayment),
         quotedAmount: String(input.quotedAmount),
         convertedDate: input.convertedDate ?? null,
+        lostReason: input.lostReason ?? null,
       });
       return { id };
     }),
@@ -592,8 +594,17 @@ export const appRouter = router({
         amount: Number(item.amount),
       }));
     }),
+  // ─── Due This Week Installments ───────────────────────────────────────────────────
+  getDueThisWeekInstallments: publicProcedure
+    .query(async () => {
+      const items = await db.getDueThisWeekInstallments();
+      return items.map(item => ({
+        ...item,
+        amount: Number(item.amount),
+      }));
+    }),
 
-  // ─── Bulk Reschedule Overdue Installments ────────────────────────────────
+  // ─── Bulk Reschedule Overdue Installments ──────────────────────────────────────────
   bulkRescheduleOverdue: publicProcedure
     .input(z.object({ newDate: z.string() }))
     .mutation(async ({ input }) => {

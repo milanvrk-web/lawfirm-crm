@@ -1,4 +1,4 @@
-import { eq, desc, asc, lt, and } from "drizzle-orm";
+import { eq, desc, asc, lt, lte, gte, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   users,
@@ -380,6 +380,50 @@ export async function getOverdueInstallments() {
   }
   const leadMap = new Map(allLeads.map(l => [l.id, l]));
   return overdueItems.map(item => {
+    const plan = planMap.get(item.planId);
+    const lead = plan ? leadMap.get(plan.leadId) : undefined;
+    return {
+      ...item,
+      planNotes: plan?.notes ?? "",
+      leadId: plan?.leadId ?? "",
+      leadName: lead?.name ?? "Unknown",
+    };
+  });
+}
+
+/** Returns all unpaid installment items due within the next 7 days (today through +6 days). */
+export async function getDueThisWeekInstallments() {
+  const db = await getDb();
+  if (!db) return [];
+  const today = new Date().toISOString().slice(0, 10);
+  const nextWeek = new Date();
+  nextWeek.setDate(nextWeek.getDate() + 7);
+  const nextWeekStr = nextWeek.toISOString().slice(0, 10);
+  const dueItems = await db
+    .select()
+    .from(installmentItems)
+    .where(and(
+      eq(installmentItems.isPaid, 0),
+      gte(installmentItems.dueDate, today),
+      lt(installmentItems.dueDate, nextWeekStr),
+    ))
+    .orderBy(asc(installmentItems.dueDate));
+  if (dueItems.length === 0) return [];
+  const planIds = Array.from(new Set(dueItems.map(i => i.planId)));
+  const allPlans: (typeof installmentPlans.$inferSelect)[] = [];
+  for (const planId of planIds) {
+    const rows = await db.select().from(installmentPlans).where(eq(installmentPlans.id, planId));
+    allPlans.push(...rows);
+  }
+  const planMap = new Map(allPlans.map(p => [p.id, p]));
+  const leadIds = Array.from(new Set(allPlans.map(p => p.leadId)));
+  const allLeads: (typeof leads.$inferSelect)[] = [];
+  for (const leadId of leadIds) {
+    const rows = await db.select().from(leads).where(eq(leads.id, leadId));
+    allLeads.push(...rows);
+  }
+  const leadMap = new Map(allLeads.map(l => [l.id, l]));
+  return dueItems.map(item => {
     const plan = planMap.get(item.planId);
     const lead = plan ? leadMap.get(plan.leadId) : undefined;
     return {

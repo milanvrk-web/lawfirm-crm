@@ -496,6 +496,7 @@ export default function LeadDetailPanel({
                   { label: "Referred By", value: lead.referredBy || "—" },
                   { label: "Quoted", value: lead.quotedAmount > 0 ? formatCurrency(lead.quotedAmount) : "—" },
                   { label: "Email", value: lead.email || "—" },
+                  ...(lead.stage === "Lost" && lead.lostReason ? [{ label: "Lost Reason", value: lead.lostReason }] : []),
                 ].map(({ label, value }) => (
                   <div key={label} className="rounded-lg p-3" style={{ background: "oklch(0.18 0.025 250)" }}>
                     <div className="text-xs mb-0.5" style={{ color: "oklch(0.45 0.01 250)" }}>{label}</div>

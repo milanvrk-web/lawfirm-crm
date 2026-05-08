@@ -1,0 +1,1 @@
+ALTER TABLE `leads` ADD `lostReason` varchar(255);

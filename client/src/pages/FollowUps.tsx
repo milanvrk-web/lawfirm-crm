@@ -138,6 +138,23 @@ export default function FollowUps() {
       " " + d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
   };
 
+  // Weekly Digest: next 7 days grouped by day
+  const weeklyDigest = useMemo(() => {
+    const days: { dateStr: string; label: string; items: FollowUp[] }[] = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date();
+      d.setDate(d.getDate() + i);
+      const dateStr = d.toISOString().split("T")[0];
+      const label = i === 0 ? "Today" : i === 1 ? "Tomorrow" :
+        d.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
+      const items = followUps.filter(f => f.status === "Pending" && f.dueDate === dateStr);
+      days.push({ dateStr, label, items });
+    }
+    return days;
+  }, [followUps]);
+
+  const [showWeeklyDigest, setShowWeeklyDigest] = useState(false);
+
   const filterButtons: FilterType[] = ["All", "Due Today", "Overdue", "Pending", "Done", "Snoozed"];
   const filterCounts: Record<FilterType, number> = {
     All: followUps.length,
@@ -270,6 +287,62 @@ export default function FollowUps() {
           </div>
         </div>
       )}
+
+      {/* ── Weekly Digest Panel ────────────────────────────────── */}
+      <div className="rounded-xl border overflow-hidden" style={{ background: "oklch(0.18 0.025 250)", borderColor: "oklch(0.72 0.12 75 / 25%)" }}>
+        <button
+          className="w-full flex items-center justify-between px-5 py-3 cursor-pointer"
+          onClick={() => setShowWeeklyDigest(v => !v)}
+          style={{ color: "oklch(0.72 0.12 75)" }}
+        >
+          <div className="flex items-center gap-2">
+            <CalendarClock className="w-4 h-4" />
+            <span className="text-sm font-semibold uppercase tracking-wider">7-Day Digest</span>
+            <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "oklch(0.72 0.12 75 / 15%)", color: "oklch(0.72 0.12 75)" }}>
+              {weeklyDigest.reduce((s, d) => s + d.items.length, 0)} tasks
+            </span>
+          </div>
+          <ChevronDown className={`w-4 h-4 transition-transform ${showWeeklyDigest ? "rotate-180" : ""}`} />
+        </button>
+        {showWeeklyDigest && (
+          <div className="px-5 pb-4 space-y-3" style={{ borderTop: "1px solid oklch(1 0 0 / 8%)" }}>
+            <div className="grid grid-cols-1 sm:grid-cols-7 gap-2 pt-3">
+              {weeklyDigest.map(({ dateStr, label, items }) => (
+                <div
+                  key={dateStr}
+                  className="rounded-lg p-3 border"
+                  style={{
+                    background: items.length > 0 ? "oklch(0.72 0.12 75 / 6%)" : "oklch(0.16 0.025 250)",
+                    borderColor: items.length > 0 ? "oklch(0.72 0.12 75 / 30%)" : "oklch(1 0 0 / 6%)",
+                  }}
+                >
+                  <div className="text-xs font-semibold mb-2" style={{ color: label === "Today" ? "oklch(0.72 0.12 75)" : "oklch(0.65 0.01 250)" }}>
+                    {label}
+                  </div>
+                  {items.length === 0 ? (
+                    <div className="text-xs" style={{ color: "oklch(0.35 0.01 250)" }}>Free</div>
+                  ) : (
+                    <div className="space-y-1">
+                      {items.map(fu => {
+                        const lead = leads.find(l => l.id === fu.leadId);
+                        return (
+                          <div key={fu.id} className="text-xs" style={{ color: "oklch(0.80 0.005 250)" }}>
+                            <div className="font-medium truncate">{fu.title}</div>
+                            {lead && <div className="truncate" style={{ color: "oklch(0.55 0.01 250)" }}>{lead.name}</div>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {items.length > 0 && (
+                    <div className="mt-2 text-xs font-bold" style={{ color: "oklch(0.72 0.12 75)" }}>{items.length}</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* ── Filter Tabs ──────────────────────────────────────── */}
       <div className="flex items-center gap-1 flex-wrap">

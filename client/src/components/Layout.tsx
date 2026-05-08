@@ -38,12 +38,24 @@ const BASE_NAV = [
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { followUps } = useCRM();
+  const { followUps, leads } = useCRM();
 
   const urgentCount = useMemo(() => {
     const today = new Date().toISOString().split("T")[0];
     return followUps.filter(f => f.status === "Pending" && (f.dueDate === today || f.dueDate < today)).length;
   }, [followUps]);
+
+  // Count leads with no follow-up activity in 7+ days (escalation)
+  const stalePipelineCount = useMemo(() => {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 7);
+    const cutoffStr = cutoff.toISOString().split("T")[0];
+    return leads.filter(l => {
+      if (l.stage === "Lost" || l.stage === "Retained") return false;
+      const lastActivity = l.date;
+      return lastActivity < cutoffStr;
+    }).length;
+  }, [leads]);
 
   return (
     <div className="flex min-h-screen" style={{ background: "oklch(0.13 0.025 250)" }}>
@@ -109,6 +121,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                       style={{ background: "oklch(0.70 0.22 25)", color: "white", fontSize: "10px" }}
                     >
                       {urgentCount}
+                    </span>
+                  )}
+                  {/* Stale pipeline escalation badge on Leads */}
+                  {path === "/leads" && stalePipelineCount > 0 && (
+                    <span
+                      className="text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center"
+                      style={{ background: "oklch(0.72 0.15 80 / 90%)", color: "oklch(0.13 0.025 250)", fontSize: "10px" }}
+                      title={`${stalePipelineCount} leads with no activity in 7+ days`}
+                    >
+                      {stalePipelineCount}
                     </span>
                   )}
                   {active && <ChevronRight className="w-3 h-3 opacity-60" />}

@@ -58,7 +58,7 @@ type DbLead = {
   id: string; name: string; phone: string; email: string; caseType: string;
   caseNumber: string; source: string; stage: string; notes: string; date: string;
   retainerBooked: string | number; downpayment: string | number; quotedAmount: string | number;
-  referredBy: string; convertedDate?: string | null;
+  referredBy: string; convertedDate?: string | null; lostReason?: string | null;
   createdAt?: Date; updatedAt?: Date;
 };
 
@@ -97,6 +97,7 @@ function normalizeLead(r: DbLead): Lead {
     quotedAmount: Number(r.quotedAmount),
     referredBy: r.referredBy,
     convertedDate: r.convertedDate ?? undefined,
+    lostReason: r.lostReason ?? null,
   };
 }
 

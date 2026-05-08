@@ -68,6 +68,25 @@ function formatTimestamp(iso: string) {
     " " + d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 }
 
+function getLeadAgeDays(dateStr: string): number {
+  const today = new Date().toISOString().split("T")[0];
+  const diff = new Date(today + "T12:00:00").getTime() - new Date(dateStr + "T12:00:00").getTime();
+  return Math.max(0, Math.round(diff / (1000 * 60 * 60 * 24)));
+}
+
+function LeadAgeBadge({ dateStr }: { dateStr: string }) {
+  const days = getLeadAgeDays(dateStr);
+  let color = "oklch(0.55 0.18 145)"; // green
+  let bg = "oklch(0.55 0.18 145 / 12%)";
+  if (days > 14) { color = "oklch(0.70 0.22 25)"; bg = "oklch(0.70 0.22 25 / 12%)"; }
+  else if (days > 7) { color = "oklch(0.80 0.15 80)"; bg = "oklch(0.80 0.15 80 / 12%)"; }
+  return (
+    <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ color, background: bg }}>
+      {days === 0 ? "Today" : `${days}d`}
+    </span>
+  );
+}
+
 // ── Main Component ─────────────────────────────────────────
 export default function Leads() {
   const { leads, payments, followUps, addLead, updateLead, deleteLead, addPayment, updateFollowUp } = useCRM();
@@ -78,6 +97,9 @@ export default function Leads() {
   const [convertForm, setConvertForm] = useState({ retainerBooked: "", downpayment: "", caseNumber: "", notes: "" });
   const [search, setSearch] = useState("");
   const [filterStage, setFilterStage] = useState<LeadStage | "All">("All");
+  const [lostLeadPending, setLostLeadPending] = useState<Lead | null>(null);
+  const [lostReason, setLostReason] = useState("");
+  const [lostReasonCustom, setLostReasonCustom] = useState("");
 
   // ── Lead Detail Slide-Over ─────────────────────────────────
   const [detailLeadId, setDetailLeadId] = useState<string | null>(null);
@@ -97,9 +119,46 @@ export default function Leads() {
     return map;
   }, [filtered]);
 
+  const stageValue = useMemo(() => {
+    const map: Record<LeadStage, number> = { "New Lead": 0, "Consultation": 0, "Retained": 0, "Lost": 0 };
+    leads.forEach(l => { map[l.stage] = (map[l.stage] || 0) + (l.retainerBooked || l.quotedAmount || 0); });
+    return map;
+  }, [leads]);
+
+  const [dragOverStage, setDragOverStage] = useState<LeadStage | null>(null);
+
+  const handleDragStart = (e: React.DragEvent, leadId: string) => {
+    e.dataTransfer.setData("leadId", leadId);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDrop = (e: React.DragEvent, targetStage: LeadStage) => {
+    e.preventDefault();
+    const leadId = e.dataTransfer.getData("leadId");
+    const lead = leads.find(l => l.id === leadId);
+    if (!lead || lead.stage === targetStage) { setDragOverStage(null); return; }
+    if (targetStage === "Lost" && lead.stage !== "Lost") {
+      setLostLeadPending(lead);
+      setLostReason("");
+      setLostReasonCustom("");
+    } else {
+      updateLead(leadId, { stage: targetStage });
+      toast.success(`Moved to ${targetStage}`);
+    }
+    setDragOverStage(null);
+  };
+
   const handleSave = () => {
     if (!form.name.trim()) { toast.error("Name is required"); return; }
     if (editLead) {
+      // If changing to Lost stage, prompt for reason
+      if (form.stage === "Lost" && editLead.stage !== "Lost") {
+        setLostLeadPending({ ...editLead, ...form } as Lead);
+        setLostReason("");
+        setLostReasonCustom("");
+        setShowAdd(false);
+        return;
+      }
       updateLead(editLead.id, form);
       toast.success("Lead updated");
       setEditLead(null);
@@ -108,6 +167,18 @@ export default function Leads() {
       toast.success("Lead added");
       setShowAdd(false);
     }
+    setForm(emptyLead);
+  };
+
+  const handleConfirmLost = () => {
+    if (!lostLeadPending) return;
+    const reason = lostReason === "Other" ? lostReasonCustom : lostReason;
+    updateLead(lostLeadPending.id, { ...form, stage: "Lost", lostReason: reason || undefined });
+    toast.success(`${lostLeadPending.name} marked as Lost`);
+    setLostLeadPending(null);
+    setLostReason("");
+    setLostReasonCustom("");
+    setEditLead(null);
     setForm(emptyLead);
   };
 
@@ -207,29 +278,54 @@ export default function Leads() {
       {/* Pipeline columns */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         {STAGES.map(stage => (
-          <div key={stage} className="rounded-lg border overflow-hidden" style={{ background: "oklch(0.16 0.025 250)", borderColor: "oklch(1 0 0 / 8%)" }}>
-            <div className="px-4 py-3 border-b flex items-center justify-between" style={{ borderColor: "oklch(1 0 0 / 8%)", borderLeft: `3px solid ${stageColor[stage]}` }}>
-              <span className="text-sm font-semibold" style={{ color: "oklch(0.80 0.005 250)" }}>{stage}</span>
-              <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: `${stageColor[stage]}20`, color: stageColor[stage] }}>
-                {byStage[stage].length}
-              </span>
+          <div
+            key={stage}
+            className="rounded-lg border overflow-hidden transition-all"
+            style={{
+              background: dragOverStage === stage ? "oklch(0.20 0.035 250)" : "oklch(0.16 0.025 250)",
+              borderColor: dragOverStage === stage ? stageColor[stage] : "oklch(1 0 0 / 8%)",
+            }}
+            onDragOver={e => { e.preventDefault(); setDragOverStage(stage); }}
+            onDragLeave={() => setDragOverStage(null)}
+            onDrop={e => handleDrop(e, stage)}
+          >
+            <div className="px-4 py-3 border-b" style={{ borderColor: "oklch(1 0 0 / 8%)", borderLeft: `3px solid ${stageColor[stage]}` }}>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold" style={{ color: "oklch(0.80 0.005 250)" }}>{stage}</span>
+                <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: `${stageColor[stage]}20`, color: stageColor[stage] }}>
+                  {byStage[stage].length}
+                </span>
+              </div>
+              {stageValue[stage] > 0 && (
+                <div className="text-xs mt-1 font-medium" style={{ color: "oklch(0.72 0.12 75)" }}>
+                  {formatCurrency(stageValue[stage])} pipeline
+                </div>
+              )}
             </div>
             <div className="p-2 space-y-2 max-h-[600px] overflow-y-auto">
               {byStage[stage].length === 0 && (
-                <div className="text-center py-8 text-xs" style={{ color: "oklch(0.40 0.01 250)" }}>No leads</div>
+                <div className="text-center py-8 text-xs" style={{ color: dragOverStage === stage ? stageColor[stage] : "oklch(0.40 0.01 250)" }}>
+                  {dragOverStage === stage ? "Drop here" : "No leads"}
+                </div>
               )}
               {byStage[stage].map(lead => (
-                <LeadCard
+                <div
                   key={lead.id}
-                  lead={lead}
-                  onOpenDetail={() => openDetail(lead)}
-                  onEdit={() => openEdit(lead)}
-                  onDelete={() => { deleteLead(lead.id); toast.success("Lead deleted"); }}
-                  onConvert={() => setConvertLead(lead)}
-                  onMarkDone={handleMarkDone}
-                  onSnooze={handleSnooze}
-                  onReschedule={handleReschedule}
-                />
+                  draggable
+                  onDragStart={e => handleDragStart(e, lead.id)}
+                  style={{ cursor: "grab" }}
+                >
+                  <LeadCard
+                    lead={lead}
+                    onOpenDetail={() => openDetail(lead)}
+                    onEdit={() => openEdit(lead)}
+                    onDelete={() => { deleteLead(lead.id); toast.success("Lead deleted"); }}
+                    onConvert={() => setConvertLead(lead)}
+                    onMarkDone={handleMarkDone}
+                    onSnooze={handleSnooze}
+                    onReschedule={handleReschedule}
+                  />
+                </div>
               ))}
             </div>
           </div>
@@ -377,6 +473,54 @@ export default function Leads() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* ── Lost Lead Reason Modal ───────────────────── */}
+      <Dialog open={!!lostLeadPending} onOpenChange={open => { if (!open) { setLostLeadPending(null); setLostReason(""); setLostReasonCustom(""); } }}>
+        <DialogContent style={{ background: "oklch(0.18 0.025 250)", borderColor: "oklch(0.70 0.22 25 / 40%)", color: "oklch(0.93 0.005 250)" }}>
+          <DialogHeader>
+            <DialogTitle style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.93 0.005 250)" }}>
+              Mark {lostLeadPending?.name} as Lost
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm mt-1" style={{ color: "oklch(0.60 0.01 250)" }}>Please select a reason so we can track why leads are not converting.</p>
+          <div className="space-y-2 mt-3">
+            {["Price too high", "Chose competitor", "Not qualified", "No response", "Changed mind", "Other"].map(r => (
+              <button
+                key={r}
+                onClick={() => setLostReason(r)}
+                className="w-full text-left px-3 py-2.5 rounded-lg text-sm transition-all"
+                style={{
+                  background: lostReason === r ? "oklch(0.70 0.22 25 / 20%)" : "oklch(0.22 0.025 250)",
+                  border: lostReason === r ? "1px solid oklch(0.70 0.22 25 / 60%)" : "1px solid oklch(1 0 0 / 8%)",
+                  color: lostReason === r ? "oklch(0.80 0.22 25)" : "oklch(0.75 0.01 250)",
+                }}
+              >{r}</button>
+            ))}
+            {lostReason === "Other" && (
+              <Input
+                value={lostReasonCustom}
+                onChange={e => setLostReasonCustom(e.target.value)}
+                placeholder="Describe the reason..."
+                autoFocus
+                style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }}
+              />
+            )}
+          </div>
+          <div className="flex gap-3 mt-4">
+            <Button
+              onClick={handleConfirmLost}
+              disabled={!lostReason || (lostReason === "Other" && !lostReasonCustom.trim())}
+              style={{ background: "oklch(0.60 0.22 25)", color: "oklch(0.98 0 0)" }}
+            >
+              Confirm Lost
+            </Button>
+            <Button variant="outline" onClick={() => { setLostLeadPending(null); setLostReason(""); setLostReasonCustom(""); }}
+              style={{ borderColor: "oklch(1 0 0 / 20%)", color: "oklch(0.65 0.01 250)" }}>
+              Cancel
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -438,7 +582,12 @@ function LeadCard({
           <div className="flex items-center gap-2 mt-1 flex-wrap">
             <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: "oklch(0.72 0.12 75 / 15%)", color: "oklch(0.72 0.12 75)" }}>{lead.caseType}</span>
             {lead.caseNumber && <span className="text-xs" style={{ color: "oklch(0.50 0.01 250)" }}>#{lead.caseNumber}</span>}
-            <span className="text-xs" style={{ color: "oklch(0.45 0.01 250)" }}>{formatDate(lead.date)}</span>
+            <LeadAgeBadge dateStr={lead.date} />
+            {lead.stage === "Lost" && lead.lostReason && (
+              <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: "oklch(0.60 0.22 25 / 12%)", color: "oklch(0.70 0.22 25)" }}>
+                {lead.lostReason}
+              </span>
+            )}
           </div>
         </div>
         {/* Open detail panel button */}

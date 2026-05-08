@@ -4,7 +4,7 @@
    Features: 7 stat cards, targets tracker, weekly bar chart
    ============================================================ */
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useCRM } from "@/contexts/CRMContext";
 import { trpc } from "@/lib/trpc";
 import {
@@ -19,6 +19,10 @@ import {
 import {
   BarChart,
   Bar,
+  LineChart,
+  Line,
+  Area,
+  AreaChart,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -45,6 +49,13 @@ import {
   Phone,
   FileText,
   Loader2,
+  Sunrise,
+  ChevronDown,
+  ChevronUp,
+  TrendingDown,
+  Clock3,
+  CheckSquare,
+  AlertTriangle,
 } from "lucide-react";
 import { Link } from "wouter";
 import LeadDetailPanel from "@/components/LeadDetailPanel";
@@ -173,6 +184,48 @@ export default function Dashboard() {
       .sort((a, b) => b.revenue - a.revenue);
   }, [monthPayments, totalReceived]);
 
+  // Revenue Velocity: cumulative actual vs. ideal pace
+  const velocityData = useMemo(() => {
+    const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+    const monthlyTarget = targets.monthly.green;
+    const dailyIdeal = monthlyTarget / daysInMonth;
+    const result: { day: number; actual: number; ideal: number }[] = [];
+    let cumulative = 0;
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      cumulative += dailyMap[dateStr]?.total ?? 0;
+      result.push({ day: d, actual: cumulative, ideal: Math.round(dailyIdeal * d) });
+    }
+    return result;
+  }, [dailyMap, selectedYear, selectedMonth, targets]);
+
+  // Month-over-Month comparison
+  const momComparison = useMemo(() => {
+    const prevM = selectedMonth === 1 ? 12 : selectedMonth - 1;
+    const prevY = selectedMonth === 1 ? selectedYear - 1 : selectedYear;
+    const prevPayments = payments.filter(p => {
+      const d = new Date(p.date + "T12:00:00");
+      return d.getFullYear() === prevY && d.getMonth() + 1 === prevM;
+    });
+    const prevTotal = prevPayments.reduce((s, p) => s + p.amount, 0);
+    const prevLeads = leads.filter(l => {
+      const d = new Date(l.date + "T12:00:00");
+      return d.getFullYear() === prevY && d.getMonth() + 1 === prevM;
+    }).length;
+    const prevConverted = leads.filter(l => {
+      if (l.stage !== "Retained") return false;
+      const dateToCheck = l.convertedDate || l.date;
+      const d = new Date(dateToCheck + "T12:00:00");
+      return d.getFullYear() === prevY && d.getMonth() + 1 === prevM;
+    }).length;
+    return {
+      prevTotal, prevLeads, prevConverted,
+      prevMonth: MONTHS[prevM - 1],
+      revChange: prevTotal > 0 ? Math.round(((totalReceived - prevTotal) / prevTotal) * 100) : null,
+      leadsChange: prevLeads > 0 ? Math.round(((totalLeads - prevLeads) / prevLeads) * 100) : null,
+    };
+  }, [payments, leads, selectedYear, selectedMonth, totalReceived, totalLeads]);
+
   // Overdue installments
   const utils = trpc.useUtils();
   const { data: overdueInstallments = [] } = trpc.getOverdueInstallments.useQuery(undefined, {
@@ -181,9 +234,34 @@ export default function Dashboard() {
   const bulkRescheduleMut = trpc.bulkRescheduleOverdue.useMutation({
     onSuccess: () => utils.getOverdueInstallments.invalidate(),
   });
+  const { data: dueThisWeekInstallments = [] } = trpc.getDueThisWeekInstallments.useQuery(undefined, {
+    refetchInterval: 60_000,
+  });
+
+  // CEO Morning Briefing collapsed state (persisted)
+  const [briefingOpen, setBriefingOpen] = useState(() => {
+    try { return localStorage.getItem("crm_briefing_open") !== "false"; } catch { return true; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem("crm_briefing_open", String(briefingOpen)); } catch {}
+  }, [briefingOpen]);
+
+  // Yesterday stats
+  const yesterdayStr = useMemo(() => {
+    const d = new Date(now);
+    d.setDate(d.getDate() - 1);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }, []);
+  const yesterdayPayments = useMemo(() => payments.filter(p => p.date === yesterdayStr), [payments, yesterdayStr]);
+  const yesterdayRevenue = useMemo(() => yesterdayPayments.reduce((s, p) => s + p.amount, 0), [yesterdayPayments]);
+  const yesterdayLeads = useMemo(() => leads.filter(l => l.date === yesterdayStr).length, [leads, yesterdayStr]);
 
   // Today's stats
   const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+
+  // Follow-up urgency counts
+  const overdueFollowUps = useMemo(() => followUps.filter(f => f.status === "Pending" && f.dueDate < todayStr), [followUps, todayStr]);
+  const dueTodayFollowUps = useMemo(() => followUps.filter(f => f.status === "Pending" && f.dueDate === todayStr), [followUps, todayStr]);
   const todayPayments = payments.filter(p => p.date === todayStr);
   const todayNew = todayPayments.filter(p => p.paymentType === "New Client").reduce((s, p) => s + p.amount, 0);
   const todayExisting = todayPayments.filter(p => p.paymentType === "Existing Client").reduce((s, p) => s + p.amount, 0);
@@ -333,6 +411,104 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* ── CEO Morning Briefing ─────────────────────────── */}
+      <div className="rounded-lg border overflow-hidden" style={{ background: "oklch(0.18 0.025 250)", borderColor: "oklch(0.72 0.12 75 / 30%)" }}>
+        <button
+          className="w-full flex items-center justify-between px-5 py-3.5 cursor-pointer select-none hover:bg-white/3 transition-colors"
+          onClick={() => setBriefingOpen(v => !v)}
+        >
+          <div className="flex items-center gap-2">
+            <Sunrise className="w-4 h-4" style={{ color: "oklch(0.72 0.12 75)" }} />
+            <span className="text-sm font-semibold uppercase tracking-wider" style={{ color: "oklch(0.72 0.12 75)" }}>
+              Morning Briefing
+            </span>
+            <span className="text-xs" style={{ color: "oklch(0.50 0.01 250)" }}>
+              {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+            </span>
+          </div>
+          {briefingOpen
+            ? <ChevronUp className="w-4 h-4" style={{ color: "oklch(0.55 0.01 250)" }} />
+            : <ChevronDown className="w-4 h-4" style={{ color: "oklch(0.55 0.01 250)" }} />}
+        </button>
+        {briefingOpen && (
+          <div className="px-5 pb-5 pt-1 border-t" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
+              {/* Yesterday Revenue */}
+              <div className="rounded-lg p-3" style={{ background: "oklch(0.22 0.025 250)" }}>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <DollarSign className="w-3.5 h-3.5" style={{ color: "oklch(0.72 0.12 75)" }} />
+                  <span className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>Yesterday Revenue</span>
+                </div>
+                <div className="text-xl font-bold" style={{ color: yesterdayRevenue > 0 ? "oklch(0.72 0.12 75)" : "oklch(0.50 0.01 250)" }}>
+                  {formatCurrency(yesterdayRevenue)}
+                </div>
+                <div className="text-xs mt-0.5" style={{ color: "oklch(0.45 0.01 250)" }}>
+                  {yesterdayPayments.length} payment{yesterdayPayments.length !== 1 ? "s" : ""}
+                </div>
+              </div>
+              {/* Overdue Follow-Ups */}
+              <div className="rounded-lg p-3" style={{ background: overdueFollowUps.length > 0 ? "oklch(0.60 0.22 25 / 12%)" : "oklch(0.22 0.025 250)", border: overdueFollowUps.length > 0 ? "1px solid oklch(0.60 0.22 25 / 30%)" : "none" }}>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <AlertTriangle className="w-3.5 h-3.5" style={{ color: overdueFollowUps.length > 0 ? "oklch(0.70 0.22 25)" : "oklch(0.55 0.01 250)" }} />
+                  <span className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>Overdue Follow-Ups</span>
+                </div>
+                <div className="text-xl font-bold" style={{ color: overdueFollowUps.length > 0 ? "oklch(0.70 0.22 25)" : "oklch(0.55 0.18 145)" }}>
+                  {overdueFollowUps.length}
+                </div>
+                <div className="text-xs mt-0.5" style={{ color: "oklch(0.45 0.01 250)" }}>
+                  {overdueFollowUps.length === 0 ? "All clear" : "need attention"}
+                </div>
+              </div>
+              {/* Due Today Follow-Ups */}
+              <div className="rounded-lg p-3" style={{ background: dueTodayFollowUps.length > 0 ? "oklch(0.72 0.12 75 / 8%)" : "oklch(0.22 0.025 250)" }}>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Clock3 className="w-3.5 h-3.5" style={{ color: "oklch(0.72 0.12 75)" }} />
+                  <span className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>Due Today</span>
+                </div>
+                <div className="text-xl font-bold" style={{ color: dueTodayFollowUps.length > 0 ? "oklch(0.80 0.12 75)" : "oklch(0.55 0.01 250)" }}>
+                  {dueTodayFollowUps.length}
+                </div>
+                <div className="text-xs mt-0.5" style={{ color: "oklch(0.45 0.01 250)" }}>follow-ups</div>
+              </div>
+              {/* Overdue Installments */}
+              <div className="rounded-lg p-3" style={{ background: overdueInstallments.length > 0 ? "oklch(0.60 0.22 25 / 12%)" : "oklch(0.22 0.025 250)", border: overdueInstallments.length > 0 ? "1px solid oklch(0.60 0.22 25 / 30%)" : "none" }}>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <CheckSquare className="w-3.5 h-3.5" style={{ color: overdueInstallments.length > 0 ? "oklch(0.70 0.22 25)" : "oklch(0.55 0.01 250)" }} />
+                  <span className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>Overdue Payments</span>
+                </div>
+                <div className="text-xl font-bold" style={{ color: overdueInstallments.length > 0 ? "oklch(0.70 0.22 25)" : "oklch(0.55 0.18 145)" }}>
+                  {overdueInstallments.length}
+                </div>
+                <div className="text-xs mt-0.5" style={{ color: "oklch(0.45 0.01 250)" }}>
+                  {overdueInstallments.length === 0 ? "All on time" : "installments late"}
+                </div>
+              </div>
+            </div>
+            {/* Quick links */}
+            <div className="flex gap-3 mt-3 flex-wrap">
+              <Link href="/follow-ups">
+                <span className="text-xs px-3 py-1.5 rounded-lg cursor-pointer transition-all hover:opacity-90"
+                  style={{ background: "oklch(0.72 0.12 75 / 12%)", color: "oklch(0.72 0.12 75)", border: "1px solid oklch(0.72 0.12 75 / 30%)" }}>
+                  View Follow-Ups
+                </span>
+              </Link>
+              <Link href="/clients">
+                <span className="text-xs px-3 py-1.5 rounded-lg cursor-pointer transition-all hover:opacity-90"
+                  style={{ background: "oklch(0.72 0.12 75 / 12%)", color: "oklch(0.72 0.12 75)", border: "1px solid oklch(0.72 0.12 75 / 30%)" }}>
+                  Client Ledger
+                </span>
+              </Link>
+              <Link href="/leads">
+                <span className="text-xs px-3 py-1.5 rounded-lg cursor-pointer transition-all hover:opacity-90"
+                  style={{ background: "oklch(0.72 0.12 75 / 12%)", color: "oklch(0.72 0.12 75)", border: "1px solid oklch(0.72 0.12 75 / 30%)" }}>
+                  Leads Pipeline
+                </span>
+              </Link>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* ── Today Strip ─────────────────────────────────────── */}
       <div className="rounded-lg p-4 border" style={{ background: "oklch(0.18 0.025 250)", borderColor: "oklch(0.72 0.12 75 / 25%)" }}>
         <div className="flex items-center gap-2 mb-3">
@@ -407,6 +583,45 @@ export default function Dashboard() {
                   View Leads
                 </span>
               </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* -- Due This Week Installments Strip */}
+      {dueThisWeekInstallments.length > 0 && (
+        <div className="rounded-lg p-4 border" style={{ background: "oklch(0.72 0.12 75 / 6%)", borderColor: "oklch(0.72 0.12 75 / 30%)" }}>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Bell className="w-4 h-4" style={{ color: "oklch(0.72 0.12 75)" }} />
+              <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "oklch(0.72 0.12 75)" }}>
+                Due This Week
+              </span>
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: "oklch(0.72 0.12 75 / 20%)", color: "oklch(0.72 0.12 75)" }}>
+                {dueThisWeekInstallments.length}
+              </span>
+            </div>
+            <div className="flex items-center gap-3 flex-wrap flex-1 min-w-0">
+              {dueThisWeekInstallments.slice(0, 4).map(item => (
+                <div key={item.id} className="flex items-center gap-1.5 text-xs" style={{ color: "oklch(0.75 0.01 250)" }}>
+                  <button
+                    onClick={() => { setPanelLeadId(String(item.leadId)); setPanelInitialTab("installments"); }}
+                    className="font-medium hover:underline cursor-pointer"
+                    style={{ color: "oklch(0.93 0.005 250)", background: "none", border: "none", padding: 0 }}
+                  >{item.leadName}</button>
+                  <span style={{ color: "oklch(0.55 0.01 250)" }}>·</span>
+                  <span>{formatCurrency(item.amount)}</span>
+                  <span className="px-1.5 py-0.5 rounded text-xs" style={{ background: item.dueDate === todayStr ? "oklch(0.72 0.12 75 / 20%)" : "oklch(0.22 0.025 250)", color: item.dueDate === todayStr ? "oklch(0.80 0.12 75)" : "oklch(0.55 0.01 250)" }}>
+                    {item.dueDate === todayStr ? "TODAY" : item.dueDate}
+                  </span>
+                </div>
+              ))}
+              {dueThisWeekInstallments.length > 4 && (
+                <span className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>+{dueThisWeekInstallments.length - 4} more</span>
+              )}
+            </div>
+            <div className="text-xs font-semibold" style={{ color: "oklch(0.72 0.12 75)" }}>
+              {formatCurrency(dueThisWeekInstallments.reduce((s, i) => s + i.amount, 0))} total
             </div>
           </div>
         </div>
@@ -580,7 +795,102 @@ export default function Dashboard() {
         </ResponsiveContainer>
       </div>
 
-      {/* ── Calendar Revenue Heatmap ───────────────────────── */}
+      {/* ── Revenue Velocity Chart ────────────────────── */}
+      <div className="rounded-lg p-5 border" style={{ background: "oklch(0.18 0.025 250)", borderColor: "oklch(1 0 0 / 8%)" }}>
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="w-4 h-4" style={{ color: "oklch(0.72 0.12 75)" }} />
+            <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "oklch(0.72 0.12 75)" }}>
+              Revenue Velocity — {MONTHS[selectedMonth - 1]} {selectedYear}
+            </h2>
+          </div>
+          <div className="flex items-center gap-4 text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>
+            <span className="flex items-center gap-1.5">
+              <span className="w-4 border-t-2 inline-block" style={{ borderColor: "oklch(0.72 0.12 75)" }} />
+              Actual
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-4 border-t-2 border-dashed inline-block" style={{ borderColor: "oklch(0.55 0.18 145)" }} />
+              Ideal Pace
+            </span>
+          </div>
+        </div>
+        <ResponsiveContainer width="100%" height={220}>
+          <AreaChart data={velocityData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+            <defs>
+              <linearGradient id="velActual" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="oklch(0.72 0.12 75)" stopOpacity={0.25} />
+                <stop offset="95%" stopColor="oklch(0.72 0.12 75)" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 6%)" />
+            <XAxis dataKey="day" tick={{ fill: "oklch(0.55 0.01 250)", fontSize: 11 }} axisLine={false} tickLine={false}
+              tickFormatter={d => d % 5 === 0 || d === 1 ? String(d) : ""} />
+            <YAxis tickFormatter={v => `$${(v/1000).toFixed(0)}k`} tick={{ fill: "oklch(0.55 0.01 250)", fontSize: 11 }} axisLine={false} tickLine={false} />
+            <Tooltip
+              contentStyle={{ background: "oklch(0.22 0.025 250)", border: "1px solid oklch(1 0 0 / 12%)", borderRadius: "8px", color: "oklch(0.93 0.005 250)" }}
+              formatter={(v: number, name: string) => [formatCurrency(v), name === "actual" ? "Actual" : "Ideal Pace"]}
+              labelFormatter={d => `Day ${d}`}
+            />
+            <ReferenceLine y={targets.monthly.green} stroke="oklch(0.55 0.18 145)" strokeDasharray="6 3" strokeWidth={1.5} />
+            <Area type="monotone" dataKey="ideal" stroke="oklch(0.55 0.18 145)" strokeWidth={1.5} strokeDasharray="6 3" fill="none" dot={false} />
+            <Area type="monotone" dataKey="actual" stroke="oklch(0.72 0.12 75)" strokeWidth={2} fill="url(#velActual)" dot={false} />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* ── Month-over-Month Comparison ────────────────── */}
+      <div className="rounded-lg p-5 border" style={{ background: "oklch(0.18 0.025 250)", borderColor: "oklch(1 0 0 / 8%)" }}>
+        <div className="flex items-center gap-2 mb-4">
+          <TrendingDown className="w-4 h-4" style={{ color: "oklch(0.72 0.12 75)" }} />
+          <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "oklch(0.72 0.12 75)" }}>
+            Month-over-Month
+          </h2>
+          <span className="text-xs" style={{ color: "oklch(0.45 0.01 250)" }}>
+            vs. {momComparison.prevMonth}
+          </span>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          {[
+            {
+              label: "Revenue",
+              current: formatCurrency(totalReceived),
+              prev: formatCurrency(momComparison.prevTotal),
+              change: momComparison.revChange,
+            },
+            {
+              label: "Leads In",
+              current: String(totalLeads),
+              prev: String(momComparison.prevLeads),
+              change: momComparison.leadsChange,
+            },
+            {
+              label: "Conversions",
+              current: String(converted),
+              prev: String(momComparison.prevConverted),
+              change: momComparison.prevConverted > 0 ? Math.round(((converted - momComparison.prevConverted) / momComparison.prevConverted) * 100) : null,
+            },
+          ].map(({ label, current, prev, change }) => (
+            <div key={label} className="rounded-lg p-3" style={{ background: "oklch(0.22 0.025 250)" }}>
+              <div className="text-xs mb-1" style={{ color: "oklch(0.50 0.01 250)" }}>{label}</div>
+              <div className="text-xl font-bold mb-1" style={{ color: "oklch(0.93 0.005 250)" }}>{current}</div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs" style={{ color: "oklch(0.45 0.01 250)" }}>{prev} prev</span>
+                {change !== null && (
+                  <span className="text-xs font-semibold px-1.5 py-0.5 rounded" style={{
+                    background: change >= 0 ? "oklch(0.55 0.18 145 / 15%)" : "oklch(0.60 0.22 25 / 15%)",
+                    color: change >= 0 ? "oklch(0.65 0.18 145)" : "oklch(0.70 0.22 25)",
+                  }}>
+                    {change >= 0 ? "+" : ""}{change}%
+                  </span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Calendar Revenue Heatmap ─────────────────── */}
       <div className="rounded-lg border overflow-hidden" style={{ background: "oklch(0.18 0.025 250)", borderColor: "oklch(1 0 0 / 8%)" }}>
         {/* Header row with toggle */}
         <div
@@ -784,7 +1094,103 @@ export default function Dashboard() {
           )}
       </div>
 
-      {/* ── Drill-Down Drawer ───────────────────────────────── */}
+      {/* ── Lead Source ROI + Pipeline Value ─────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Lead Source ROI */}
+        <div className="rounded-lg p-5 border" style={{ background: "oklch(0.18 0.025 250)", borderColor: "oklch(1 0 0 / 8%)" }}>
+          <div className="flex items-center gap-2 mb-4">
+            <Target className="w-4 h-4" style={{ color: "oklch(0.72 0.12 75)" }} />
+            <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "oklch(0.72 0.12 75)" }}>Lead Source</h2>
+            <span className="text-xs" style={{ color: "oklch(0.45 0.01 250)" }}>all time</span>
+          </div>
+          {(() => {
+            const sourceMap: Record<string, { leads: number; converted: number; revenue: number }> = {};
+            leads.forEach(l => {
+              const src = l.source || "Unknown";
+              if (!sourceMap[src]) sourceMap[src] = { leads: 0, converted: 0, revenue: 0 };
+              sourceMap[src].leads += 1;
+              if (l.stage === "Retained") {
+                sourceMap[src].converted += 1;
+                sourceMap[src].revenue += l.retainerBooked || 0;
+              }
+            });
+            const rows = Object.entries(sourceMap)
+              .map(([src, d]) => ({ src, ...d, convRate: d.leads > 0 ? Math.round((d.converted / d.leads) * 100) : 0 }))
+              .sort((a, b) => b.revenue - a.revenue)
+              .slice(0, 6);
+            if (rows.length === 0) return <p className="text-sm text-center py-6" style={{ color: "oklch(0.45 0.01 250)" }}>No lead source data yet.</p>;
+            return (
+              <div className="space-y-2">
+                {rows.map(row => (
+                  <div key={row.src} className="flex items-center gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-medium truncate" style={{ color: "oklch(0.80 0.005 250)" }}>{row.src}</span>
+                        <span className="text-xs ml-2 flex-shrink-0" style={{ color: "oklch(0.55 0.01 250)" }}>{row.leads} leads · {row.convRate}% conv</span>
+                      </div>
+                      <div className="relative h-1.5 rounded-full overflow-hidden" style={{ background: "oklch(0.22 0.025 250)" }}>
+                        <div className="h-full rounded-full" style={{ width: `${rows[0].revenue > 0 ? Math.round((row.revenue / rows[0].revenue) * 100) : 0}%`, background: "oklch(0.72 0.12 75)" }} />
+                      </div>
+                    </div>
+                    <span className="text-xs font-semibold flex-shrink-0" style={{ color: "oklch(0.72 0.12 75)" }}>{formatCurrency(row.revenue)}</span>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+        </div>
+
+        {/* Pipeline Value Summary */}
+        <div className="rounded-lg p-5 border" style={{ background: "oklch(0.18 0.025 250)", borderColor: "oklch(1 0 0 / 8%)" }}>
+          <div className="flex items-center gap-2 mb-4">
+            <BookOpen className="w-4 h-4" style={{ color: "oklch(0.72 0.12 75)" }} />
+            <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "oklch(0.72 0.12 75)" }}>Pipeline Value</h2>
+            <span className="text-xs" style={{ color: "oklch(0.45 0.01 250)" }}>active leads</span>
+          </div>
+          {(() => {
+            const activeLeads = leads.filter(l => l.stage !== "Lost");
+            const totalPipeline = activeLeads.reduce((s, l) => s + (l.retainerBooked || l.quotedAmount || 0), 0);
+            const stageBreakdown = ["New Lead", "Consultation", "Retained"].map(stage => {
+              const stageLeads = activeLeads.filter(l => l.stage === stage);
+              const value = stageLeads.reduce((s, l) => s + (l.retainerBooked || l.quotedAmount || 0), 0);
+              return { stage, count: stageLeads.length, value };
+            });
+            const stageColors: Record<string, string> = {
+              "New Lead": "oklch(0.65 0.15 250)",
+              "Consultation": "oklch(0.72 0.12 75)",
+              "Retained": "oklch(0.55 0.18 145)",
+            };
+            return (
+              <div className="space-y-4">
+                <div className="text-center">
+                  <div className="text-3xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.72 0.12 75)" }}>
+                    {formatCurrency(totalPipeline)}
+                  </div>
+                  <div className="text-xs mt-1" style={{ color: "oklch(0.45 0.01 250)" }}>{activeLeads.length} active leads</div>
+                </div>
+                <div className="space-y-2">
+                  {stageBreakdown.map(({ stage, count, value }) => (
+                    <div key={stage} className="flex items-center gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-medium" style={{ color: stageColors[stage] }}>{stage}</span>
+                          <span className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>{count} leads</span>
+                        </div>
+                        <div className="relative h-1.5 rounded-full overflow-hidden" style={{ background: "oklch(0.22 0.025 250)" }}>
+                          <div className="h-full rounded-full" style={{ width: totalPipeline > 0 ? `${Math.round((value / totalPipeline) * 100)}%` : "0%", background: stageColors[stage] }} />
+                        </div>
+                      </div>
+                      <span className="text-xs font-semibold flex-shrink-0" style={{ color: "oklch(0.80 0.005 250)" }}>{formatCurrency(value)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      </div>
+
+      {/* ── Drill-Down Drawer ─────────────────────────────────── */}
       {drillDown && (() => {
         type PaymentRow = { date: string; clientName: string; caseType: string; caseNumber?: string; paymentType: string; amount: number; receivedFor: string; notes?: string; leadId?: string; };
         type LeadRow = { id: string; name: string; phone?: string; caseType: string; caseNumber?: string; stage: string; date: string; convertedDate?: string; retainerBooked: number; source?: string; notes?: string; };

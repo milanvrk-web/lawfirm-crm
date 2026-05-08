@@ -63,3 +63,77 @@
 - [x] Show loading spinner on button while mutation is in progress
 - [x] Refresh overdue installments query after mutation completes
 - [x] Add test for bulk reschedule mutation
+
+## CEO Morning Briefing Widget
+
+- [ ] Add collapsible "Morning Briefing" card at top of Dashboard showing yesterday's revenue, overdue follow-ups count, overdue payments count, and leads added yesterday
+- [ ] Show a color-coded status (green/yellow/red) for each metric based on thresholds
+- [ ] Persist collapsed/expanded state in localStorage
+
+## Lead Age Indicator
+
+- [ ] Add age badge to each lead card showing days since creation (green <7d, yellow 7–14d, red >14d)
+- [ ] Add age column/badge to Leads page list view
+- [ ] Add "Stale Leads" count to Dashboard stat cards (leads with no activity >14 days)
+
+## Lost Lead Reason Tracking
+
+- [ ] Add lostReason field to leads table (DB migration)
+- [ ] When marking a lead as Lost, show a modal requiring a reason (price, competitor, not qualified, no response, other)
+- [ ] Show lost reason on lead detail Info tab
+- [ ] Add Lost Reasons breakdown chart to Dashboard (pie or bar)
+
+## Kanban Board View
+
+- [ ] Add a "Pipeline" page with a Kanban board layout (columns: New Lead, Consulted, Retained, Closed/Lost)
+- [ ] Each card shows lead name, case type, days old, retainer booked amount
+- [ ] Drag-and-drop between columns updates lead stage in DB
+- [ ] Add Pipeline page to sidebar navigation
+- [ ] Show total pipeline value (sum of retainerBooked) per column footer
+
+## Installments Due This Week
+
+- [ ] Add tRPC query getInstallmentsDueThisWeek (unpaid items with dueDate within next 7 days)
+- [ ] Add a "Due This Week" amber alert strip on Dashboard above the overdue strip
+- [ ] Show lead name, amount, and due date for each item
+- [ ] Clicking a lead name opens Lead Detail panel on Installments tab
+
+## Retainer Balance Tracker
+
+- [ ] In Lead Detail panel Payments tab, show retainer booked vs. total collected vs. outstanding balance
+- [ ] Color-code outstanding balance (green = fully paid, yellow = partially paid, red = nothing collected)
+- [ ] Add "Outstanding Balance" column to Payments page table
+
+## Revenue Velocity Chart
+
+- [ ] Compute cumulative daily revenue for the selected month
+- [ ] Add a line chart showing actual cumulative revenue vs. ideal pace line (target/days × day number)
+- [ ] Place below the existing weekly bar chart on Dashboard
+
+## Month-over-Month Comparison
+
+- [ ] Add a comparison row below the stat cards showing this month vs. last month for: revenue, leads, conversions
+- [ ] Show % change with up/down arrow and color (green = improvement, red = decline)
+
+## Lead Source ROI
+
+- [ ] Add a "Lead Sources" section to Dashboard showing: source name, lead count, conversion count, conversion %, total revenue
+- [ ] Sort by total revenue descending
+- [ ] Show for the selected month
+
+## Pipeline Value Summary
+
+- [ ] Add a "Pipeline Value" stat card showing total retainerBooked across all active (non-lost, non-closed) leads
+- [ ] Show breakdown by stage in a small table below the card
+
+## Weekly Follow-Up Digest
+
+- [ ] Add a "This Week's Follow-Ups" section to the Follow-Ups page showing all tasks due Mon–Sun of current week grouped by day
+- [ ] Highlight today's tasks with a gold border
+- [ ] Show completion count vs. total per day (e.g., "3 / 5 done")
+
+## Overdue Follow-Up Escalation
+
+- [ ] Add a red escalation badge on follow-up tasks that are >24h overdue (not just past due date)
+- [ ] Add overdue count badge to the Follow-Ups sidebar nav item
+- [ ] Show escalated tasks at the top of the Follow-Ups list

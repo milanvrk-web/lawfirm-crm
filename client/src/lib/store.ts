@@ -52,6 +52,7 @@ export interface Lead {
   quotedAmount: number;   // initial quote
   referredBy: string;
   convertedDate?: string;
+  lostReason?: string | null;
   leadLog?: LeadNote[];   // inline timestamped notes
 }
 
