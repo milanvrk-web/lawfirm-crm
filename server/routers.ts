@@ -262,10 +262,11 @@ export const appRouter = router({
         dueDate: z.string(),
         title: z.string(),
         status: FollowUpStatusEnum.default("Pending"),
+        assignedTo: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
         const id = nanoid();
-        await db.createFollowUp({ id, ...input });
+        await db.createFollowUp({ id, ...input, assignedTo: input.assignedTo ?? null });
         return { id };
       }),
 

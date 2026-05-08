@@ -119,7 +119,7 @@ export default function LeadDetailPanel({
   const handleSaveFollowUp = () => {
     if (!fuTitle.trim()) { toast.error("Enter a task title"); return; }
     if (!fuDate) { toast.error("Select a due date"); return; }
-    addFollowUp({ leadId: lead.id, dueDate: fuDate, status: "Pending", title: fuTitle.trim() });
+    addFollowUp({ leadId: lead.id, dueDate: fuDate, status: "Pending", title: fuTitle.trim(), assignedTo: activeMember?.name ?? null });
     setFuTitle("Call back");
     setFuDate(new Date().toISOString().split("T")[0]);
     setShowFuForm(false);
@@ -418,8 +418,12 @@ export default function LeadDetailPanel({
                                 <span className="opacity-0 group-hover:opacity-60 transition-opacity" style={{ fontSize: "10px" }}>✎</span>
                               </button>
                             )}
+                            {fu.assignedTo && (
+                              <span className="text-xs px-1.5 py-0.5 rounded-full font-medium" style={{ background: "oklch(0.55 0.18 250 / 20%)", color: "oklch(0.70 0.12 250)" }}>
+                                {fu.assignedTo}
+                              </span>
+                            )}
                           </div>
-
                           {/* Comments */}
                           {fu.comments.length > 0 && (
                             <div className="mt-2 space-y-1">

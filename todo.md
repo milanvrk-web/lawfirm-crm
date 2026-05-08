@@ -172,4 +172,9 @@
 - [x] Add authorName field to lead_notes table (DB migration)
 - [x] When saving a note, attach the active member's name as authorName
 - [x] Show author name badge on each note row in LeadDetailPanel
-- [ ] Add authorName to follow-up tasks table and show it on task cards
+- [x] Add authorName to follow-up tasks table and show it on task cards
+
+## Team Members — Gap Fixes
+
+- [x] Show assignedTo badge on follow-up task cards in the main Follow-Ups page
+- [x] Pass active member name in StaleLeadsDrawer addFollowUp calls

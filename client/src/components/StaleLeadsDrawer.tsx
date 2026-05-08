@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useCRM } from "@/contexts/CRMContext";
+import { useActiveMember } from "@/contexts/ActiveMemberContext";
 import type { Lead } from "@/lib/store";
 
 interface StaleLead {
@@ -48,6 +49,7 @@ function stageColor(stage: string): string {
 
 export default function StaleLeadsDrawer({ open, onClose }: StaleLeadsDrawerProps) {
   const { leads, payments, followUps, addFollowUp } = useCRM();
+  const { activeMember } = useActiveMember();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [forms, setForms] = useState<Record<string, { title: string; dueDate: string; note: string }>>({});
   const [saving, setSaving] = useState<Record<string, boolean>>({});
@@ -105,6 +107,7 @@ export default function StaleLeadsDrawer({ open, onClose }: StaleLeadsDrawerProp
         title: form.title.trim(),
         dueDate: form.dueDate,
         status: "Pending",
+        assignedTo: activeMember?.name ?? null,
       });
       toast.success(`Follow-up assigned for ${lead.name}`);
       setExpandedId(null);

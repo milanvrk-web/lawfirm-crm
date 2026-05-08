@@ -71,7 +71,7 @@ type DbPayment = {
 
 type DbFollowUp = {
   id: string; leadId: string; dueDate: string; status: string; title: string;
-  createdAt?: Date; updatedAt?: Date;
+  createdAt?: Date; updatedAt?: Date; assignedTo?: string | null;
 };
 
 type DbDayClose = {
@@ -119,6 +119,7 @@ function normalizeFollowUp(r: DbFollowUp, comments: DbComment[] = []): FollowUp 
     status: r.status as FollowUp["status"],
     title: r.title,
     createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : (r.createdAt ?? new Date().toISOString()),
+    assignedTo: r.assignedTo ?? null,
     comments: comments.filter(c => c.followUpId === r.id).map(c => ({
       id: c.id, initial: c.initial, text: c.text, timestamp: c.timestamp,
     })),
@@ -264,6 +265,7 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
       dueDate: fu.dueDate,
       title: fu.title,
       status: fu.status,
+      assignedTo: fu.assignedTo ?? undefined,
     });
   }, [createFollowUpMut]);
 

@@ -26,6 +26,7 @@ export interface FollowUp {
   title: string;      // short task title e.g. "Call back"
   comments: FollowUpComment[];
   createdAt: string;  // ISO string
+  assignedTo?: string | null;
 }
 export type CaseType = "DA" | "SIJS" | "AOS" | "AO" | "K1/K2" | "U-Visa" | "Green Card" | "BIA" | "Other";
 export type PaymentType = "New Client" | "Existing Client";

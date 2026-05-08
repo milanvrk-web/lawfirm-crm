@@ -522,6 +522,11 @@ export default function FollowUps() {
                             <span className="opacity-0 group-hover:opacity-60 text-xs transition-opacity" style={{ fontSize: "10px" }}>✎</span>
                           </button>
                         )}
+                        {fu.assignedTo && (
+                          <span className="text-xs px-1.5 py-0.5 rounded-full font-medium" style={{ background: "oklch(0.55 0.18 250 / 20%)", color: "oklch(0.70 0.12 250)" }}>
+                            {fu.assignedTo}
+                          </span>
+                        )}
                       </div>
                       {fu.comments.length > 0 && (
                         <div className="flex items-center gap-1">

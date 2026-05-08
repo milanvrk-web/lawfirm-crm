@@ -119,6 +119,7 @@ export const followUps = mysqlTable("follow_ups", {
   title: varchar("title", { length: 500 }).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  assignedTo: varchar("assignedTo", { length: 100 }),
 });
 
 export type DbFollowUp = typeof followUps.$inferSelect;
