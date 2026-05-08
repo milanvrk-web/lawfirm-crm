@@ -1,4 +1,4 @@
-import { eq, desc, asc } from "drizzle-orm";
+import { eq, desc, asc, lt, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   users,
@@ -348,4 +348,45 @@ export async function getPaymentByLinkedInstallment(installmentId: string) {
     .where(eq(payments.linkedInstallmentId, installmentId))
     .limit(1);
   return result[0] ?? null;
+}
+
+/** Returns all unpaid installment items whose due date is before today, with their plan and lead info. */
+export async function getOverdueInstallments() {
+  const db = await getDb();
+  if (!db) return [];
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  // Fetch all unpaid items with a past due date
+  const overdueItems = await db
+    .select()
+    .from(installmentItems)
+    .where(and(eq(installmentItems.isPaid, 0), lt(installmentItems.dueDate, today)))
+    .orderBy(asc(installmentItems.dueDate));
+  if (overdueItems.length === 0) return [];
+  // Enrich with plan → lead info
+  const planIds = Array.from(new Set(overdueItems.map(i => i.planId)));
+  // Fetch all relevant plans in one go using a loop (TiDB-safe)
+  const allPlans: (typeof installmentPlans.$inferSelect)[] = [];
+  for (const planId of planIds) {
+    const rows = await db.select().from(installmentPlans).where(eq(installmentPlans.id, planId));
+    allPlans.push(...rows);
+  }
+  const planMap = new Map(allPlans.map(p => [p.id, p]));
+  // Fetch all relevant leads
+  const leadIds = Array.from(new Set(allPlans.map(p => p.leadId)));
+  const allLeads: (typeof leads.$inferSelect)[] = [];
+  for (const leadId of leadIds) {
+    const rows = await db.select().from(leads).where(eq(leads.id, leadId));
+    allLeads.push(...rows);
+  }
+  const leadMap = new Map(allLeads.map(l => [l.id, l]));
+  return overdueItems.map(item => {
+    const plan = planMap.get(item.planId);
+    const lead = plan ? leadMap.get(plan.leadId) : undefined;
+    return {
+      ...item,
+      planNotes: plan?.notes ?? "",
+      leadId: plan?.leadId ?? "",
+      leadName: lead?.name ?? "Unknown",
+    };
+  });
 }

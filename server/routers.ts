@@ -582,5 +582,15 @@ export const appRouter = router({
       await db.updateInstallmentItem(input.id, { dueDate: input.dueDate });
       return { success: true };
     }),
+
+  // ─── Overdue Installments ─────────────────────────────────────────────────
+  getOverdueInstallments: publicProcedure
+    .query(async () => {
+      const items = await db.getOverdueInstallments();
+      return items.map(item => ({
+        ...item,
+        amount: Number(item.amount),
+      }));
+    }),
 });
 export type AppRouter = typeof appRouter;

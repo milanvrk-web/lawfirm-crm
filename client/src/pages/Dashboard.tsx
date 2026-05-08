@@ -6,6 +6,7 @@
 
 import { useState, useMemo } from "react";
 import { useCRM } from "@/contexts/CRMContext";
+import { trpc } from "@/lib/trpc";
 import {
   formatCurrency,
   getMonthLeads,
@@ -167,6 +168,11 @@ export default function Dashboard() {
       .map(([caseType, { revenue, count }]) => ({ caseType, revenue, count, pct: totalReceived > 0 ? Math.round((revenue / totalReceived) * 100) : 0 }))
       .sort((a, b) => b.revenue - a.revenue);
   }, [monthPayments, totalReceived]);
+
+  // Overdue installments
+  const { data: overdueInstallments = [] } = trpc.getOverdueInstallments.useQuery(undefined, {
+    refetchInterval: 60_000, // refresh every minute
+  });
 
   // Today's stats
   const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
@@ -343,6 +349,42 @@ export default function Dashboard() {
           ))}
         </div>
       </div>
+
+      {/* -- Overdue Installments Alert Strip */}
+      {overdueInstallments.length > 0 && (
+        <div className="rounded-lg p-4 border" style={{ background: "oklch(0.70 0.22 25 / 8%)", borderColor: "oklch(0.70 0.22 25 / 35%)" }}>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4" style={{ color: "oklch(0.70 0.22 25)" }} />
+              <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "oklch(0.70 0.22 25)" }}>
+                Overdue Installments
+              </span>
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: "oklch(0.70 0.22 25 / 20%)", color: "oklch(0.70 0.22 25)" }}>
+                {overdueInstallments.length}
+              </span>
+            </div>
+            <div className="flex items-center gap-3 flex-wrap flex-1 min-w-0">
+              {overdueInstallments.slice(0, 4).map(item => (
+                <div key={item.id} className="flex items-center gap-1.5 text-xs" style={{ color: "oklch(0.75 0.01 250)" }}>
+                  <span className="font-medium" style={{ color: "oklch(0.93 0.005 250)" }}>{item.leadName}</span>
+                  <span style={{ color: "oklch(0.55 0.01 250)" }}>·</span>
+                  <span>{formatCurrency(item.amount)}</span>
+                  <span style={{ color: "oklch(0.55 0.01 250)" }}>due {item.dueDate}</span>
+                </div>
+              ))}
+              {overdueInstallments.length > 4 && (
+                <span className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>+{overdueInstallments.length - 4} more</span>
+              )}
+            </div>
+            <Link href="/leads">
+              <span className="text-xs font-medium px-3 py-1.5 rounded-lg transition-all hover:opacity-90 cursor-pointer"
+                style={{ background: "oklch(0.70 0.22 25 / 15%)", color: "oklch(0.70 0.22 25)", border: "1px solid oklch(0.70 0.22 25 / 35%)" }}>
+                View Leads
+              </span>
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* -- Follow-Up Alert Strip */}
       {(() => {

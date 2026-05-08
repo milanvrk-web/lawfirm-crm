@@ -48,3 +48,10 @@
 - [x] Add linkedInstallmentId column to payments table to track the link
 - [x] Show a "Linked to installment #N" badge on the payment row in the Payments tab
 - [x] Write tests covering auto-link and auto-unlink logic
+
+## Overdue Installment Alert Card
+
+- [ ] Add tRPC query to fetch all overdue installment items with lead info
+- [ ] Add alert card to Dashboard showing overdue count and per-lead breakdown
+- [ ] Clicking a lead name in the alert opens the Lead Detail panel on the Payments tab
+- [ ] Card is hidden when there are no overdue installments
