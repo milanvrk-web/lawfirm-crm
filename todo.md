@@ -216,3 +216,10 @@
 - [x] Replace +1d/+3d/+7d push buttons on Follow-Up Kanban cards with an inline date picker input
 - [x] Auto-create a follow-up task when a lead is dragged/moved to the Follow-Up stage (same as Consultation stage)
 - [x] If a follow-up task already exists for the lead, update its due date when the date picker changes
+
+## Drag-to-Retained Conversion
+
+- [x] When a lead is dragged to the Retained column, open the Convert modal instead of silently moving the stage
+- [x] Convert modal pre-fills case number from the lead and shows retainer/downpayment/notes fields
+- [x] On confirm, update stage to Retained and log the downpayment payment (same as clicking Convert button)
+- [x] On cancel, do not move the lead

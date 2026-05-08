@@ -144,6 +144,10 @@ export default function Leads() {
       setLostLeadPending(lead);
       setLostReason("");
       setLostReasonCustom("");
+    } else if (targetStage === "Retained" && lead.stage !== "Retained") {
+      // Open the Convert modal — same as clicking the Convert button
+      setConvertLead(lead);
+      setConvertForm({ retainerBooked: "", downpayment: "", caseNumber: lead.caseNumber || "", notes: "" });
     } else {
       updateLead(leadId, { stage: targetStage });
       toast.success(`Moved to ${targetStage}`);
