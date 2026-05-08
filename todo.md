@@ -51,7 +51,7 @@
 
 ## Overdue Installment Alert Card
 
-- [ ] Add tRPC query to fetch all overdue installment items with lead info
-- [ ] Add alert card to Dashboard showing overdue count and per-lead breakdown
-- [ ] Clicking a lead name in the alert opens the Lead Detail panel on the Payments tab
-- [ ] Card is hidden when there are no overdue installments
+- [x] Add tRPC query to fetch all overdue installment items with lead info
+- [x] Add alert card to Dashboard showing overdue count and per-lead breakdown
+- [x] Clicking a lead name in the alert opens the Lead Detail panel on the Payments tab
+- [x] Card is hidden when there are no overdue installments

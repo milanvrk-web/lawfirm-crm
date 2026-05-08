@@ -46,6 +46,7 @@ import {
   FileText,
 } from "lucide-react";
 import { Link } from "wouter";
+import LeadDetailPanel from "@/components/LeadDetailPanel";
 
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
@@ -76,6 +77,8 @@ export default function Dashboard() {
   const now = new Date();
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
+  const [panelLeadId, setPanelLeadId] = useState<string | null>(null);
+  const [panelInitialTab, setPanelInitialTab] = useState<"followups" | "notes" | "info" | "installments">("installments");
   // Drill-down drawer
   type DrillKey = "leads" | "converted" | "revBooked" | "newClient" | "existingClient" | "totalReceived" | null;
   const [drillDown, setDrillDown] = useState<DrillKey>(null); // current month
@@ -285,6 +288,7 @@ export default function Dashboard() {
   const sc = statusColors[monthStatus];
 
   return (
+    <>
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
       {/* ── Header ──────────────────────────────────────────── */}
       <div className="flex items-start justify-between flex-wrap gap-4">
@@ -366,7 +370,11 @@ export default function Dashboard() {
             <div className="flex items-center gap-3 flex-wrap flex-1 min-w-0">
               {overdueInstallments.slice(0, 4).map(item => (
                 <div key={item.id} className="flex items-center gap-1.5 text-xs" style={{ color: "oklch(0.75 0.01 250)" }}>
-                  <span className="font-medium" style={{ color: "oklch(0.93 0.005 250)" }}>{item.leadName}</span>
+                  <button
+                    onClick={() => { setPanelLeadId(String(item.leadId)); setPanelInitialTab("installments"); }}
+                    className="font-medium hover:underline cursor-pointer"
+                    style={{ color: "oklch(0.93 0.005 250)", background: "none", border: "none", padding: 0 }}
+                  >{item.leadName}</button>
                   <span style={{ color: "oklch(0.55 0.01 250)" }}>·</span>
                   <span>{formatCurrency(item.amount)}</span>
                   <span style={{ color: "oklch(0.55 0.01 250)" }}>due {item.dueDate}</span>
@@ -929,6 +937,16 @@ export default function Dashboard() {
         ))}
       </div>
     </div>
+
+    {/* Lead Detail Panel — opened from overdue installment alert */}
+    {panelLeadId && (
+      <LeadDetailPanel
+        leadId={panelLeadId}
+        initialTab={panelInitialTab}
+        onClose={() => setPanelLeadId(null)}
+      />
+    )}
+    </>  
   );
 }
 
