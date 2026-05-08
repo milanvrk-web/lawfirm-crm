@@ -38,6 +38,7 @@ import {
   DollarSign,
   BookOpen,
   ArrowUpRight,
+  ArrowDownRight,
   Target,
   ChevronLeft,
   ChevronRight,
@@ -535,6 +536,45 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* -- Due This Week Installments Strip */}
+      {dueThisWeekInstallments.length > 0 && (
+        <div className="rounded-lg p-4 border" style={{ background: "oklch(0.72 0.12 75 / 6%)", borderColor: "oklch(0.72 0.12 75 / 30%)" }}>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Bell className="w-4 h-4" style={{ color: "oklch(0.72 0.12 75)" }} />
+              <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "oklch(0.72 0.12 75)" }}>
+                Due This Week
+              </span>
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: "oklch(0.72 0.12 75 / 20%)", color: "oklch(0.72 0.12 75)" }}>
+                {dueThisWeekInstallments.length}
+              </span>
+            </div>
+            <div className="flex items-center gap-3 flex-wrap flex-1 min-w-0">
+              {dueThisWeekInstallments.slice(0, 4).map(item => (
+                <div key={item.id} className="flex items-center gap-1.5 text-xs" style={{ color: "oklch(0.75 0.01 250)" }}>
+                  <button
+                    onClick={() => { setPanelLeadId(String(item.leadId)); setPanelInitialTab("installments"); }}
+                    className="font-medium hover:underline cursor-pointer"
+                    style={{ color: "oklch(0.93 0.005 250)", background: "none", border: "none", padding: 0 }}
+                  >{item.leadName}</button>
+                  <span style={{ color: "oklch(0.55 0.01 250)" }}>·</span>
+                  <span>{formatCurrency(item.amount)}</span>
+                  <span className="px-1.5 py-0.5 rounded text-xs" style={{ background: item.dueDate === todayStr ? "oklch(0.72 0.12 75 / 20%)" : "oklch(0.22 0.025 250)", color: item.dueDate === todayStr ? "oklch(0.80 0.12 75)" : "oklch(0.55 0.01 250)" }}>
+                    {item.dueDate === todayStr ? "TODAY" : item.dueDate}
+                  </span>
+                </div>
+              ))}
+              {dueThisWeekInstallments.length > 4 && (
+                <span className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>+{dueThisWeekInstallments.length - 4} more</span>
+              )}
+            </div>
+            <div className="text-xs font-semibold" style={{ color: "oklch(0.72 0.12 75)" }}>
+              {formatCurrency(dueThisWeekInstallments.reduce((s, i) => s + i.amount, 0))} total
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* -- Overdue Installments Alert Strip */}
       {overdueInstallments.length > 0 && (
         <div className="rounded-lg p-4 border" style={{ background: "oklch(0.70 0.22 25 / 8%)", borderColor: "oklch(0.70 0.22 25 / 35%)" }}>
@@ -583,45 +623,6 @@ export default function Dashboard() {
                   View Leads
                 </span>
               </Link>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* -- Due This Week Installments Strip */}
-      {dueThisWeekInstallments.length > 0 && (
-        <div className="rounded-lg p-4 border" style={{ background: "oklch(0.72 0.12 75 / 6%)", borderColor: "oklch(0.72 0.12 75 / 30%)" }}>
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <div className="flex items-center gap-2">
-              <Bell className="w-4 h-4" style={{ color: "oklch(0.72 0.12 75)" }} />
-              <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "oklch(0.72 0.12 75)" }}>
-                Due This Week
-              </span>
-              <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: "oklch(0.72 0.12 75 / 20%)", color: "oklch(0.72 0.12 75)" }}>
-                {dueThisWeekInstallments.length}
-              </span>
-            </div>
-            <div className="flex items-center gap-3 flex-wrap flex-1 min-w-0">
-              {dueThisWeekInstallments.slice(0, 4).map(item => (
-                <div key={item.id} className="flex items-center gap-1.5 text-xs" style={{ color: "oklch(0.75 0.01 250)" }}>
-                  <button
-                    onClick={() => { setPanelLeadId(String(item.leadId)); setPanelInitialTab("installments"); }}
-                    className="font-medium hover:underline cursor-pointer"
-                    style={{ color: "oklch(0.93 0.005 250)", background: "none", border: "none", padding: 0 }}
-                  >{item.leadName}</button>
-                  <span style={{ color: "oklch(0.55 0.01 250)" }}>·</span>
-                  <span>{formatCurrency(item.amount)}</span>
-                  <span className="px-1.5 py-0.5 rounded text-xs" style={{ background: item.dueDate === todayStr ? "oklch(0.72 0.12 75 / 20%)" : "oklch(0.22 0.025 250)", color: item.dueDate === todayStr ? "oklch(0.80 0.12 75)" : "oklch(0.55 0.01 250)" }}>
-                    {item.dueDate === todayStr ? "TODAY" : item.dueDate}
-                  </span>
-                </div>
-              ))}
-              {dueThisWeekInstallments.length > 4 && (
-                <span className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>+{dueThisWeekInstallments.length - 4} more</span>
-              )}
-            </div>
-            <div className="text-xs font-semibold" style={{ color: "oklch(0.72 0.12 75)" }}>
-              {formatCurrency(dueThisWeekInstallments.reduce((s, i) => s + i.amount, 0))} total
             </div>
           </div>
         </div>
@@ -877,11 +878,16 @@ export default function Dashboard() {
               <div className="flex items-center gap-2">
                 <span className="text-xs" style={{ color: "oklch(0.45 0.01 250)" }}>{prev} prev</span>
                 {change !== null && (
-                  <span className="text-xs font-semibold px-1.5 py-0.5 rounded" style={{
+                  <span className="text-xs font-semibold px-1.5 py-0.5 rounded flex items-center gap-0.5" style={{
                     background: change >= 0 ? "oklch(0.55 0.18 145 / 15%)" : "oklch(0.60 0.22 25 / 15%)",
                     color: change >= 0 ? "oklch(0.65 0.18 145)" : "oklch(0.70 0.22 25)",
                   }}>
-                    {change >= 0 ? "+" : ""}{change}%
+                    {change >= 0 ? (
+                      <ArrowUpRight className="w-3 h-3" />
+                    ) : (
+                      <ArrowDownRight className="w-3 h-3" />
+                    )}
+                    {Math.abs(change)}%
                   </span>
                 )}
               </div>
@@ -1101,11 +1107,16 @@ export default function Dashboard() {
           <div className="flex items-center gap-2 mb-4">
             <Target className="w-4 h-4" style={{ color: "oklch(0.72 0.12 75)" }} />
             <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "oklch(0.72 0.12 75)" }}>Lead Source</h2>
-            <span className="text-xs" style={{ color: "oklch(0.45 0.01 250)" }}>all time</span>
+            <span className="text-xs" style={{ color: "oklch(0.45 0.01 250)" }}>{MONTHS[selectedMonth - 1]} {selectedYear}</span>
           </div>
           {(() => {
+            // Filter leads created in the selected month/year
+            const monthLeads = leads.filter(l => {
+              const d = new Date(l.date);
+              return d.getFullYear() === selectedYear && (d.getMonth() + 1) === selectedMonth;
+            });
             const sourceMap: Record<string, { leads: number; converted: number; revenue: number }> = {};
-            leads.forEach(l => {
+            monthLeads.forEach(l => {
               const src = l.source || "Unknown";
               if (!sourceMap[src]) sourceMap[src] = { leads: 0, converted: 0, revenue: 0 };
               sourceMap[src].leads += 1;
@@ -1118,23 +1129,28 @@ export default function Dashboard() {
               .map(([src, d]) => ({ src, ...d, convRate: d.leads > 0 ? Math.round((d.converted / d.leads) * 100) : 0 }))
               .sort((a, b) => b.revenue - a.revenue)
               .slice(0, 6);
-            if (rows.length === 0) return <p className="text-sm text-center py-6" style={{ color: "oklch(0.45 0.01 250)" }}>No lead source data yet.</p>;
+            if (rows.length === 0) return <p className="text-sm text-center py-6" style={{ color: "oklch(0.45 0.01 250)" }}>No lead source data for this month.</p>;
             return (
-              <div className="space-y-2">
-                {rows.map(row => (
-                  <div key={row.src} className="flex items-center gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-medium truncate" style={{ color: "oklch(0.80 0.005 250)" }}>{row.src}</span>
-                        <span className="text-xs ml-2 flex-shrink-0" style={{ color: "oklch(0.55 0.01 250)" }}>{row.leads} leads · {row.convRate}% conv</span>
-                      </div>
-                      <div className="relative h-1.5 rounded-full overflow-hidden" style={{ background: "oklch(0.22 0.025 250)" }}>
-                        <div className="h-full rounded-full" style={{ width: `${rows[0].revenue > 0 ? Math.round((row.revenue / rows[0].revenue) * 100) : 0}%`, background: "oklch(0.72 0.12 75)" }} />
-                      </div>
+              <div>
+                {/* Header row */}
+                <div className="grid grid-cols-4 gap-2 mb-2 px-1">
+                  <span className="text-xs col-span-1" style={{ color: "oklch(0.45 0.01 250)" }}>Source</span>
+                  <span className="text-xs text-center" style={{ color: "oklch(0.45 0.01 250)" }}>Leads</span>
+                  <span className="text-xs text-center" style={{ color: "oklch(0.45 0.01 250)" }}>Conv.</span>
+                  <span className="text-xs text-right" style={{ color: "oklch(0.45 0.01 250)" }}>Revenue</span>
+                </div>
+                <div className="space-y-1.5">
+                  {rows.map(row => (
+                    <div key={row.src} className="grid grid-cols-4 gap-2 items-center rounded px-1 py-1.5" style={{ background: "oklch(0.20 0.025 250)" }}>
+                      <span className="text-xs font-medium truncate col-span-1" style={{ color: "oklch(0.80 0.005 250)" }}>{row.src}</span>
+                      <span className="text-xs text-center" style={{ color: "oklch(0.65 0.01 250)" }}>{row.leads}</span>
+                      <span className="text-xs text-center font-semibold" style={{ color: row.convRate >= 50 ? "oklch(0.65 0.18 145)" : row.convRate >= 25 ? "oklch(0.72 0.12 75)" : "oklch(0.65 0.01 250)" }}>
+                        {row.converted} <span className="font-normal opacity-70">({row.convRate}%)</span>
+                      </span>
+                      <span className="text-xs font-semibold text-right" style={{ color: "oklch(0.72 0.12 75)" }}>{formatCurrency(row.revenue)}</span>
                     </div>
-                    <span className="text-xs font-semibold flex-shrink-0" style={{ color: "oklch(0.72 0.12 75)" }}>{formatCurrency(row.revenue)}</span>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             );
           })()}
@@ -1190,7 +1206,55 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ── Drill-Down Drawer ─────────────────────────────────── */}
+      {/* ── Lost Reasons Breakdown ────────────────────────────────── */}
+      {(() => {
+        const lostLeads = leads.filter(l => l.stage === "Lost" && l.lostReason);
+        if (lostLeads.length === 0) return null;
+        const reasonMap: Record<string, number> = {};
+        lostLeads.forEach(l => {
+          const r = l.lostReason || "Other";
+          reasonMap[r] = (reasonMap[r] || 0) + 1;
+        });
+        const rows = Object.entries(reasonMap).sort((a, b) => b[1] - a[1]);
+        const maxCount = rows[0]?.[1] || 1;
+        const reasonColors: Record<string, string> = {
+          "Price": "oklch(0.70 0.22 25)",
+          "Competitor": "oklch(0.65 0.15 250)",
+          "Not Qualified": "oklch(0.60 0.20 60)",
+          "No Response": "oklch(0.55 0.01 250)",
+          "Other": "oklch(0.50 0.01 250)",
+        };
+        return (
+          <div className="rounded-lg p-5 border" style={{ background: "oklch(0.18 0.025 250)", borderColor: "oklch(1 0 0 / 8%)" }}>
+            <div className="flex items-center gap-2 mb-4">
+              <AlertCircle className="w-4 h-4" style={{ color: "oklch(0.70 0.22 25)" }} />
+              <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "oklch(0.72 0.12 75)" }}>Lost Lead Reasons</h2>
+              <span className="text-xs" style={{ color: "oklch(0.45 0.01 250)" }}>{lostLeads.length} lost leads</span>
+            </div>
+            <div className="space-y-2">
+              {rows.map(([reason, count]) => (
+                <div key={reason} className="flex items-center gap-3">
+                  <div className="w-28 text-xs font-medium flex-shrink-0" style={{ color: "oklch(0.75 0.01 250)" }}>{reason}</div>
+                  <div className="flex-1 relative h-5 rounded overflow-hidden" style={{ background: "oklch(0.22 0.025 250)" }}>
+                    <div
+                      className="h-full rounded transition-all"
+                      style={{ width: `${Math.round((count / maxCount) * 100)}%`, background: reasonColors[reason] || "oklch(0.55 0.01 250)" }}
+                    />
+                    <span className="absolute inset-0 flex items-center px-2 text-xs font-semibold" style={{ color: "oklch(0.93 0.005 250)" }}>
+                      {count} lead{count !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                  <span className="text-xs w-10 text-right flex-shrink-0" style={{ color: "oklch(0.55 0.01 250)" }}>
+                    {Math.round((count / lostLeads.length) * 100)}%
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── Drill-Down Drawer ──────────────────────────────────────── */}
       {drillDown && (() => {
         type PaymentRow = { date: string; clientName: string; caseType: string; caseNumber?: string; paymentType: string; amount: number; receivedFor: string; notes?: string; leadId?: string; };
         type LeadRow = { id: string; name: string; phone?: string; caseType: string; caseNumber?: string; stage: string; date: string; convertedDate?: string; retainerBooked: number; source?: string; notes?: string; };

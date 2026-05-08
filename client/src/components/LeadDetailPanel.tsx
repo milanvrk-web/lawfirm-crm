@@ -510,6 +510,40 @@ export default function LeadDetailPanel({
                   <div className="text-sm leading-relaxed" style={{ color: "oklch(0.75 0.01 250)" }}>{lead.notes}</div>
                 </div>
               )}
+              {/* Retainer Balance Tracker */}
+              {lead.stage === "Retained" && lead.retainerBooked > 0 && (() => {
+                const outstanding = lead.retainerBooked - totalReceived;
+                const pct = Math.min(100, totalReceived > 0 ? Math.round((totalReceived / lead.retainerBooked) * 100) : 0);
+                const balanceColor = outstanding <= 0 ? "oklch(0.65 0.18 145)" : pct >= 50 ? "oklch(0.72 0.12 75)" : "oklch(0.70 0.22 25)";
+                const balanceLabel = outstanding <= 0 ? "Fully Paid" : pct >= 50 ? "Partially Paid" : "Mostly Outstanding";
+                return (
+                  <div className="rounded-lg p-4 border" style={{ background: "oklch(0.18 0.025 250)", borderColor: `${balanceColor} / 30%` }}>
+                    <div className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "oklch(0.45 0.01 250)" }}>Retainer Balance</div>
+                    <div className="grid grid-cols-3 gap-3 mb-3">
+                      <div className="text-center">
+                        <div className="text-xs mb-0.5" style={{ color: "oklch(0.45 0.01 250)" }}>Booked</div>
+                        <div className="text-sm font-bold" style={{ color: "oklch(0.72 0.12 75)" }}>{formatCurrency(lead.retainerBooked)}</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-xs mb-0.5" style={{ color: "oklch(0.45 0.01 250)" }}>Collected</div>
+                        <div className="text-sm font-bold" style={{ color: "oklch(0.65 0.18 145)" }}>{formatCurrency(totalReceived)}</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-xs mb-0.5" style={{ color: "oklch(0.45 0.01 250)" }}>Outstanding</div>
+                        <div className="text-sm font-bold" style={{ color: balanceColor }}>{formatCurrency(Math.max(0, outstanding))}</div>
+                      </div>
+                    </div>
+                    <div className="relative h-2 rounded-full overflow-hidden mb-1" style={{ background: "oklch(0.22 0.025 250)" }}>
+                      <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: balanceColor }} />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs" style={{ color: "oklch(0.45 0.01 250)" }}>{pct}% collected</span>
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: `${balanceColor} / 15%`, color: balanceColor }}>{balanceLabel}</span>
+                    </div>
+                  </div>
+                );
+              })()}
+
               {leadPayments.length > 0 && (
                 <div>
                   <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "oklch(0.45 0.01 250)" }}>Payment History</div>

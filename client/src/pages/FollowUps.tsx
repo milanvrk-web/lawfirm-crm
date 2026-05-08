@@ -64,9 +64,17 @@ export default function FollowUps() {
   const today = new Date().toISOString().split("T")[0];
 
   // ── Derived data ─────────────────────────────────────────
+  const nowMs = Date.now();
   const dueToday = useMemo(() => followUps.filter(f => f.status === "Pending" && f.dueDate === today), [followUps, today]);
   const overdue = useMemo(() => followUps.filter(f => f.status === "Pending" && f.dueDate < today), [followUps, today]);
   const pending = useMemo(() => followUps.filter(f => f.status === "Pending"), [followUps]);
+
+  // True >24h escalation: dueDate is at least 1 full day in the past
+  const isEscalated = (fu: FollowUp) => {
+    if (fu.status !== "Pending") return false;
+    const dueMs = new Date(fu.dueDate + "T23:59:59").getTime();
+    return nowMs - dueMs > 24 * 60 * 60 * 1000;
+  };
 
   const filteredFollowUps = useMemo(() => {
     let list = [...followUps];
@@ -75,13 +83,17 @@ export default function FollowUps() {
     else if (filter === "Pending") list = pending;
     else if (filter === "Done") list = list.filter(f => f.status === "Done");
     else if (filter === "Snoozed") list = list.filter(f => f.status === "Snoozed");
-    // Sort: Overdue first, then Due Today, then future, Done last
+    // Sort: Escalated (>24h overdue) first, then overdue, then due today, then future, Done last
     return list.sort((a, b) => {
       if (a.status === "Done" && b.status !== "Done") return 1;
       if (b.status === "Done" && a.status !== "Done") return -1;
+      const aEsc = isEscalated(a) ? 0 : 1;
+      const bEsc = isEscalated(b) ? 0 : 1;
+      if (aEsc !== bEsc) return aEsc - bEsc;
       return a.dueDate.localeCompare(b.dueDate);
     });
-  }, [followUps, filter, dueToday, overdue, pending]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [followUps, filter, dueToday, overdue, pending, nowMs]);
 
   const leadOptions = useMemo(() =>
     leads.filter(l =>
@@ -97,6 +109,7 @@ export default function FollowUps() {
 
   const getDueBadge = (fu: FollowUp) => {
     if (fu.status !== "Pending") return null;
+    if (isEscalated(fu)) return { label: "ESCALATED", color: "oklch(0.65 0.25 20)" };
     if (fu.dueDate < today) return { label: "OVERDUE", color: "oklch(0.70 0.22 25)" };
     if (fu.dueDate === today) return { label: "DUE TODAY", color: "oklch(0.72 0.12 75)" };
     return null;
@@ -307,38 +320,48 @@ export default function FollowUps() {
         {showWeeklyDigest && (
           <div className="px-5 pb-4 space-y-3" style={{ borderTop: "1px solid oklch(1 0 0 / 8%)" }}>
             <div className="grid grid-cols-1 sm:grid-cols-7 gap-2 pt-3">
-              {weeklyDigest.map(({ dateStr, label, items }) => (
-                <div
-                  key={dateStr}
-                  className="rounded-lg p-3 border"
-                  style={{
-                    background: items.length > 0 ? "oklch(0.72 0.12 75 / 6%)" : "oklch(0.16 0.025 250)",
-                    borderColor: items.length > 0 ? "oklch(0.72 0.12 75 / 30%)" : "oklch(1 0 0 / 6%)",
-                  }}
-                >
-                  <div className="text-xs font-semibold mb-2" style={{ color: label === "Today" ? "oklch(0.72 0.12 75)" : "oklch(0.65 0.01 250)" }}>
-                    {label}
-                  </div>
-                  {items.length === 0 ? (
-                    <div className="text-xs" style={{ color: "oklch(0.35 0.01 250)" }}>Free</div>
-                  ) : (
-                    <div className="space-y-1">
-                      {items.map(fu => {
-                        const lead = leads.find(l => l.id === fu.leadId);
-                        return (
-                          <div key={fu.id} className="text-xs" style={{ color: "oklch(0.80 0.005 250)" }}>
-                            <div className="font-medium truncate">{fu.title}</div>
-                            {lead && <div className="truncate" style={{ color: "oklch(0.55 0.01 250)" }}>{lead.name}</div>}
-                          </div>
-                        );
-                      })}
+              {weeklyDigest.map(({ dateStr, label, items }) => {
+                const isToday = dateStr === today;
+                const doneCount = followUps.filter(f => f.dueDate === dateStr && f.status === "Done").length;
+                const totalCount = followUps.filter(f => f.dueDate === dateStr).length;
+                return (
+                  <div
+                    key={dateStr}
+                    className="rounded-lg p-3"
+                    style={{
+                      background: isToday ? "oklch(0.72 0.12 75 / 10%)" : items.length > 0 ? "oklch(0.72 0.12 75 / 4%)" : "oklch(0.16 0.025 250)",
+                      border: isToday ? "2px solid oklch(0.72 0.12 75 / 70%)" : `1px solid ${items.length > 0 ? "oklch(0.72 0.12 75 / 20%)" : "oklch(1 0 0 / 6%)"}`,
+                    }}
+                  >
+                    <div className="text-xs font-semibold mb-1" style={{ color: isToday ? "oklch(0.72 0.12 75)" : "oklch(0.65 0.01 250)" }}>
+                      {label}
                     </div>
-                  )}
-                  {items.length > 0 && (
-                    <div className="mt-2 text-xs font-bold" style={{ color: "oklch(0.72 0.12 75)" }}>{items.length}</div>
-                  )}
-                </div>
-              ))}
+                    {totalCount > 0 && (
+                      <div className="text-xs mb-2" style={{ color: "oklch(0.50 0.01 250)" }}>
+                        {doneCount}/{totalCount} done
+                      </div>
+                    )}
+                    {items.length === 0 ? (
+                      <div className="text-xs" style={{ color: "oklch(0.35 0.01 250)" }}>Free</div>
+                    ) : (
+                      <div className="space-y-1">
+                        {items.map(fu => {
+                          const lead = leads.find(l => l.id === fu.leadId);
+                          return (
+                            <div key={fu.id} className="text-xs" style={{ color: "oklch(0.80 0.005 250)" }}>
+                              <div className="font-medium truncate">{fu.title}</div>
+                              {lead && <div className="truncate" style={{ color: "oklch(0.55 0.01 250)" }}>{lead.name}</div>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {items.length > 0 && (
+                      <div className="mt-2 text-xs font-bold" style={{ color: "oklch(0.72 0.12 75)" }}>{items.length} pending</div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
