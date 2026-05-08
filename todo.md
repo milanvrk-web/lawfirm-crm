@@ -137,3 +137,12 @@
 - [x] Add a red escalation badge on follow-up tasks that are >24h overdue (not just past due date)
 - [x] Add overdue count badge to the Follow-Ups sidebar nav item
 - [x] Show escalated tasks at the top of the Follow-Ups list
+
+## Stale Leads Drawer
+
+- [x] Build StaleLeadsDrawer component showing all stale leads with last activity date and days since last activity
+- [x] Each stale lead row shows: name, case type, stage, days stale, last activity date
+- [x] Inline "Assign Follow-Up" form per lead: title, due date, note fields with a Save button
+- [x] Saving creates a follow-up task via addFollowUp and shows a success toast
+- [x] Make Stale Leads stat card on Dashboard clickable to open the drawer
+- [x] Drawer closes on overlay click or Escape key

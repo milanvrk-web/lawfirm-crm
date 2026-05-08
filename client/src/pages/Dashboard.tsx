@@ -60,6 +60,7 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 import LeadDetailPanel from "@/components/LeadDetailPanel";
+import StaleLeadsDrawer from "@/components/StaleLeadsDrawer";
 
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
@@ -95,6 +96,7 @@ export default function Dashboard() {
   // Drill-down drawer
   type DrillKey = "leads" | "converted" | "revBooked" | "newClient" | "existingClient" | "totalReceived" | null;
   const [drillDown, setDrillDown] = useState<DrillKey>(null); // current month
+  const [staleDrawerOpen, setStaleDrawerOpen] = useState(false);
 
   const monthLeads = useMemo(() => getMonthLeads(crmData as any, selectedYear, selectedMonth), [crmData, selectedYear, selectedMonth]);
   const monthPayments = useMemo(() => getMonthPayments(crmData as any, selectedYear, selectedMonth), [crmData, selectedYear, selectedMonth]);
@@ -724,6 +726,7 @@ export default function Dashboard() {
           statusBg={staleLeads > 0 ? "oklch(0.70 0.22 25 / 10%)" : "oklch(0.65 0.18 145 / 10%)"}
           statusBorder={staleLeads > 0 ? "oklch(0.70 0.22 25 / 30%)" : "oklch(0.65 0.18 145 / 30%)"}
           statusLabel={staleLeads > 0 ? `${staleLeads} need attention` : "All fresh"}
+          onClick={() => setStaleDrawerOpen(true)}
         />
       </div>
 
@@ -1465,7 +1468,10 @@ export default function Dashboard() {
         onClose={() => setPanelLeadId(null)}
       />
     )}
-    </>  
+
+    {/* Stale Leads Drawer */}
+    <StaleLeadsDrawer open={staleDrawerOpen} onClose={() => setStaleDrawerOpen(false)} />
+    </>
   );
 }
 
