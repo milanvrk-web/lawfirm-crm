@@ -122,6 +122,38 @@ export default function Dashboard() {
   // Monthly target status
   const monthStatus = getTargetStatus(totalReceived, "monthly", targets);
 
+  // Calendar view
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [calPopoverDay, setCalPopoverDay] = useState<string | null>(null);
+
+  // Daily revenue map: YYYY-MM-DD → { total, payments[] }
+  const dailyMap = useMemo(() => {
+    const map: Record<string, { total: number; payments: typeof monthPayments }> = {};
+    monthPayments.forEach(p => {
+      if (!map[p.date]) map[p.date] = { total: 0, payments: [] };
+      map[p.date].total += p.amount;
+      map[p.date].payments.push(p);
+    });
+    return map;
+  }, [monthPayments]);
+
+  // Calendar grid: array of { dateStr, day } with leading nulls for offset
+  const calendarCells = useMemo(() => {
+    const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+    const firstDow = new Date(selectedYear, selectedMonth - 1, 1).getDay(); // 0=Sun
+    const cells: (null | string)[] = Array(firstDow).fill(null);
+    for (let d = 1; d <= daysInMonth; d++) {
+      cells.push(`${selectedYear}-${String(selectedMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`);
+    }
+    return cells;
+  }, [selectedYear, selectedMonth]);
+
+  // Max daily revenue for heatmap intensity scaling
+  const maxDailyRev = useMemo(() => {
+    const vals = Object.values(dailyMap).map(v => v.total);
+    return vals.length > 0 ? Math.max(...vals) : 1;
+  }, [dailyMap]);
+
   // Case type revenue breakdown
   const caseTypeData = useMemo(() => {
     const map: Record<string, { revenue: number; count: number }> = {};
@@ -478,6 +510,145 @@ export default function Dashboard() {
             <Bar dataKey="Existing Client" stackId="a" fill="oklch(0.35 0.05 250)" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
+      </div>
+
+      {/* ── Calendar Revenue Heatmap ───────────────────────── */}
+      <div className="rounded-lg border overflow-hidden" style={{ background: "oklch(0.18 0.025 250)", borderColor: "oklch(1 0 0 / 8%)" }}>
+        {/* Header row with toggle */}
+        <div
+          className="flex items-center justify-between px-5 py-4 cursor-pointer select-none"
+          onClick={() => setShowCalendar(v => !v)}
+          style={{ borderBottom: showCalendar ? "1px solid oklch(1 0 0 / 8%)" : "none" }}
+        >
+          <h2 className="text-sm font-semibold uppercase tracking-wider flex items-center gap-2" style={{ color: "oklch(0.72 0.12 75)" }}>
+            <CalendarCheck className="w-4 h-4" />
+            Calendar View — {MONTHS[selectedMonth - 1]} {selectedYear}
+          </h2>
+          <ChevronRight
+            className="w-4 h-4 transition-transform duration-200"
+            style={{ color: "oklch(0.55 0.01 250)", transform: showCalendar ? "rotate(90deg)" : "rotate(0deg)" }}
+          />
+        </div>
+
+        {showCalendar && (
+          <div className="p-5">
+            {/* Legend */}
+            <div className="flex items-center gap-4 mb-4 text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>
+              <span className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-sm inline-block" style={{ background: "oklch(0.22 0.025 250)", border: "1px solid oklch(1 0 0 / 15%)" }} />
+                No revenue
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-sm inline-block" style={{ background: "oklch(0.72 0.12 75 / 30%)" }} />
+                Low
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-sm inline-block" style={{ background: "oklch(0.72 0.12 75 / 65%)" }} />
+                Medium
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-sm inline-block" style={{ background: "oklch(0.72 0.12 75)" }} />
+                High
+              </span>
+            </div>
+
+            {/* Day-of-week headers */}
+            <div className="grid grid-cols-7 gap-1.5 mb-1.5">
+              {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d => (
+                <div key={d} className="text-center text-xs font-semibold py-1" style={{ color: "oklch(0.45 0.01 250)" }}>{d}</div>
+              ))}
+            </div>
+
+            {/* Calendar cells */}
+            <div className="grid grid-cols-7 gap-1.5">
+              {calendarCells.map((dateStr, i) => {
+                if (!dateStr) return <div key={`empty-${i}`} />;
+                const day = parseInt(dateStr.slice(-2));
+                const dayData = dailyMap[dateStr];
+                const rev = dayData?.total ?? 0;
+                const intensity = rev > 0 ? Math.max(0.15, rev / maxDailyRev) : 0;
+                const isToday = dateStr === todayStr;
+                const isOpen = calPopoverDay === dateStr;
+
+                // Heatmap color
+                const cellBg = rev > 0
+                  ? `oklch(0.72 0.12 75 / ${Math.round(intensity * 100)}%)`
+                  : "oklch(0.22 0.025 250)";
+                const cellBorder = isToday
+                  ? "oklch(0.72 0.12 75)"
+                  : rev > 0
+                    ? "oklch(0.72 0.12 75 / 30%)"
+                    : "oklch(1 0 0 / 8%)";
+
+                return (
+                  <div key={dateStr} className="relative">
+                    <button
+                      onClick={() => setCalPopoverDay(isOpen ? null : dateStr)}
+                      className="w-full aspect-square rounded-lg flex flex-col items-center justify-center gap-0.5 transition-all hover:scale-105 active:scale-95"
+                      style={{
+                        background: cellBg,
+                        border: `1px solid ${cellBorder}`,
+                        outline: isOpen ? `2px solid oklch(0.72 0.12 75)` : "none",
+                        outlineOffset: "2px",
+                      }}
+                      title={rev > 0 ? `${dateStr}: ${formatCurrency(rev)}` : dateStr}
+                    >
+                      <span className="text-xs font-semibold leading-none" style={{ color: rev > 0 ? "oklch(0.10 0.01 250)" : "oklch(0.50 0.01 250)" }}>{day}</span>
+                      {rev > 0 && (
+                        <span className="text-[9px] leading-none font-medium" style={{ color: "oklch(0.15 0.01 250)" }}>
+                          ${rev >= 1000 ? `${(rev/1000).toFixed(1)}k` : rev}
+                        </span>
+                      )}
+                    </button>
+
+                    {/* Day popover */}
+                    {isOpen && dayData && (
+                      <div
+                        className="absolute z-50 rounded-xl shadow-2xl p-4 min-w-[220px]"
+                        style={{
+                          background: "oklch(0.20 0.025 250)",
+                          border: "1px solid oklch(0.72 0.12 75 / 40%)",
+                          top: "calc(100% + 8px)",
+                          left: "50%",
+                          transform: "translateX(-50%)",
+                        }}
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "oklch(0.72 0.12 75)" }}>
+                            {new Date(dateStr + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+                          </span>
+                          <span className="text-sm font-bold" style={{ color: "oklch(0.93 0.005 250)" }}>{formatCurrency(rev)}</span>
+                        </div>
+                        <div className="space-y-2">
+                          {dayData.payments.map((p, pi) => (
+                            <div key={pi} className="flex items-start justify-between gap-3 text-xs" style={{ borderTop: pi > 0 ? "1px solid oklch(1 0 0 / 8%)" : "none", paddingTop: pi > 0 ? "8px" : "0" }}>
+                              <div>
+                                <div className="font-medium" style={{ color: "oklch(0.85 0.005 250)" }}>{p.clientName}</div>
+                                <div style={{ color: "oklch(0.50 0.01 250)" }}>{p.caseType} · {p.paymentType === "New Client" ? "New" : "Existing"}</div>
+                              </div>
+                              <div className="font-semibold shrink-0" style={{ color: "oklch(0.72 0.12 75)" }}>{formatCurrency(p.amount)}</div>
+                            </div>
+                          ))}
+                        </div>
+                        <button
+                          onClick={e => { e.stopPropagation(); setCalPopoverDay(null); }}
+                          className="mt-3 w-full text-xs py-1.5 rounded-lg transition-colors hover:bg-white/5"
+                          style={{ color: "oklch(0.45 0.01 250)", border: "1px solid oklch(1 0 0 / 10%)" }}
+                        >Close</button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Monthly total footer */}
+            <div className="mt-4 pt-4 flex items-center justify-between text-xs" style={{ borderTop: "1px solid oklch(1 0 0 / 8%)", color: "oklch(0.55 0.01 250)" }}>
+              <span>{Object.keys(dailyMap).length} days with revenue</span>
+              <span className="font-semibold" style={{ color: "oklch(0.72 0.12 75)" }}>Total: {formatCurrency(totalReceived)}</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Case Type Revenue Breakdown ─────────────────────── */}

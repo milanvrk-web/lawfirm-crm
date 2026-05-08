@@ -23,3 +23,11 @@
 - [x] Add horizontal bar chart (Recharts) showing revenue by case type
 - [x] Add summary table with case type, payment count, total revenue, % of total
 - [x] Place section below the Weekly Revenue chart on the Dashboard
+
+## Calendar Revenue Heatmap
+
+- [x] Compute daily revenue totals from monthPayments
+- [x] Build calendar grid component (Sun–Sat, correct day offsets)
+- [x] Color-code each day cell by revenue amount (none/low/mid/high)
+- [x] Show day's total revenue on hover/click with payment breakdown popover
+- [x] Add "Calendar View" toggle button on the Dashboard below the month selector
