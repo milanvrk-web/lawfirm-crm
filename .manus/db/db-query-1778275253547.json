@@ -1,0 +1,18 @@
+{
+  "query": "SHOW COLUMNS FROM leads LIKE 'consultationFee';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute SHOW COLUMNS FROM leads LIKE 'consultationFee';",
+  "rows": [
+    {
+      "Field": "consultationFee",
+      "Type": "decimal(10,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    }
+  ],
+  "messages": [],
+  "stdout": "Field\tType\tNull\tKey\tDefault\tExtra\nconsultationFee\tdecimal(10,2)\tYES\t\t0\t\n",
+  "stderr": "",
+  "execution_time_ms": 285
+}

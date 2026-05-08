@@ -223,3 +223,14 @@
 - [x] Convert modal pre-fills case number from the lead and shows retainer/downpayment/notes fields
 - [x] On confirm, update stage to Retained and log the downpayment payment (same as clicking Convert button)
 - [x] On cancel, do not move the lead
+
+## Consultation Fee Lifecycle Tracking
+
+- [x] Add consultationFee field to Lead type in store.ts (optional number)
+- [x] Add consultationFee column to leads table in drizzle/schema.ts and run DB migration
+- [x] Add "Consultation Fee" input to Add Lead form (optional, defaults to 0)
+- [x] When a lead is moved to Consultation stage (drag or edit), auto-log the consultation fee as a payment (receivedFor: "Consultation Fee") if consultationFee > 0 and not already logged
+- [x] Show consultation fee badge on Consultation and Follow-Up stage Kanban cards
+- [x] Show quoted amount on Consultation and Follow-Up stage cards
+- [x] In the Lost Reason modal, show a summary: consultation fee collected and quoted retainer amount
+- [x] In the Lead Detail panel Info tab, show consultation fee and quoted amount clearly

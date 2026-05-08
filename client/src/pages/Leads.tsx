@@ -45,7 +45,7 @@ const stageColor: Record<LeadStage, string> = {
 const emptyLead: Omit<Lead, "id"> = {
   name: "", phone: "", email: "", caseType: "DA", caseNumber: "", source: "",
   stage: "New Lead", notes: "", date: new Date().toISOString().split("T")[0],
-  retainerBooked: 0, downpayment: 0, quotedAmount: 0, referredBy: "",
+  retainerBooked: 0, downpayment: 0, quotedAmount: 0, referredBy: "", consultationFee: 0,
 };
 
 // ── Helpers ────────────────────────────────────────────────
@@ -151,6 +151,24 @@ export default function Leads() {
     } else {
       updateLead(leadId, { stage: targetStage });
       toast.success(`Moved to ${targetStage}`);
+      // Auto-log consultation fee as a payment when moving to Consultation (if fee > 0 and not already logged)
+      if (targetStage === "Consultation" && (lead.consultationFee ?? 0) > 0) {
+        const alreadyLogged = payments.some(p => p.leadId === leadId && p.receivedFor === "Consultation Fee");
+        if (!alreadyLogged) {
+          addPayment({
+            date: new Date().toISOString().split("T")[0],
+            clientName: lead.name,
+            leadId,
+            caseType: lead.caseType,
+            caseNumber: lead.caseNumber,
+            paymentType: "New Client",
+            amount: lead.consultationFee!,
+            receivedFor: "Consultation Fee",
+            notes: "",
+          });
+          toast.info(`Consultation fee $${lead.consultationFee} logged as payment`);
+        }
+      }
       // Auto-create a follow-up task when a lead moves to Consultation or Follow-Up with no pending tasks
       if (targetStage === "Consultation" || targetStage === "Follow-Up") {
         const hasPending = followUps.some(f => f.leadId === leadId && f.status === "Pending");
@@ -186,6 +204,24 @@ export default function Leads() {
       }
       updateLead(editLead.id, form);
       toast.success("Lead updated");
+      // Auto-log consultation fee when stage changes to Consultation via edit form
+      if (form.stage === "Consultation" && editLead.stage !== "Consultation" && (form.consultationFee ?? 0) > 0) {
+        const alreadyLogged = payments.some(p => p.leadId === editLead.id && p.receivedFor === "Consultation Fee");
+        if (!alreadyLogged) {
+          addPayment({
+            date: new Date().toISOString().split("T")[0],
+            clientName: form.name,
+            leadId: editLead.id,
+            caseType: form.caseType,
+            caseNumber: form.caseNumber,
+            paymentType: "New Client",
+            amount: form.consultationFee!,
+            receivedFor: "Consultation Fee",
+            notes: "",
+          });
+          toast.info(`Consultation fee $${form.consultationFee} logged as payment`);
+        }
+      }
       setEditLead(null);
     } else {
       addLead(form);
@@ -439,6 +475,11 @@ export default function Leads() {
               <Input type="number" value={form.quotedAmount || ""} onChange={e => setForm(f => ({ ...f, quotedAmount: parseFloat(e.target.value) || 0 }))} placeholder="0"
                 style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
             </div>
+            <div>
+              <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Consultation Fee</Label>
+              <Input type="number" value={form.consultationFee || ""} onChange={e => setForm(f => ({ ...f, consultationFee: parseFloat(e.target.value) || 0 }))} placeholder="e.g. 150"
+                style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
+            </div>
             <div className="col-span-2">
               <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Notes</Label>
               <Textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Any additional notes..."
@@ -508,6 +549,24 @@ export default function Leads() {
             </DialogTitle>
           </DialogHeader>
           <p className="text-sm mt-1" style={{ color: "oklch(0.60 0.01 250)" }}>Please select a reason so we can track why leads are not converting.</p>
+          {/* Revenue summary for this lead */}
+          {(lostLeadPending?.consultationFee ?? 0) > 0 || (lostLeadPending?.quotedAmount ?? 0) > 0 ? (
+            <div className="mt-3 rounded-lg px-3 py-2.5 flex flex-col gap-1" style={{ background: "oklch(0.22 0.025 250)", border: "1px solid oklch(1 0 0 / 10%)" }}>
+              <p className="text-xs font-semibold" style={{ color: "oklch(0.65 0.01 250)" }}>Revenue Summary</p>
+              {(lostLeadPending?.consultationFee ?? 0) > 0 && (
+                <div className="flex justify-between text-xs">
+                  <span style={{ color: "oklch(0.60 0.01 250)" }}>Consultation fee collected</span>
+                  <span className="font-medium" style={{ color: "oklch(0.72 0.12 75)" }}>${(lostLeadPending?.consultationFee ?? 0).toLocaleString()}</span>
+                </div>
+              )}
+              {(lostLeadPending?.quotedAmount ?? 0) > 0 && (
+                <div className="flex justify-between text-xs">
+                  <span style={{ color: "oklch(0.60 0.01 250)" }}>Quoted retainer (not collected)</span>
+                  <span className="font-medium" style={{ color: "oklch(0.55 0.01 250)" }}>${(lostLeadPending?.quotedAmount ?? 0).toLocaleString()}</span>
+                </div>
+              )}
+            </div>
+          ) : null}
           <div className="space-y-2 mt-3">
             {["Price too high", "Chose competitor", "Not qualified", "No response", "Changed mind", "Other"].map(r => (
               <button
@@ -717,6 +776,22 @@ function LeadCard({
           />
           {!nextFU && (
             <span className="text-xs italic" style={{ color: "oklch(0.45 0.01 250)" }}>task pending…</span>
+          )}
+        </div>
+      )}
+
+      {/* Consultation fee + quoted amount (Consultation / Follow-Up stages) */}
+      {(lead.stage === "Consultation" || lead.stage === "Follow-Up") && (
+        <div className="mt-2 flex items-center gap-2 flex-wrap">
+          {(lead.consultationFee ?? 0) > 0 && (
+            <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ background: "oklch(0.72 0.12 75 / 15%)", color: "oklch(0.72 0.12 75)", border: "1px solid oklch(0.72 0.12 75 / 25%)" }}>
+              Consult: {formatCurrency(lead.consultationFee!)}
+            </span>
+          )}
+          {(lead.quotedAmount ?? 0) > 0 && (
+            <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ background: "oklch(0.65 0.20 300 / 12%)", color: "oklch(0.70 0.15 300)", border: "1px solid oklch(0.65 0.20 300 / 25%)" }}>
+              Quoted: {formatCurrency(lead.quotedAmount)}
+            </span>
           )}
         </div>
       )}

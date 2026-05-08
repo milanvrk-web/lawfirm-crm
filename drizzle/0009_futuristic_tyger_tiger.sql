@@ -1,0 +1,1 @@
+ALTER TABLE `leads` ADD `consultationFee` decimal(10,2) DEFAULT '0';

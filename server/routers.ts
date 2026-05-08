@@ -30,6 +30,7 @@ const LeadInput = z.object({
   referredBy: z.string().default(""),
   convertedDate: z.string().optional().nullable(),
   lostReason: z.string().optional().nullable(),
+  consultationFee: z.number().default(0).optional(),
 });
 
 const PaymentInput = z.object({
@@ -90,6 +91,7 @@ export const appRouter = router({
         retainerBooked: Number(r.retainerBooked),
         downpayment: Number(r.downpayment),
         quotedAmount: Number(r.quotedAmount),
+        consultationFee: Number((r as any).consultationFee ?? 0),
       }));
     }),
 
@@ -103,6 +105,7 @@ export const appRouter = router({
         quotedAmount: String(input.quotedAmount),
         convertedDate: input.convertedDate ?? null,
         lostReason: input.lostReason ?? null,
+        consultationFee: String(input.consultationFee ?? 0),
       });
       return { id };
     }),
@@ -114,6 +117,7 @@ export const appRouter = router({
         if (input.data.retainerBooked !== undefined) data.retainerBooked = String(input.data.retainerBooked);
         if (input.data.downpayment !== undefined) data.downpayment = String(input.data.downpayment);
         if (input.data.quotedAmount !== undefined) data.quotedAmount = String(input.data.quotedAmount);
+        if (input.data.consultationFee !== undefined) data.consultationFee = String(input.data.consultationFee);
         await db.updateLead(input.id, data as Parameters<typeof db.updateLead>[1]);
         return { success: true };
       }),

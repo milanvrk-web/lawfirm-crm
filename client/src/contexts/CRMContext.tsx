@@ -59,6 +59,7 @@ type DbLead = {
   caseNumber: string; source: string; stage: string; notes: string; date: string;
   retainerBooked: string | number; downpayment: string | number; quotedAmount: string | number;
   referredBy: string; convertedDate?: string | null; lostReason?: string | null;
+  consultationFee?: string | number | null;
   createdAt?: Date; updatedAt?: Date;
 };
 
@@ -99,6 +100,7 @@ function normalizeLead(r: DbLead): Lead {
     referredBy: r.referredBy,
     convertedDate: r.convertedDate ?? undefined,
     lostReason: r.lostReason ?? null,
+    consultationFee: Number(r.consultationFee ?? 0),
   };
 }
 
@@ -216,6 +218,7 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
       quotedAmount: lead.quotedAmount,
       referredBy: lead.referredBy,
       convertedDate: lead.convertedDate ?? null,
+      consultationFee: lead.consultationFee ?? 0,
     });
   }, [createLeadMut]);
 

@@ -54,6 +54,7 @@ export interface Lead {
   referredBy: string;
   convertedDate?: string;
   lostReason?: string | null;
+  consultationFee?: number;  // fee paid for consultation (e.g. $150)
   leadLog?: LeadNote[];   // inline timestamped notes
 }
 
