@@ -278,3 +278,8 @@
 - [x] Checklist items in popover: add new, edit label, delete
 - [x] Add new stage button at the end of the Kanban columns (+ Add Stage)
 - [x] Remove Pipeline Editor from sidebar nav (or hide it)
+
+## Lead Card Checklist Progress Bar
+
+- [x] Add a compact progress bar to every lead card showing X/N checklist steps completed for the current stage
+- [x] Bar fills with the stage color; shows "X/N steps" label; hidden when stage has no checklist templates

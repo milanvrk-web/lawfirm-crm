@@ -660,6 +660,7 @@ export default function Leads() {
                     <LeadCard
                       lead={lead}
                       stageTemplates={stageTemplates}
+                      stageColor={color}
                       onOpenDetail={() => openDetail(lead)}
                       onEdit={() => openEdit(lead)}
                       onDelete={() => { deleteLead(lead.id); toast.success("Lead deleted"); }}
@@ -939,10 +940,11 @@ export default function Leads() {
 type ChecklistTemplate = { id: string; stageId: string; label: string; description: string | null; order: number; createdAt: Date; };
 
 function LeadCard({
-  lead, stageTemplates = [], onOpenDetail, onEdit, onDelete, onConvert, onMarkDone, onSnooze, onReschedule,
+  lead, stageTemplates = [], stageColor: cardStageColor, onOpenDetail, onEdit, onDelete, onConvert, onMarkDone, onSnooze, onReschedule,
 }: {
   lead: Lead;
   stageTemplates?: ChecklistTemplate[];
+  stageColor?: string;
   onOpenDetail: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -1067,6 +1069,31 @@ function LeadCard({
           )}
         </button>
       </div>
+
+      {/* ── Checklist Progress Bar (visible on all cards with stage templates) ── */}
+      {hasTemplates && (
+        <div className="mt-2">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>Steps</span>
+            {allDone ? (
+              <span className="text-xs font-semibold" style={{ color: "oklch(0.55 0.18 145)" }}>✓ All done</span>
+            ) : (
+              <span className="text-xs font-medium" style={{ color: "oklch(0.65 0.01 250)" }}>{completedCount}/{totalSteps} steps</span>
+            )}
+          </div>
+          <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "oklch(0.22 0.025 250)" }}>
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{
+                width: `${totalSteps > 0 ? (completedCount / totalSteps) * 100 : 0}%`,
+                background: allDone
+                  ? "oklch(0.55 0.18 145)"
+                  : (cardStageColor ?? "oklch(0.65 0.18 200)"),
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* ── Next Follow-Up Strip ── */}
       {nextFU && (
