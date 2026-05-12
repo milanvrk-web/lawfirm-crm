@@ -1,0 +1,9 @@
+{
+  "query": "\nUPDATE leads SET retainerBooked = 1500, downpayment = 1500, caseNumber = 'A# 215-550-409', convertedDate = '2026-05-05' WHERE id = 'lead-maninder-singh-01';\nUPDATE leads SET retainerBooked = 10000, downpayment = 2000, caseNumber = '515', convertedDate = '2026-05-05' WHERE id = 'lead-manjit-kumar-01';\nUPDATE leads SET retainerBooked = 8000, downpayment = 3000, caseNumber = 'A# A232-687-767', convertedDate = '2026-05-11' WHERE id = 'lead-vinit-kumar-01';\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute \nUPDATE leads SET retainerBooked = 1500, downpayment = 1500, caseNumber = 'A# 215-550-409', convertedDate = '2026-05-05' WHERE id = 'lead-maninder-singh-01';\nUPDATE leads SET retainerBooked = 10000, downpayment = 2000, caseNumber = '515', convertedDate = '2026-05-05' WHERE id = 'lead-manjit-kumar-01';\nUPDATE leads SET retainerBooked = 8000, downpayment = 3000, caseNumber = 'A# A232-687-767', convertedDate = '2026-05-11' WHERE id = 'lead-vinit-kumar-01';\n",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 278
+}

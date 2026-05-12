@@ -283,3 +283,12 @@
 
 - [x] Add a compact progress bar to every lead card showing X/N checklist steps completed for the current stage
 - [x] Bar fills with the stage color; shows "X/N steps" label; hidden when stage has no checklist templates
+
+## Delete Options for Clients and Day Closes
+
+- [ ] Add clients.delete tRPC procedure in routers.ts
+- [ ] Add dayCloses.delete tRPC procedure in routers.ts
+- [ ] Add delete DB helper for clients in server/db.ts
+- [ ] Add delete DB helper for day_closes in server/db.ts
+- [ ] Add delete button + confirmation dialog to Clients page
+- [ ] Add delete button + confirmation dialog to CloseDay history table
