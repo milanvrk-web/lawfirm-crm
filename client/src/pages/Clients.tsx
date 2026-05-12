@@ -7,13 +7,25 @@
 import { useState, useMemo } from "react";
 import { useCRM } from "@/contexts/CRMContext";
 import { formatCurrency, formatDate } from "@/lib/store";
-import { BookOpen, ChevronDown, ChevronUp, Search } from "lucide-react";
+import { BookOpen, ChevronDown, ChevronUp, Search, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 
 export default function Clients() {
-  const { leads, payments: allPayments } = useCRM();
+  const { leads, payments: allPayments, deleteLead } = useCRM();
   const [search, setSearch] = useState("");
   const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  const handleDeleteClient = async (id: string) => {
+    try {
+      await deleteLead(id);
+      toast.success("Client record deleted");
+      setConfirmDeleteId(null);
+    } catch {
+      toast.error("Failed to delete client");
+    }
+  };
 
   const retainedLeads = useMemo(() => leads.filter(l => l.stage === "Retained"), [leads]);
 
@@ -103,9 +115,35 @@ export default function Clients() {
                       </div>
                     )}
                   </div>
-                  <button onClick={() => toggleExpand(lead.id)} style={{ color: "oklch(0.55 0.01 250)" }}>
-                    {expanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {confirmDeleteId === lead.id ? (
+                      <span className="inline-flex items-center gap-1">
+                        <span className="text-xs" style={{ color: "oklch(0.75 0.18 25)" }}>Delete?</span>
+                        <button
+                          onClick={() => handleDeleteClient(lead.id)}
+                          className="text-xs px-2 py-0.5 rounded font-semibold"
+                          style={{ background: "oklch(0.60 0.22 25 / 20%)", color: "oklch(0.75 0.18 25)" }}
+                        >Yes</button>
+                        <button
+                          onClick={() => setConfirmDeleteId(null)}
+                          className="text-xs px-2 py-0.5 rounded"
+                          style={{ color: "oklch(0.55 0.01 250)" }}
+                        >No</button>
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmDeleteId(lead.id)}
+                        className="p-1 rounded hover:bg-white/5 transition-colors"
+                        style={{ color: "oklch(0.60 0.22 25)" }}
+                        title="Delete client record"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                    <button onClick={() => toggleExpand(lead.id)} style={{ color: "oklch(0.55 0.01 250)" }}>
+                      {expanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                    </button>
+                  </div>
                 </div>
 
                 {/* Retainer progress */}

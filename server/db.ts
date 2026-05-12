@@ -149,6 +149,10 @@ export async function updateLead(id: string, data: Partial<InsertLead>) {
 export async function deleteLead(id: string) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
+  // Cascade: delete related payments, follow-ups, and notes first
+  await db.delete(payments).where(eq(payments.leadId, id));
+  await db.delete(followUps).where(eq(followUps.leadId, id));
+  await db.delete(leadNotes).where(eq(leadNotes.leadId, id));
   await db.delete(leads).where(eq(leads.id, id));
 }
 
@@ -622,4 +626,11 @@ export async function seedDefaultPipelineStages() {
   for (const item of checklistItems) {
     await db.insert(stageChecklistTemplates).values(item);
   }
+}
+
+// ─── Delete Day Close ─────────────────────────────────────────────────────────
+export async function deleteDayClose(date: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(dayCloses).where(eq(dayCloses.date, date));
 }

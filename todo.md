@@ -286,9 +286,9 @@
 
 ## Delete Options for Clients and Day Closes
 
-- [ ] Add clients.delete tRPC procedure in routers.ts
-- [ ] Add dayCloses.delete tRPC procedure in routers.ts
-- [ ] Add delete DB helper for clients in server/db.ts
-- [ ] Add delete DB helper for day_closes in server/db.ts
-- [ ] Add delete button + confirmation dialog to Clients page
-- [ ] Add delete button + confirmation dialog to CloseDay history table
+- [x] Add clients.delete tRPC procedure in routers.ts
+- [x] Add dayCloses.delete tRPC procedure in routers.ts
+- [x] Add delete DB helper for clients in server/db.ts
+- [x] Add delete DB helper for day_closes in server/db.ts
+- [x] Add delete button + confirmation dialog to Clients page
+- [x] Add delete button + confirmation dialog to CloseDay history table

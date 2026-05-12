@@ -229,6 +229,13 @@ export const appRouter = router({
       }));
     }),
 
+    delete: publicProcedure
+      .input(z.object({ date: z.string() }))
+      .mutation(async ({ input }) => {
+        await db.deleteDayClose(input.date);
+        return { success: true };
+      }),
+
     close: publicProcedure
       .input(z.object({ date: z.string(), closedBy: z.string().optional() }))
       .mutation(async ({ input }) => {

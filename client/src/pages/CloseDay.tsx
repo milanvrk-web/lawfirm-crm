@@ -8,9 +8,10 @@ import { useState, useMemo } from "react";
 import { useCRM } from "@/contexts/CRMContext";
 import { useActiveMember } from "@/contexts/ActiveMemberContext";
 import { formatCurrency, formatDate } from "@/lib/store";
-import { CalendarCheck, Lock, CheckCircle, ChevronLeft, ChevronRight, User } from "lucide-react";
+import { CalendarCheck, Lock, CheckCircle, ChevronLeft, ChevronRight, User, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { trpc } from "@/lib/trpc";
 
 function todayStr() {
   const d = new Date();
@@ -40,6 +41,17 @@ export default function CloseDay() {
 
   const closed = isDayClosed(selectedDate);
   const closeRecord = getDayClose(selectedDate);
+
+  const [confirmDeleteDate, setConfirmDeleteDate] = useState<string | null>(null);
+  const utils = trpc.useUtils();
+  const deleteDayCloseMut = trpc.dayCloses.delete.useMutation({
+    onSuccess: () => {
+      utils.dayCloses.list.invalidate();
+      toast.success("Close record deleted");
+      setConfirmDeleteDate(null);
+    },
+    onError: () => toast.error("Failed to delete close record"),
+  });
 
   const prevDay = () => {
     const d = new Date(selectedDate + "T12:00:00");
@@ -282,11 +294,12 @@ export default function CloseDay() {
                   <th className="px-4 py-2.5 text-right text-xs font-semibold" style={{ color: "oklch(0.72 0.12 75)" }}>Total</th>
                   <th className="px-4 py-2.5 text-right text-xs font-semibold" style={{ color: "oklch(0.55 0.01 250)" }}>Closed By</th>
                   <th className="px-4 py-2.5 text-right text-xs font-semibold" style={{ color: "oklch(0.55 0.01 250)" }}>Time</th>
+                  <th className="px-4 py-2.5 text-right text-xs font-semibold" style={{ color: "oklch(0.55 0.01 250)" }}></th>
                 </tr>
               </thead>
               <tbody>
                 {history.map(dc => (
-                  <tr key={dc.date} className="border-b" style={{ borderColor: "oklch(1 0 0 / 5%)", background: dc.date === selectedDate ? "oklch(0.72 0.12 75 / 5%)" : undefined }}>
+                  <tr key={dc.date} className="border-b group" style={{ borderColor: "oklch(1 0 0 / 5%)", background: dc.date === selectedDate ? "oklch(0.72 0.12 75 / 5%)" : undefined }}>
                     <td className="px-4 py-3 font-medium" style={{ color: "oklch(0.80 0.005 250)" }}>
                       {new Date(dc.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
                     </td>
@@ -304,6 +317,31 @@ export default function CloseDay() {
                     </td>
                     <td className="px-4 py-3 text-right text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>
                       {new Date(dc.closedAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {confirmDeleteDate === dc.date ? (
+                        <span className="inline-flex items-center gap-1">
+                          <button
+                            onClick={() => deleteDayCloseMut.mutate({ date: dc.date })}
+                            className="text-xs px-2 py-0.5 rounded font-semibold"
+                            style={{ background: "oklch(0.60 0.22 25 / 20%)", color: "oklch(0.75 0.18 25)" }}
+                          >Yes</button>
+                          <button
+                            onClick={() => setConfirmDeleteDate(null)}
+                            className="text-xs px-2 py-0.5 rounded"
+                            style={{ color: "oklch(0.55 0.01 250)" }}
+                          >No</button>
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => setConfirmDeleteDate(dc.date)}
+                          className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-white/5 transition-all"
+                          style={{ color: "oklch(0.60 0.22 25)" }}
+                          title="Delete close record"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
