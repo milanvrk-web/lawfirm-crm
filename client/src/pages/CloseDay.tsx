@@ -8,14 +8,14 @@ import { useState, useMemo } from "react";
 import { useCRM } from "@/contexts/CRMContext";
 import { useActiveMember } from "@/contexts/ActiveMemberContext";
 import { formatCurrency, formatDate } from "@/lib/store";
+import { todayPST } from "@/lib/timezone";
 import { CalendarCheck, Lock, CheckCircle, ChevronLeft, ChevronRight, User, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 
 function todayStr() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  return todayPST();
 }
 
 export default function CloseDay() {
@@ -56,13 +56,13 @@ export default function CloseDay() {
   const prevDay = () => {
     const d = new Date(selectedDate + "T12:00:00");
     d.setDate(d.getDate() - 1);
-    setSelectedDate(d.toISOString().split("T")[0]);
+    setSelectedDate(d.toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" }));
   };
 
   const nextDay = () => {
     const d = new Date(selectedDate + "T12:00:00");
     d.setDate(d.getDate() + 1);
-    setSelectedDate(d.toISOString().split("T")[0]);
+    setSelectedDate(d.toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" }));
   };
 
   const handleClose = () => {
@@ -119,7 +119,7 @@ export default function CloseDay() {
           <div>
             <div className="font-semibold text-sm" style={{ color: "oklch(0.55 0.18 145)" }}>Day Closed ✓</div>
             <div className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>
-              Closed at {new Date(closeRecord.closedAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
+              Closed at {new Date(closeRecord.closedAt).toLocaleTimeString("en-US", { timeZone: "America/Los_Angeles", hour: "2-digit", minute: "2-digit" })}
               {closeRecord.closedBy && (
                 <span className="inline-flex items-center gap-1 ml-2 px-1.5 py-0.5 rounded" style={{ background: "oklch(0.55 0.18 145 / 20%)", color: "oklch(0.55 0.18 145)" }}>
                   <User className="w-3 h-3" />{closeRecord.closedBy}
@@ -316,7 +316,7 @@ export default function CloseDay() {
                       )}
                     </td>
                     <td className="px-4 py-3 text-right text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>
-                      {new Date(dc.closedAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
+                      {new Date(dc.closedAt).toLocaleTimeString("en-US", { timeZone: "America/Los_Angeles", hour: "2-digit", minute: "2-digit" })}
                     </td>
                     <td className="px-4 py-3 text-right">
                       {confirmDeleteDate === dc.date ? (

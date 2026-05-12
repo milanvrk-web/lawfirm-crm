@@ -241,7 +241,7 @@ export default function StaleLeadsDrawer({ open, onClose }: StaleLeadsDrawerProp
                         <span>{lastActivityLabel}</span>
                       </div>
                       <div className="text-xs" style={{ color: "oklch(0.35 0.01 250)" }}>
-                        {new Date(lastActivityMs).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                        {new Date(lastActivityMs).toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", month: "short", day: "numeric", year: "numeric" })}
                       </div>
                     </div>
                     <div style={{ color: "oklch(0.55 0.01 250)" }}>

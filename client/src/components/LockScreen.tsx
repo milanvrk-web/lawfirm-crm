@@ -1,5 +1,5 @@
 /* ============================================================
-   Law Firm CRM — Lock Screen
+   Graham Immigration Law, PC — Lock Screen
    Shown before the app loads if ACCESS_CODE is set.
    Verified session is stored in sessionStorage so users
    don't re-enter the code on every page navigation.
@@ -74,10 +74,10 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
               className="text-xl font-bold tracking-wide"
               style={{ color: "oklch(0.93 0.005 250)", fontFamily: "'Playfair Display', serif" }}
             >
-              Law Firm CRM
+              Graham Immigration Law, PC
             </h1>
             <p className="text-sm mt-0.5" style={{ color: "oklch(0.55 0.01 250)" }}>
-              Operations Dashboard
+              Leads · Payments · Revenue
             </p>
           </div>
         </div>

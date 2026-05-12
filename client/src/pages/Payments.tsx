@@ -1,3 +1,4 @@
+import { todayPST } from "@/lib/timezone";
 /* ============================================================
    Law Firm CRM — Payments Page
    Features: Log payment (New/Existing toggle), live client search,
@@ -20,7 +21,7 @@ import { Label } from "@/components/ui/label";
 const CASE_TYPES: CaseType[] = ["DA", "SIJS", "AOS", "AO", "K1/K2", "U-Visa", "Green Card", "BIA", "Other"];
 
 const emptyPayment: Omit<Payment, "id"> = {
-  date: new Date().toISOString().split("T")[0],
+  date: todayPST(),
   clientName: "",
   leadId: undefined,
   caseType: "DA",

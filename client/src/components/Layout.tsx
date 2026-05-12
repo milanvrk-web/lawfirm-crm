@@ -1,5 +1,6 @@
+import { todayPST } from "@/lib/timezone";
 /* ============================================================
-   Law Firm CRM — Layout Component
+   Graham Immigration Law, PC — Layout Component
    Design: Dark Luxury Legal — Fixed left sidebar, gold accents
    Nav: Dashboard | Leads | Payments | Clients | Follow-Ups | Close Day | All Data
    ============================================================ */
@@ -48,7 +49,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const { data: members = [] } = trpc.members.list.useQuery();
 
   const urgentCount = useMemo(() => {
-    const today = new Date().toISOString().split("T")[0];
+    const today = todayPST();
     return followUps.filter(f => f.status === "Pending" && (f.dueDate === today || f.dueDate < today)).length;
   }, [followUps]);
 
@@ -88,9 +89,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
           <div>
             <div className="text-sm font-bold tracking-wide" style={{ color: "oklch(0.93 0.005 250)", fontFamily: "'Playfair Display', serif" }}>
-              Law Firm CRM
+              Graham Immigration Law, PC
             </div>
-            <div className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>Operations Dashboard</div>
+            <div className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>Leads · Payments · Revenue</div>
           </div>
           <button
             className="ml-auto lg:hidden"
@@ -217,7 +218,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         {/* Footer */}
         <div className="px-6 py-3 border-t" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
           <div className="text-xs" style={{ color: "oklch(0.40 0.01 250)" }}>
-            Law Firm CRM v2.0
+            Graham Immigration Law, PC v2.0
           </div>
           <div className="text-xs mt-0.5" style={{ color: "oklch(0.35 0.01 250)" }}>
             Data synced to cloud database
@@ -246,7 +247,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-2">
             <Scale className="w-4 h-4" style={{ color: "oklch(0.72 0.12 75)" }} />
             <span className="text-sm font-semibold" style={{ color: "oklch(0.93 0.005 250)", fontFamily: "'Playfair Display', serif" }}>
-              Law Firm CRM
+              Graham Immigration Law, PC
             </span>
           </div>
         </header>

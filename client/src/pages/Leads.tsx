@@ -1,3 +1,4 @@
+import { todayPST } from "@/lib/timezone";
 /* ============================================================
    Law Firm CRM — Leads Page
    Design: Dark luxury navy/gold — Playfair Display headings
@@ -47,7 +48,7 @@ const stageColor: Record<LeadStage, string> = {
 
 const emptyLead: Omit<Lead, "id"> = {
   name: "", phone: "", email: "", caseType: "DA", caseNumber: "", source: "",
-  stage: "New Lead", notes: "", date: new Date().toISOString().split("T")[0],
+  stage: "New Lead", notes: "", date: todayPST(),
   retainerBooked: 0, downpayment: 0, quotedAmount: 0, referredBy: "", consultationFee: 0,
 };
 
@@ -58,7 +59,7 @@ function getNextFollowUp(followUps: FollowUp[]): FollowUp | null {
 }
 
 function dueDateLabel(dueDate: string): { label: string; color: string; isOverdue: boolean } {
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayPST();
   const diff = new Date(dueDate + "T12:00:00").getTime() - new Date(today + "T12:00:00").getTime();
   const days = Math.round(diff / (1000 * 60 * 60 * 24));
   if (days < 0) return { label: `${Math.abs(days)}d overdue`, color: "oklch(0.65 0.22 25)", isOverdue: true };
@@ -69,12 +70,12 @@ function dueDateLabel(dueDate: string): { label: string; color: string; isOverdu
 
 function formatTimestamp(iso: string) {
   const d = new Date(iso);
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) +
-    " " + d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  return d.toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", month: "short", day: "numeric" }) +
+    " " + d.toLocaleTimeString("en-US", { timeZone: "America/Los_Angeles", hour: "numeric", minute: "2-digit" });
 }
 
 function getLeadAgeDays(dateStr: string): number {
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayPST();
   const diff = new Date(today + "T12:00:00").getTime() - new Date(dateStr + "T12:00:00").getTime();
   return Math.max(0, Math.round(diff / (1000 * 60 * 60 * 24)));
 }
@@ -269,7 +270,7 @@ export default function Leads() {
         const alreadyLogged = payments.some(p => p.leadId === leadId && p.receivedFor === "Consultation Fee");
         if (!alreadyLogged) {
           addPayment({
-            date: new Date().toISOString().split("T")[0],
+            date: todayPST(),
             clientName: lead.name,
             leadId,
             caseType: lead.caseType,
@@ -322,7 +323,7 @@ export default function Leads() {
         const alreadyLogged = payments.some(p => p.leadId === editLead.id && p.receivedFor === "Consultation Fee");
         if (!alreadyLogged) {
           addPayment({
-            date: new Date().toISOString().split("T")[0],
+            date: todayPST(),
             clientName: form.name,
             leadId: editLead.id,
             caseType: form.caseType,
@@ -366,11 +367,11 @@ export default function Leads() {
       retainerBooked: retainer,
       downpayment: dp,
       caseNumber: convertForm.caseNumber || convertLead.caseNumber,
-      convertedDate: new Date().toISOString().split("T")[0],
+      convertedDate: todayPST(),
     });
     if (dp > 0) {
       addPayment({
-        date: new Date().toISOString().split("T")[0],
+        date: todayPST(),
         clientName: convertLead.name,
         leadId: convertLead.id,
         caseType: convertLead.caseType,
@@ -410,7 +411,7 @@ export default function Leads() {
     toast.success("Due date updated");
   };
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayPST();
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
@@ -1163,7 +1164,7 @@ function LeadCard({
           <input
             type="date"
             value={nextFU?.dueDate ?? ""}
-            min={new Date().toISOString().split("T")[0]}
+            min={todayPST()}
             onChange={e => {
               const newDate = e.target.value;
               if (!newDate) return;

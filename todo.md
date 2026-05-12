@@ -292,3 +292,8 @@
 - [x] Add delete DB helper for day_closes in server/db.ts
 - [x] Add delete button + confirmation dialog to Clients page
 - [x] Add delete button + confirmation dialog to CloseDay history table
+
+## Branding & Timezone
+- [x] Rename app title to "Graham Immigration Law, PC"
+- [x] Update subtitle to "Leads · Payments · Revenue"
+- [x] Set PST (America/Los_Angeles) as default timezone for all date/time display throughout the app

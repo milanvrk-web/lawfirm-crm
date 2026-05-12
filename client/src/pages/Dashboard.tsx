@@ -1,5 +1,5 @@
 /* ============================================================
-   Law Firm CRM — Dashboard Page
+   Graham Immigration Law, PC — Dashboard Page
    Design: Dark Luxury Legal — Navy + Gold
    Features: 7 stat cards, targets tracker, weekly bar chart
    ============================================================ */
@@ -7,6 +7,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useCRM } from "@/contexts/CRMContext";
 import { trpc } from "@/lib/trpc";
+import { todayPST } from "@/lib/timezone";
 import {
   formatCurrency,
   getMonthLeads,
@@ -89,8 +90,9 @@ export default function Dashboard() {
   const { leads, payments, followUps, dayCloses, targets } = useCRM();
   const crmData = useMemo(() => ({ leads, payments, followUps, dayCloses }), [leads, payments, followUps, dayCloses]);
   const now = new Date();
-  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
+  const nowPSTStr = now.toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" }); // YYYY-MM-DD
+  const [selectedYear, setSelectedYear] = useState(parseInt(nowPSTStr.split("-")[0]));
+  const [selectedMonth, setSelectedMonth] = useState(parseInt(nowPSTStr.split("-")[1]));
   const [panelLeadId, setPanelLeadId] = useState<string | null>(null);
   const [panelInitialTab, setPanelInitialTab] = useState<"followups" | "notes" | "info" | "installments">("installments");
   // Drill-down drawer
@@ -324,7 +326,7 @@ export default function Dashboard() {
     const summaryRows: string[][] = [
       ["LAW FIRM CRM — MONTHLY REPORT"],
       [`Month: ${MONTHS[selectedMonth - 1]} ${selectedYear}`],
-      [`Exported: ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}`],
+      [`Exported: ${new Date().toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", month: "long", day: "numeric", year: "numeric" })}`],
       [],
       ["SUMMARY"],
       ["Metric", "Value"],
@@ -401,10 +403,10 @@ export default function Dashboard() {
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.93 0.005 250)" }}>
-            Operations Dashboard
+            Leads · Payments · Revenue
           </h1>
           <p className="text-sm mt-1" style={{ color: "oklch(0.55 0.01 250)" }}>
-            {MONTHS[selectedMonth - 1]} {selectedYear} · Law Firm CRM
+            {MONTHS[selectedMonth - 1]} {selectedYear} · Graham Immigration Law, PC
           </p>
         </div>
         {/* Right controls: Export + Month selector */}
@@ -447,7 +449,7 @@ export default function Dashboard() {
               Morning Briefing
             </span>
             <span className="text-xs" style={{ color: "oklch(0.50 0.01 250)" }}>
-              {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+              {new Date().toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", weekday: "long", month: "long", day: "numeric" })}
             </span>
           </div>
           {briefingOpen
@@ -538,7 +540,7 @@ export default function Dashboard() {
         <div className="flex items-center gap-2 mb-3">
           <CalendarCheck className="w-4 h-4" style={{ color: "oklch(0.72 0.12 75)" }} />
           <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "oklch(0.72 0.12 75)" }}>
-            Today — {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+            Today — {new Date().toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", weekday: "long", month: "long", day: "numeric" })}
           </span>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
@@ -630,7 +632,7 @@ export default function Dashboard() {
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => bulkRescheduleMut.mutate({ newDate: new Date().toISOString().slice(0, 10) })}
+                onClick={() => bulkRescheduleMut.mutate({ newDate: todayPST() })}
                 disabled={bulkRescheduleMut.isPending}
                 className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-all hover:opacity-90 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                 style={{ background: "oklch(0.72 0.12 75 / 20%)", color: "oklch(0.72 0.12 75)", border: "1px solid oklch(0.72 0.12 75 / 40%)" }}
@@ -1033,7 +1035,7 @@ export default function Dashboard() {
                       >
                         <div className="flex items-center justify-between mb-3">
                           <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "oklch(0.72 0.12 75)" }}>
-                            {new Date(dateStr + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+                            {new Date(dateStr + "T12:00:00").toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", weekday: "short", month: "short", day: "numeric" })}
                           </span>
                           <span className="text-sm font-bold" style={{ color: "oklch(0.93 0.005 250)" }}>{formatCurrency(rev)}</span>
                         </div>

@@ -1,3 +1,4 @@
+import { todayPST } from "@/lib/timezone";
 /* ============================================================
    LeadDetailPanel — shared slide-over component
    Design: Dark luxury navy/gold — Playfair Display headings
@@ -29,7 +30,7 @@ const stageColor: Record<string, string> = {
 };
 
 function dueDateLabel(dueDate: string): { label: string; color: string; isOverdue: boolean } {
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayPST();
   const diff = new Date(dueDate + "T12:00:00").getTime() - new Date(today + "T12:00:00").getTime();
   const days = Math.round(diff / (1000 * 60 * 60 * 24));
   if (days < 0) return { label: `${Math.abs(days)}d overdue`, color: "oklch(0.65 0.22 25)", isOverdue: true };
@@ -40,8 +41,8 @@ function dueDateLabel(dueDate: string): { label: string; color: string; isOverdu
 
 function formatTimestamp(iso: string) {
   const d = new Date(iso);
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) +
-    " " + d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  return d.toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", month: "short", day: "numeric" }) +
+    " " + d.toLocaleTimeString("en-US", { timeZone: "America/Los_Angeles", hour: "numeric", minute: "2-digit" });
 }
 
 // ── Props ──────────────────────────────────────────────────
@@ -69,14 +70,14 @@ export default function LeadDetailPanel({
 
   const [detailTab, setDetailTab] = useState<"followups" | "notes" | "info" | "installments" | "onboarding">(initialTab);
   const [fuTitle, setFuTitle] = useState("Call back");
-  const [fuDate, setFuDate] = useState(new Date().toISOString().split("T")[0]);
+  const [fuDate, setFuDate] = useState(todayPST());
   const [showFuForm, setShowFuForm] = useState(false);
   const [noteText, setNoteText] = useState("");
   const [commentText, setCommentText] = useState<Record<string, string>>({});
   const [editingDueDateId, setEditingDueDateId] = useState<string | null>(null);
   const [confirmDeleteNoteId, setConfirmDeleteNoteId] = useState<string | null>(null);
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayPST();
 
   const lead = useMemo(() =>
     leadId ? leads.find(l => l.id === leadId) ?? null : null,
@@ -121,7 +122,7 @@ export default function LeadDetailPanel({
     if (!fuDate) { toast.error("Select a due date"); return; }
     addFollowUp({ leadId: lead.id, dueDate: fuDate, status: "Pending", title: fuTitle.trim(), assignedTo: activeMember?.name ?? null });
     setFuTitle("Call back");
-    setFuDate(new Date().toISOString().split("T")[0]);
+    setFuDate(todayPST());
     setShowFuForm(false);
     toast.success("Follow-up added");
   };
@@ -692,12 +693,12 @@ function InstallmentsTab({ leadId }: { leadId: string }) {
   const [showForm, setShowForm] = useState(false);
   const [formTotal, setFormTotal] = useState("");
   const [formCount, setFormCount] = useState("6");
-  const [formStart, setFormStart] = useState(new Date().toISOString().split("T")[0]);
+  const [formStart, setFormStart] = useState(todayPST());
   const [formNotes, setFormNotes] = useState("");
   const [editingDueDateItemId, setEditingDueDateItemId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayPST();
 
   const handleCreatePlan = () => {
     const total = parseFloat(formTotal);
@@ -913,14 +914,14 @@ function InstallmentsTab({ leadId }: { leadId: string }) {
                           }}
                           title={item.isPaid ? undefined : "Click to change due date"}
                         >
-                          {new Date(item.dueDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                          {new Date(item.dueDate + "T12:00:00").toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", month: "short", day: "numeric", year: "numeric" })}
                           {isOverdue && <span className="ml-1 text-[10px]">(overdue)</span>}
                           {isDueToday && <span className="ml-1 text-[10px]">(today)</span>}
                         </button>
                       )}
                       {item.isPaid && item.paidDate && (
                         <div className="text-[10px]" style={{ color: "oklch(0.45 0.01 250)" }}>
-                          Paid {new Date(item.paidDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                          Paid {new Date(item.paidDate + "T12:00:00").toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", month: "short", day: "numeric" })}
                         </div>
                       )}
                     </div>
@@ -1057,7 +1058,7 @@ function OnboardingTab({ leadId, activeMemberName }: { leadId: string; activeMem
                       <span className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>
                         Completed by <strong style={{ color: "oklch(0.65 0.01 250)" }}>{stepData.completedBy}</strong>
                         {stepData.completedAt && (
-                          <> · {new Date(stepData.completedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</>
+                          <> · {new Date(stepData.completedAt).toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", month: "short", day: "numeric", year: "numeric" })}</>
                         )}
                       </span>
                     </div>

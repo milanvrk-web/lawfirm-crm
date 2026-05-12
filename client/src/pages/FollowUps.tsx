@@ -1,3 +1,4 @@
+import { todayPST } from "@/lib/timezone";
 /* ============================================================
    Law Firm CRM — Follow-Ups Page
    Design: Dark Luxury Legal — Navy + Gold
@@ -53,7 +54,7 @@ export default function FollowUps() {
   const [addLeadSearch, setAddLeadSearch] = useState("");
   const [addLeadId, setAddLeadId] = useState("");
   const [addTitle, setAddTitle] = useState("Call back");
-  const [addDueDate, setAddDueDate] = useState(new Date().toISOString().split("T")[0]);
+  const [addDueDate, setAddDueDate] = useState(todayPST());
 
   // ── Comment form per follow-up ───────────────────────────
   const [commentText, setCommentText] = useState<Record<string, string>>({});
@@ -61,7 +62,7 @@ export default function FollowUps() {
   // ── Inline due date editing (MS To Do style) ─────────────
   const [editingDueDateId, setEditingDueDateId] = useState<string | null>(null);
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayPST();
 
   // ── Derived data ─────────────────────────────────────────
   const nowMs = Date.now();
@@ -123,7 +124,7 @@ export default function FollowUps() {
     setAddLeadId("");
     setAddLeadSearch("");
     setAddTitle("Call back");
-    setAddDueDate(new Date().toISOString().split("T")[0]);
+    setAddDueDate(todayPST());
     setShowAddForm(false);
     toast.success("Follow-up task added");
   };
@@ -147,8 +148,8 @@ export default function FollowUps() {
 
   const formatTimestamp = (iso: string) => {
     const d = new Date(iso);
-    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) +
-      " " + d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+    return d.toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", month: "short", day: "numeric" }) +
+      " " + d.toLocaleTimeString("en-US", { timeZone: "America/Los_Angeles", hour: "numeric", minute: "2-digit" });
   };
 
   // Weekly Digest: next 7 days grouped by day
@@ -159,7 +160,7 @@ export default function FollowUps() {
       d.setDate(d.getDate() + i);
       const dateStr = d.toISOString().split("T")[0];
       const label = i === 0 ? "Today" : i === 1 ? "Tomorrow" :
-        d.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
+        d.toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", weekday: "long", month: "short", day: "numeric" });
       const items = followUps.filter(f => f.status === "Pending" && f.dueDate === dateStr);
       days.push({ dateStr, label, items });
     }

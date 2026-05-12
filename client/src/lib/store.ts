@@ -1,3 +1,4 @@
+import { todayPST } from "@/lib/timezone";
 /* ============================================================
    Law Firm CRM — Data Store (localStorage)
    Design: Dark Luxury Legal — Navy + Gold
@@ -332,11 +333,11 @@ export function getPendingFollowUps(data: CRMData): FollowUp[] {
   return data.followUps.filter(f => f.status === "Pending");
 }
 export function getDueTodayFollowUps(data: CRMData): FollowUp[] {
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayPST();
   return data.followUps.filter(f => f.status === "Pending" && f.dueDate === today);
 }
 export function getOverdueFollowUps(data: CRMData): FollowUp[] {
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayPST();
   return data.followUps.filter(f => f.status === "Pending" && f.dueDate < today);
 }
 
@@ -386,7 +387,7 @@ export function formatCurrency(amount: number): string {
 }
 
 export function formatDate(dateStr: string): string {
-  return new Date(dateStr + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return new Date(dateStr + "T12:00:00").toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", month: "short", day: "numeric", year: "numeric" });
 }
 
 // Returns weeks as YYYY-MM-DD string ranges to avoid all timezone issues
