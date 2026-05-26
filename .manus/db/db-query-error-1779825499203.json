@@ -1,0 +1,8 @@
+{
+  "query": "\nSELECT stage, COUNT(*) as count, \n  SUM(CAST(quoted_amount AS DECIMAL(10,2))) as total_quoted,\n  SUM(CAST(retainer_booked AS DECIMAL(10,2))) as total_retainer\nFROM leads\nGROUP BY stage\nORDER BY count DESC;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute \nSELECT stage, COUNT(*) as count, \n  SUM(CAST(quoted_amount AS DECIMAL(10,2))) as total_quoted,\n  SUM(CAST(retainer_booked AS DECIMAL(10,2))) as total_retainer\nFROM leads\nGROUP BY stage\nORDER BY count DESC;\n",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 2: Unknown column 'quoted_amount' in 'group statement'"
+  ]
+}

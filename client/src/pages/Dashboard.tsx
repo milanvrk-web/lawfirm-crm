@@ -1200,17 +1200,19 @@ export default function Dashboard() {
             <span className="text-xs" style={{ color: "oklch(0.45 0.01 250)" }}>active leads</span>
           </div>
           {(() => {
-            const activeLeads = leads.filter(l => l.stage !== "Lost");
-            const totalPipeline = activeLeads.reduce((s, l) => s + (l.retainerBooked || l.quotedAmount || 0), 0);
-            const stageBreakdown = ["New Lead", "Consultation", "Retained"].map(stage => {
+            // Pipeline = hot leads only (pre-retained). Exclude Retained, Onboarding, and Lost.
+            const PIPELINE_STAGES = ["New Lead", "Consultation", "Follow-Up"];
+            const activeLeads = leads.filter(l => PIPELINE_STAGES.includes(l.stage));
+            const totalPipeline = activeLeads.reduce((s, l) => s + (l.quotedAmount || 0), 0);
+            const stageBreakdown = PIPELINE_STAGES.map(stage => {
               const stageLeads = activeLeads.filter(l => l.stage === stage);
-              const value = stageLeads.reduce((s, l) => s + (l.retainerBooked || l.quotedAmount || 0), 0);
+              const value = stageLeads.reduce((s, l) => s + (l.quotedAmount || 0), 0);
               return { stage, count: stageLeads.length, value };
             });
             const stageColors: Record<string, string> = {
               "New Lead": "oklch(0.65 0.15 250)",
               "Consultation": "oklch(0.72 0.12 75)",
-              "Retained": "oklch(0.55 0.18 145)",
+              "Follow-Up": "oklch(0.72 0.12 40)",
             };
             return (
               <div className="space-y-4">
@@ -1218,7 +1220,7 @@ export default function Dashboard() {
                   <div className="text-3xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.72 0.12 75)" }}>
                     {formatCurrency(totalPipeline)}
                   </div>
-                  <div className="text-xs mt-1" style={{ color: "oklch(0.45 0.01 250)" }}>{activeLeads.length} active leads</div>
+                  <div className="text-xs mt-1" style={{ color: "oklch(0.45 0.01 250)" }}>{activeLeads.length} hot leads (excl. retained &amp; onboarding)</div>
                 </div>
                 <div className="space-y-2">
                   {stageBreakdown.map(({ stage, count, value }) => (

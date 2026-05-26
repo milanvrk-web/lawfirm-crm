@@ -151,7 +151,13 @@ export default function Leads() {
   const stageValue = useMemo(() => {
     const map: Record<string, number> = {};
     pipelineStageNames.forEach(s => { map[s] = 0; });
-    leads.forEach(l => { map[l.stage] = (map[l.stage] || 0) + (l.retainerBooked || l.quotedAmount || 0); });
+    // Only count quotedAmount for pre-retained stages; Retained/Onboarding are clients, not pipeline
+    const PIPELINE_STAGES_SET = new Set(["New Lead", "Consultation", "Follow-Up"]);
+    leads.forEach(l => {
+      if (PIPELINE_STAGES_SET.has(l.stage)) {
+        map[l.stage] = (map[l.stage] || 0) + (l.quotedAmount || 0);
+      }
+    });
     return map;
   }, [leads, pipelineStageNames]);
 
@@ -638,8 +644,8 @@ export default function Leads() {
                   </div>
                 </div>
 
-                {/* Pipeline value */}
-                {(stageValue[stage] ?? 0) > 0 && (
+                {/* Pipeline value — only shown for pre-retained stages */}
+                {(stageValue[stage] ?? 0) > 0 && !["Retained", "Onboarding"].includes(stage) && (
                   <div className="text-xs mt-1 font-medium" style={{ color: "oklch(0.72 0.12 75)" }}>
                     {formatCurrency(stageValue[stage])} pipeline
                   </div>
