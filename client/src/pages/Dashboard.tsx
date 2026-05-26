@@ -4,7 +4,8 @@
    Features: 7 stat cards, targets tracker, weekly bar chart
    ============================================================ */
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
+import { toast } from "sonner";
 import { useCRM } from "@/contexts/CRMContext";
 import { trpc } from "@/lib/trpc";
 import { todayPST } from "@/lib/timezone";
@@ -16,6 +17,7 @@ import {
   getTargetStatus,
   getDueTodayFollowUps,
   getOverdueFollowUps,
+  type Lead, type Payment, type CaseType, type PaymentType, type LeadStage,
 } from "@/lib/store";
 import {
   BarChart,
@@ -56,9 +58,16 @@ import {
   TrendingDown,
   AlertTriangle,
 } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import LeadDetailPanel from "@/components/LeadDetailPanel";
 import StaleLeadsDrawer from "@/components/StaleLeadsDrawer";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+
 
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
@@ -84,7 +93,7 @@ function downloadCSV(filename: string, rows: string[][]): void {
 }
 
 export default function Dashboard() {
-  const { leads, payments, followUps, dayCloses, targets } = useCRM();
+  const { leads, payments, followUps, dayCloses, targets, addLead, addPayment } = useCRM();
   const crmData = useMemo(() => ({ leads, payments, followUps, dayCloses }), [leads, payments, followUps, dayCloses]);
   const now = new Date();
   const nowPSTStr = now.toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" }); // YYYY-MM-DD
@@ -239,6 +248,57 @@ export default function Dashboard() {
   const { data: dueThisWeekInstallments = [] } = trpc.getDueThisWeekInstallments.useQuery(undefined, {
     refetchInterval: 60_000,
   });
+
+  // ── Inline modal state ──────────────────────────────────
+  const LEAD_STAGES: LeadStage[] = ["New Lead", "Consultation", "Follow-Up", "Retained", "Onboarding", "Lost"];
+  const CASE_TYPES: CaseType[] = ["DA", "SIJS", "AOS", "AO", "K1/K2", "U-Visa", "Green Card", "BIA", "Other"];
+  const emptyLeadForm: Omit<Lead, "id"> = {
+    name: "", phone: "", email: "", caseType: "DA", caseNumber: "", source: "",
+    stage: "New Lead", notes: "", date: todayPST(),
+    retainerBooked: 0, downpayment: 0, quotedAmount: 0, referredBy: "", consultationFee: 0,
+  };
+  const emptyPaymentForm: Omit<Payment, "id"> = {
+    date: todayPST(), clientName: "", leadId: undefined,
+    caseType: "DA", caseNumber: "", paymentType: "New Client",
+    amount: 0, receivedFor: "", notes: "",
+  };
+  const [showAddLead, setShowAddLead] = useState(false);
+  const [leadForm, setLeadForm] = useState<Omit<Lead, "id">>(emptyLeadForm);
+  const [showLogPayment, setShowLogPayment] = useState(false);
+  const [paymentForm, setPaymentForm] = useState<Omit<Payment, "id">>(emptyPaymentForm);
+  const [paymentClientSearch, setPaymentClientSearch] = useState("");
+  const [showPaymentClientDrop, setShowPaymentClientDrop] = useState(false);
+
+  const retainedLeads = useMemo(() => leads.filter(l => l.stage === "Retained" || l.stage === "Onboarding"), [leads]);
+  const paymentClientMatches = useMemo(() => {
+    if (paymentClientSearch.length < 2) return [];
+    return retainedLeads.filter(l => l.name.toLowerCase().includes(paymentClientSearch.toLowerCase())).slice(0, 6);
+  }, [retainedLeads, paymentClientSearch]);
+
+  const handleAddLead = useCallback(() => {
+    if (!leadForm.name.trim()) { toast.error("Name is required"); return; }
+    addLead(leadForm);
+    toast.success("Lead added");
+    setShowAddLead(false);
+    setLeadForm(emptyLeadForm);
+  }, [leadForm, addLead]);
+
+  const handleLogPayment = useCallback(() => {
+    if (!paymentForm.clientName.trim()) { toast.error("Client name is required"); return; }
+    if (paymentForm.amount <= 0) { toast.error("Amount must be greater than 0"); return; }
+    if (!paymentForm.receivedFor.trim()) { toast.error("Please specify what the payment is for"); return; }
+    addPayment(paymentForm);
+    toast.success("Payment logged");
+    setShowLogPayment(false);
+    setPaymentForm(emptyPaymentForm);
+    setPaymentClientSearch("");
+  }, [paymentForm, addPayment]);
+
+  const linkPaymentClient = useCallback((lead: typeof retainedLeads[0]) => {
+    setPaymentForm(f => ({ ...f, clientName: lead.name, leadId: lead.id, caseType: lead.caseType, caseNumber: lead.caseNumber }));
+    setPaymentClientSearch(lead.name);
+    setShowPaymentClientDrop(false);
+  }, []);
 
   // ── Day Navigator state ──────────────────────────────────
   const [dayNavDate, setDayNavDate] = useState<string>(() =>
@@ -426,31 +486,64 @@ export default function Dashboard() {
 
       {/* ── Quick Actions ──────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          { href: "/leads", label: "Add Lead", icon: Users, desc: "New intake" },
-          { href: "/payments", label: "Log Payment", icon: DollarSign, desc: "Record received" },
-          { href: "/clients", label: "Client Ledger", icon: BookOpen, desc: "View accounts" },
-          { href: "/close-day", label: "Close Day", icon: CalendarCheck, desc: "End of day register" },
-        ].map(({ href, label, icon: Icon, desc }) => (
-          <Link key={href} href={href}>
-            <div
-              className="flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98]"
-              style={{
-                background: "oklch(0.20 0.030 250)",
-                borderColor: "oklch(0.72 0.12 75 / 25%)",
-                boxShadow: "0 1px 8px oklch(0 0 0 / 20%)",
-              }}
-            >
-              <div className="flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: "oklch(0.72 0.12 75 / 12%)" }}>
-                <Icon className="w-4 h-4" style={{ color: "oklch(0.72 0.12 75)" }} />
-              </div>
-              <div className="min-w-0">
-                <div className="text-sm font-semibold" style={{ color: "oklch(0.93 0.005 250)" }}>{label}</div>
-                <div className="text-xs" style={{ color: "oklch(0.50 0.01 250)" }}>{desc}</div>
-              </div>
+        {/* Add Lead — opens inline modal */}
+        <button
+          onClick={() => { setLeadForm(emptyLeadForm); setShowAddLead(true); }}
+          className="flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] text-left w-full"
+          style={{ background: "oklch(0.20 0.030 250)", borderColor: "oklch(0.72 0.12 75 / 25%)", boxShadow: "0 1px 8px oklch(0 0 0 / 20%)" }}
+        >
+          <div className="flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: "oklch(0.72 0.12 75 / 12%)" }}>
+            <Users className="w-4 h-4" style={{ color: "oklch(0.72 0.12 75)" }} />
+          </div>
+          <div className="min-w-0">
+            <div className="text-sm font-semibold" style={{ color: "oklch(0.93 0.005 250)" }}>Add Lead</div>
+            <div className="text-xs" style={{ color: "oklch(0.50 0.01 250)" }}>New intake</div>
+          </div>
+        </button>
+        {/* Log Payment — opens inline modal */}
+        <button
+          onClick={() => { setPaymentForm(emptyPaymentForm); setPaymentClientSearch(""); setShowLogPayment(true); }}
+          className="flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] text-left w-full"
+          style={{ background: "oklch(0.20 0.030 250)", borderColor: "oklch(0.72 0.12 75 / 25%)", boxShadow: "0 1px 8px oklch(0 0 0 / 20%)" }}
+        >
+          <div className="flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: "oklch(0.72 0.12 75 / 12%)" }}>
+            <DollarSign className="w-4 h-4" style={{ color: "oklch(0.72 0.12 75)" }} />
+          </div>
+          <div className="min-w-0">
+            <div className="text-sm font-semibold" style={{ color: "oklch(0.93 0.005 250)" }}>Log Payment</div>
+            <div className="text-xs" style={{ color: "oklch(0.50 0.01 250)" }}>Record received</div>
+          </div>
+        </button>
+        {/* Client Ledger — navigates */}
+        <Link href="/clients">
+          <div
+            className="flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98]"
+            style={{ background: "oklch(0.20 0.030 250)", borderColor: "oklch(0.72 0.12 75 / 25%)", boxShadow: "0 1px 8px oklch(0 0 0 / 20%)" }}
+          >
+            <div className="flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: "oklch(0.72 0.12 75 / 12%)" }}>
+              <BookOpen className="w-4 h-4" style={{ color: "oklch(0.72 0.12 75)" }} />
             </div>
-          </Link>
-        ))}
+            <div className="min-w-0">
+              <div className="text-sm font-semibold" style={{ color: "oklch(0.93 0.005 250)" }}>Client Ledger</div>
+              <div className="text-xs" style={{ color: "oklch(0.50 0.01 250)" }}>View accounts</div>
+            </div>
+          </div>
+        </Link>
+        {/* Close Day — navigates */}
+        <Link href="/close-day">
+          <div
+            className="flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98]"
+            style={{ background: "oklch(0.20 0.030 250)", borderColor: "oklch(0.72 0.12 75 / 25%)", boxShadow: "0 1px 8px oklch(0 0 0 / 20%)" }}
+          >
+            <div className="flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: "oklch(0.72 0.12 75 / 12%)" }}>
+              <CalendarCheck className="w-4 h-4" style={{ color: "oklch(0.72 0.12 75)" }} />
+            </div>
+            <div className="min-w-0">
+              <div className="text-sm font-semibold" style={{ color: "oklch(0.93 0.005 250)" }}>Close Day</div>
+              <div className="text-xs" style={{ color: "oklch(0.50 0.01 250)" }}>End of day register</div>
+            </div>
+          </div>
+        </Link>
       </div>
 
       {/* ── Day Navigator ─────────────────────────────────── */}
@@ -1511,6 +1604,173 @@ export default function Dashboard() {
 
     {/* Stale Leads Drawer */}
     <StaleLeadsDrawer open={staleDrawerOpen} onClose={() => setStaleDrawerOpen(false)} />
+
+    {/* ── Add Lead Modal ───────────────────────────────── */}
+    <Dialog open={showAddLead} onOpenChange={open => { setShowAddLead(open); if (!open) setLeadForm(emptyLeadForm); }}>
+      <DialogContent style={{ background: "oklch(0.18 0.030 250)", borderColor: "oklch(1 0 0 / 12%)", maxWidth: "520px" }}>
+        <DialogHeader>
+          <DialogTitle style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.93 0.005 250)" }}>Add New Lead</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3 mt-2">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="col-span-2">
+              <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Full Name *</Label>
+              <Input value={leadForm.name} onChange={e => setLeadForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Mandeep Singh"
+                style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
+            </div>
+            <div>
+              <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Phone</Label>
+              <Input value={leadForm.phone} onChange={e => setLeadForm(f => ({ ...f, phone: e.target.value }))} placeholder="+1 (555) 000-0000"
+                style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
+            </div>
+            <div>
+              <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Email</Label>
+              <Input value={leadForm.email} onChange={e => setLeadForm(f => ({ ...f, email: e.target.value }))} placeholder="email@example.com"
+                style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
+            </div>
+            <div>
+              <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Case Type</Label>
+              <Select value={leadForm.caseType} onValueChange={v => setLeadForm(f => ({ ...f, caseType: v as CaseType }))}>
+                <SelectTrigger style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }}><SelectValue /></SelectTrigger>
+                <SelectContent style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)" }}>
+                  {CASE_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Stage</Label>
+              <Select value={leadForm.stage} onValueChange={v => setLeadForm(f => ({ ...f, stage: v as LeadStage }))}>
+                <SelectTrigger style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }}><SelectValue /></SelectTrigger>
+                <SelectContent style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)" }}>
+                  {LEAD_STAGES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Source</Label>
+              <Input value={leadForm.source} onChange={e => setLeadForm(f => ({ ...f, source: e.target.value }))} placeholder="e.g. Referral, Google"
+                style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
+            </div>
+            <div>
+              <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Quoted Amount ($)</Label>
+              <Input type="number" value={leadForm.quotedAmount || ""} onChange={e => setLeadForm(f => ({ ...f, quotedAmount: parseFloat(e.target.value) || 0 }))} placeholder="0"
+                style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
+            </div>
+            <div>
+              <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Date</Label>
+              <Input type="date" value={leadForm.date} onChange={e => setLeadForm(f => ({ ...f, date: e.target.value }))}
+                style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
+            </div>
+            <div className="col-span-2">
+              <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Notes</Label>
+              <Textarea value={leadForm.notes} onChange={e => setLeadForm(f => ({ ...f, notes: e.target.value }))} placeholder="Optional" rows={2}
+                style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
+            </div>
+          </div>
+        </div>
+        <div className="flex gap-3 mt-4">
+          <Button onClick={handleAddLead} style={{ background: "oklch(0.72 0.12 75)", color: "oklch(0.13 0.025 250)" }}>Add Lead</Button>
+          <Button variant="outline" onClick={() => setShowAddLead(false)} style={{ borderColor: "oklch(1 0 0 / 15%)", color: "oklch(0.65 0.01 250)" }}>Cancel</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+
+    {/* ── Log Payment Modal ─────────────────────────────── */}
+    <Dialog open={showLogPayment} onOpenChange={open => { setShowLogPayment(open); if (!open) { setPaymentForm(emptyPaymentForm); setPaymentClientSearch(""); } }}>
+      <DialogContent style={{ background: "oklch(0.18 0.030 250)", borderColor: "oklch(1 0 0 / 12%)", maxWidth: "520px" }}>
+        <DialogHeader>
+          <DialogTitle style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.93 0.005 250)" }}>Log Payment</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3 mt-2">
+          {/* New / Existing toggle */}
+          <div className="flex gap-2">
+            {(["New Client", "Existing Client"] as PaymentType[]).map(t => (
+              <button key={t} onClick={() => setPaymentForm(f => ({ ...f, paymentType: t }))}
+                className="flex-1 py-2 rounded-lg text-sm font-medium transition-all"
+                style={paymentForm.paymentType === t
+                  ? { background: "oklch(0.72 0.12 75)", color: "oklch(0.13 0.025 250)" }
+                  : { background: "oklch(0.22 0.025 250)", color: "oklch(0.55 0.01 250)", border: "1px solid oklch(1 0 0 / 12%)" }
+                }>{t}</button>
+            ))}
+          </div>
+          {/* Client name with autocomplete */}
+          <div className="relative">
+            <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Client Name *</Label>
+            <div className="relative">
+              <Input
+                value={paymentClientSearch || paymentForm.clientName}
+                onChange={e => {
+                  const v = e.target.value;
+                  setPaymentClientSearch(v);
+                  setPaymentForm(f => ({ ...f, clientName: v, leadId: undefined }));
+                  setShowPaymentClientDrop(v.length >= 2);
+                }}
+                onFocus={() => setShowPaymentClientDrop(paymentClientSearch.length >= 2)}
+                placeholder="Type client name"
+                style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }}
+              />
+              {paymentForm.leadId && (
+                <button className="absolute right-2 top-1/2 -translate-y-1/2" onClick={() => { setPaymentForm(f => ({ ...f, leadId: undefined, clientName: "" })); setPaymentClientSearch(""); }} style={{ color: "oklch(0.55 0.01 250)" }}>
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+            {showPaymentClientDrop && paymentClientMatches.length > 0 && (
+              <div className="absolute z-50 w-full mt-1 rounded-lg border shadow-xl overflow-hidden" style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 15%)" }}>
+                {paymentClientMatches.map(lead => (
+                  <button key={lead.id} onClick={() => linkPaymentClient(lead)} className="w-full text-left px-3 py-2.5 hover:bg-white/5 transition-colors">
+                    <div className="text-sm font-medium" style={{ color: "oklch(0.93 0.005 250)" }}>{lead.name}</div>
+                    <div className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>{lead.caseType} · #{lead.caseNumber} · Retainer: {formatCurrency(lead.retainerBooked)}</div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Case Type</Label>
+              <Select value={paymentForm.caseType} onValueChange={v => setPaymentForm(f => ({ ...f, caseType: v as CaseType }))}>
+                <SelectTrigger style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }}><SelectValue /></SelectTrigger>
+                <SelectContent style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)" }}>
+                  {CASE_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Case Number</Label>
+              <Input value={paymentForm.caseNumber} onChange={e => setPaymentForm(f => ({ ...f, caseNumber: e.target.value }))} placeholder="e.g. 409"
+                style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Amount ($) *</Label>
+              <Input type="number" value={paymentForm.amount || ""} onChange={e => setPaymentForm(f => ({ ...f, amount: parseFloat(e.target.value) || 0 }))} placeholder="0"
+                style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
+            </div>
+            <div>
+              <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Date</Label>
+              <Input type="date" value={paymentForm.date} onChange={e => setPaymentForm(f => ({ ...f, date: e.target.value }))}
+                style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
+            </div>
+          </div>
+          <div>
+            <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Received For *</Label>
+            <Input value={paymentForm.receivedFor} onChange={e => setPaymentForm(f => ({ ...f, receivedFor: e.target.value }))} placeholder="e.g. Retainer downpayment, I-589 update"
+              style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
+          </div>
+          <div>
+            <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Notes</Label>
+            <Textarea value={paymentForm.notes} onChange={e => setPaymentForm(f => ({ ...f, notes: e.target.value }))} placeholder="Optional" rows={2}
+              style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
+          </div>
+        </div>
+        <div className="flex gap-3 mt-4">
+          <Button onClick={handleLogPayment} style={{ background: "oklch(0.72 0.12 75)", color: "oklch(0.13 0.025 250)" }}>Log Payment</Button>
+          <Button variant="outline" onClick={() => setShowLogPayment(false)} style={{ borderColor: "oklch(1 0 0 / 15%)", color: "oklch(0.65 0.01 250)" }}>Cancel</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
     </>
   );
 }

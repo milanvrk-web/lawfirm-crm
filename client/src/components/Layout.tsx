@@ -5,10 +5,10 @@ import { todayPST } from "@/lib/timezone";
    Nav: Dashboard | Leads | Payments | Clients | Follow-Ups | Close Day | All Data
    ============================================================ */
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useActiveMember } from "@/contexts/ActiveMemberContext";
 import { trpc } from "@/lib/trpc";
-import { Link, useLocation } from "wouter";
+import { Link, useLocation, useRoute } from "wouter";
 import {
   LayoutDashboard,
   Users,
@@ -23,10 +23,20 @@ import {
   Bell,
   Settings2,
   UserCog,
+  Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCRM } from "@/contexts/CRMContext";
-import { getDueTodayFollowUps, getOverdueFollowUps } from "@/lib/store";
+import { getDueTodayFollowUps, getOverdueFollowUps, formatCurrency } from "@/lib/store";
+import {
+  CommandDialog,
+  CommandInput,
+  CommandList,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+  CommandSeparator,
+} from "@/components/ui/command";
 
 const BASE_NAV = [
   { path: "/", icon: LayoutDashboard, label: "Dashboard" },
@@ -41,13 +51,66 @@ const BASE_NAV = [
 ];
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { followUps, leads } = useCRM();
+  const { followUps, leads, payments } = useCRM();
   const { activeMember, setActiveMember } = useActiveMember();
   const [memberPickerOpen, setMemberPickerOpen] = useState(false);
   const { data: members = [] } = trpc.members.list.useQuery();
 
+  // ── Global Search ─────────────────────────────────────────
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Open on Cmd+K or Ctrl+K
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setSearchOpen(open => !open);
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, []);
+
+  const q = searchQuery.toLowerCase().trim();
+
+  const matchedLeads = useMemo(() => {
+    if (!q) return [];
+    return leads
+      .filter(l =>
+        l.name.toLowerCase().includes(q) ||
+        l.caseNumber?.toLowerCase().includes(q) ||
+        l.caseType?.toLowerCase().includes(q) ||
+        l.phone?.toLowerCase().includes(q)
+      )
+      .slice(0, 5);
+  }, [leads, q]);
+
+  const matchedPayments = useMemo(() => {
+    if (!q) return [];
+    return payments
+      .filter(p =>
+        p.clientName.toLowerCase().includes(q) ||
+        p.caseNumber?.toLowerCase().includes(q) ||
+        p.receivedFor?.toLowerCase().includes(q)
+      )
+      .slice(0, 4);
+  }, [payments, q]);
+
+  const matchedPages = useMemo(() => {
+    if (!q) return BASE_NAV;
+    return BASE_NAV.filter(n => n.label.toLowerCase().includes(q));
+  }, [q]);
+
+  const handleSelect = useCallback((path: string) => {
+    navigate(path);
+    setSearchOpen(false);
+    setSearchQuery("");
+  }, [navigate]);
+
+  // ── Follow-up urgency badge ───────────────────────────────
   const urgentCount = useMemo(() => {
     const today = todayPST();
     return followUps.filter(f => f.status === "Pending" && (f.dueDate === today || f.dueDate < today)).length;
@@ -99,6 +162,21 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             style={{ color: "oklch(0.55 0.01 250)" }}
           >
             <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Search trigger */}
+        <div className="px-3 pt-3 pb-1">
+          <button
+            onClick={() => setSearchOpen(true)}
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all hover:opacity-90"
+            style={{ background: "oklch(0.20 0.025 250)", border: "1px solid oklch(1 0 0 / 10%)", color: "oklch(0.50 0.01 250)" }}
+          >
+            <Search className="w-3.5 h-3.5 flex-shrink-0" />
+            <span className="flex-1 text-left text-xs">Search leads, payments…</span>
+            <kbd className="text-xs px-1.5 py-0.5 rounded" style={{ background: "oklch(0.25 0.025 250)", color: "oklch(0.45 0.01 250)", fontFamily: "monospace" }}>
+              ⌘K
+            </kbd>
           </button>
         </div>
 
@@ -250,6 +328,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               Graham Immigration Law, PC
             </span>
           </div>
+          {/* Mobile search trigger */}
+          <button
+            onClick={() => setSearchOpen(true)}
+            className="ml-auto p-1.5 rounded-lg"
+            style={{ color: "oklch(0.55 0.01 250)" }}
+          >
+            <Search className="w-4 h-4" />
+          </button>
         </header>
 
         {/* Page content */}
@@ -257,6 +343,94 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
+
+      {/* ── Global Search Palette ─────────────────────────────── */}
+      <CommandDialog
+        open={searchOpen}
+        onOpenChange={open => { setSearchOpen(open); if (!open) setSearchQuery(""); }}
+      >
+        <CommandInput
+          placeholder="Search leads, payments, pages…"
+          value={searchQuery}
+          onValueChange={setSearchQuery}
+        />
+        <CommandList>
+          <CommandEmpty>No results found.</CommandEmpty>
+
+          {/* Leads */}
+          {matchedLeads.length > 0 && (
+            <CommandGroup heading="Leads">
+              {matchedLeads.map(lead => (
+                <CommandItem
+                  key={lead.id}
+                  value={`lead-${lead.id}-${lead.name}`}
+                  onSelect={() => handleSelect("/leads")}
+                  className="flex items-center gap-3 cursor-pointer"
+                >
+                  <Users className="w-4 h-4 flex-shrink-0" style={{ color: "oklch(0.72 0.12 75)" }} />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium truncate">{lead.name}</div>
+                    <div className="text-xs truncate" style={{ color: "oklch(0.55 0.01 250)" }}>
+                      {lead.caseType} · #{lead.caseNumber || "—"} · {lead.stage}
+                    </div>
+                  </div>
+                  {lead.retainerBooked > 0 && (
+                    <span className="text-xs flex-shrink-0" style={{ color: "oklch(0.72 0.12 75)" }}>
+                      {formatCurrency(lead.retainerBooked)}
+                    </span>
+                  )}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
+
+          {matchedLeads.length > 0 && matchedPayments.length > 0 && <CommandSeparator />}
+
+          {/* Payments */}
+          {matchedPayments.length > 0 && (
+            <CommandGroup heading="Payments">
+              {matchedPayments.map(payment => (
+                <CommandItem
+                  key={payment.id}
+                  value={`payment-${payment.id}-${payment.clientName}`}
+                  onSelect={() => handleSelect("/payments")}
+                  className="flex items-center gap-3 cursor-pointer"
+                >
+                  <DollarSign className="w-4 h-4 flex-shrink-0" style={{ color: "oklch(0.65 0.18 145)" }} />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium truncate">{payment.clientName}</div>
+                    <div className="text-xs truncate" style={{ color: "oklch(0.55 0.01 250)" }}>
+                      {payment.date} · {payment.receivedFor}
+                    </div>
+                  </div>
+                  <span className="text-xs flex-shrink-0 font-semibold" style={{ color: "oklch(0.65 0.18 145)" }}>
+                    {formatCurrency(payment.amount)}
+                  </span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
+
+          {(matchedLeads.length > 0 || matchedPayments.length > 0) && matchedPages.length > 0 && <CommandSeparator />}
+
+          {/* Pages */}
+          {matchedPages.length > 0 && (
+            <CommandGroup heading="Pages">
+              {matchedPages.map(({ path, icon: Icon, label }) => (
+                <CommandItem
+                  key={path}
+                  value={`page-${path}-${label}`}
+                  onSelect={() => handleSelect(path)}
+                  className="flex items-center gap-3 cursor-pointer"
+                >
+                  <Icon className="w-4 h-4 flex-shrink-0" style={{ color: "oklch(0.55 0.01 250)" }} />
+                  <span className="text-sm">{label}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
+        </CommandList>
+      </CommandDialog>
     </div>
   );
 }

@@ -1,0 +1,26 @@
+{
+  "query": "\nSELECT 'leads' as tbl, COUNT(*) as cnt FROM leads\nUNION ALL SELECT 'payments', COUNT(*) FROM payments\nUNION ALL SELECT 'follow_ups', COUNT(*) FROM follow_ups\nUNION ALL SELECT 'day_closes', COUNT(*) FROM day_closes;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute \nSELECT 'leads' as tbl, COUNT(*) as cnt FROM leads\nUNION ALL SELECT 'payments', COUNT(*) FROM payments\nUNION ALL SELECT 'follow_ups', COUNT(*) FROM follow_ups\nUNION ALL SELECT 'day_closes', COUNT(*) FROM day_closes;\n",
+  "rows": [
+    {
+      "tbl": "leads",
+      "cnt": "21"
+    },
+    {
+      "tbl": "follow_ups",
+      "cnt": "12"
+    },
+    {
+      "tbl": "day_closes",
+      "cnt": "6"
+    },
+    {
+      "tbl": "payments",
+      "cnt": "51"
+    }
+  ],
+  "messages": [],
+  "stdout": "tbl\tcnt\nleads\t21\nfollow_ups\t12\nday_closes\t6\npayments\t51\n",
+  "stderr": "",
+  "execution_time_ms": 260
+}
