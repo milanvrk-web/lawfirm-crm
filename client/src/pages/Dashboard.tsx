@@ -200,15 +200,24 @@ export default function Dashboard() {
     const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
     const monthlyTarget = targets.monthly.green;
     const dailyIdeal = monthlyTarget / daysInMonth;
-    const result: { day: number; actual: number; ideal: number }[] = [];
+    const todayDay = selectedYear === parseInt(nowPSTStr.split("-")[0]) && selectedMonth === parseInt(nowPSTStr.split("-")[1])
+      ? parseInt(nowPSTStr.split("-")[2])
+      : daysInMonth; // for past months show full month
+    const result: { day: number; label: string; actual: number | null; ideal: number }[] = [];
     let cumulative = 0;
     for (let d = 1; d <= daysInMonth; d++) {
       const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
       cumulative += dailyMap[dateStr]?.total ?? 0;
-      result.push({ day: d, actual: cumulative, ideal: Math.round(dailyIdeal * d) });
+      const label = `${MONTHS[selectedMonth - 1].slice(0, 3)} ${d}`;
+      result.push({
+        day: d,
+        label,
+        actual: d <= todayDay ? cumulative : null,
+        ideal: Math.round(dailyIdeal * d),
+      });
     }
     return result;
-  }, [dailyMap, selectedYear, selectedMonth, targets]);
+  }, [dailyMap, selectedYear, selectedMonth, targets, nowPSTStr]);
 
   // Month-over-Month comparison
   const momComparison = useMemo(() => {
@@ -997,8 +1006,8 @@ export default function Dashboard() {
             </span>
           </div>
         </div>
-        <ResponsiveContainer width="100%" height={220}>
-          <AreaChart data={velocityData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+        <ResponsiveContainer width="100%" height={240}>
+          <AreaChart data={velocityData} margin={{ top: 5, right: 20, left: 10, bottom: 20 }}>
             <defs>
               <linearGradient id="velActual" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="oklch(0.72 0.12 75)" stopOpacity={0.25} />
@@ -1006,17 +1015,40 @@ export default function Dashboard() {
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 6%)" />
-            <XAxis dataKey="day" tick={{ fill: "oklch(0.55 0.01 250)", fontSize: 11 }} axisLine={false} tickLine={false}
-              tickFormatter={d => d % 5 === 0 || d === 1 ? String(d) : ""} />
+            <XAxis
+              dataKey="label"
+              tick={{ fill: "oklch(0.55 0.01 250)", fontSize: 10 }}
+              axisLine={false}
+              tickLine={false}
+              interval={4}
+              angle={-35}
+              textAnchor="end"
+              height={40}
+            />
             <YAxis tickFormatter={v => `$${(v/1000).toFixed(0)}k`} tick={{ fill: "oklch(0.55 0.01 250)", fontSize: 11 }} axisLine={false} tickLine={false} />
             <Tooltip
               contentStyle={{ background: "oklch(0.22 0.025 250)", border: "1px solid oklch(1 0 0 / 12%)", borderRadius: "8px", color: "oklch(0.93 0.005 250)" }}
-              formatter={(v: number, name: string) => [formatCurrency(v), name === "actual" ? "Actual" : "Ideal Pace"]}
-              labelFormatter={d => `Day ${d}`}
+              formatter={(v: unknown, name: string) => { const num = typeof v === "number" ? v : null; return num !== null ? [formatCurrency(num), name === "actual" ? "Actual" : "Ideal Pace"] : ["—", name === "actual" ? "Actual" : "Ideal Pace"]; }}
+              labelFormatter={(label: string) => label}
             />
-            <ReferenceLine y={targets.monthly.green} stroke="oklch(0.55 0.18 145)" strokeDasharray="6 3" strokeWidth={1.5} />
+            {/* Monthly target line */}
+            <ReferenceLine y={targets.monthly.green} stroke="oklch(0.55 0.18 145)" strokeDasharray="6 3" strokeWidth={1.5}
+              label={{ value: "Target", position: "insideTopRight", fill: "oklch(0.55 0.18 145)", fontSize: 10 }} />
+            {/* Today vertical marker — only for current month */}
+            {selectedYear === parseInt(nowPSTStr.split("-")[0]) && selectedMonth === parseInt(nowPSTStr.split("-")[1]) && (() => {
+              const todayLabel = `${MONTHS[selectedMonth - 1].slice(0, 3)} ${parseInt(nowPSTStr.split("-")[2])}`;
+              return (
+                <ReferenceLine
+                  x={todayLabel}
+                  stroke="oklch(0.72 0.12 75 / 70%)"
+                  strokeWidth={2}
+                  strokeDasharray="4 2"
+                  label={{ value: "Today", position: "insideTopLeft", fill: "oklch(0.72 0.12 75)", fontSize: 10 }}
+                />
+              );
+            })()}
             <Area type="monotone" dataKey="ideal" stroke="oklch(0.55 0.18 145)" strokeWidth={1.5} strokeDasharray="6 3" fill="none" dot={false} />
-            <Area type="monotone" dataKey="actual" stroke="oklch(0.72 0.12 75)" strokeWidth={2} fill="url(#velActual)" dot={false} />
+            <Area type="monotone" dataKey="actual" stroke="oklch(0.72 0.12 75)" strokeWidth={2.5} fill="url(#velActual)" dot={false} connectNulls={false} />
           </AreaChart>
         </ResponsiveContainer>
       </div>
