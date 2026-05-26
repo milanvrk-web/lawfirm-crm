@@ -51,12 +51,9 @@ import {
   Phone,
   FileText,
   Loader2,
-  Sunrise,
   ChevronDown,
   ChevronUp,
   TrendingDown,
-  Clock3,
-  CheckSquare,
   AlertTriangle,
 } from "lucide-react";
 import { Link } from "wouter";
@@ -243,35 +240,26 @@ export default function Dashboard() {
     refetchInterval: 60_000,
   });
 
-  // CEO Morning Briefing collapsed state (persisted)
-  const [briefingOpen, setBriefingOpen] = useState(() => {
-    try { return localStorage.getItem("crm_briefing_open") !== "false"; } catch { return true; }
-  });
-  useEffect(() => {
-    try { localStorage.setItem("crm_briefing_open", String(briefingOpen)); } catch {}
-  }, [briefingOpen]);
+  // ── Day Navigator state ──────────────────────────────────
+  const [dayNavDate, setDayNavDate] = useState<string>(() =>
+    new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" })
+  );
+  const shiftDayNav = (delta: number) => {
+    setDayNavDate(prev => {
+      const d = new Date(prev + "T12:00:00");
+      d.setDate(d.getDate() + delta);
+      return d.toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
+    });
+  };
+  const isToday = dayNavDate === new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
 
-  // Yesterday stats
-  const yesterdayStr = useMemo(() => {
-    const d = new Date(now);
-    d.setDate(d.getDate() - 1);
-    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-  }, []);
-  const yesterdayPayments = useMemo(() => payments.filter(p => p.date === yesterdayStr), [payments, yesterdayStr]);
-  const yesterdayRevenue = useMemo(() => yesterdayPayments.reduce((s, p) => s + p.amount, 0), [yesterdayPayments]);
-  const yesterdayLeads = useMemo(() => leads.filter(l => l.date === yesterdayStr).length, [leads, yesterdayStr]);
-
-  // Today's stats
-  const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+  // Today's stats (always today's date for other uses)
+  const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
 
   // Follow-up urgency counts
   const overdueFollowUps = useMemo(() => followUps.filter(f => f.status === "Pending" && f.dueDate < todayStr), [followUps, todayStr]);
   const dueTodayFollowUps = useMemo(() => followUps.filter(f => f.status === "Pending" && f.dueDate === todayStr), [followUps, todayStr]);
-  const todayPayments = payments.filter(p => p.date === todayStr);
-  const todayNew = todayPayments.filter(p => p.paymentType === "New Client").reduce((s, p) => s + p.amount, 0);
-  const todayExisting = todayPayments.filter(p => p.paymentType === "Existing Client").reduce((s, p) => s + p.amount, 0);
-  const todayTotal = todayNew + todayExisting;
-  const todayLeads = leads.filter(l => l.date === todayStr).length;
+  // todayPayments kept for stale-lead checks; individual breakdowns computed in Day Navigator
 
   // Stale leads: active (non-lost, non-retained) leads with no payment or follow-up activity in 14+ days
   // Activity = latest payment date OR latest follow-up date OR lead creation date
@@ -293,8 +281,7 @@ export default function Dashboard() {
       return lastActivity < cutoffMs;
     }).length;
   }, [leads, payments, followUps]);
-  // Use convertedDate for today's conversion count so same-day converts show immediately
-  const todayConverted = leads.filter(l => l.stage === "Retained" && (l.convertedDate === todayStr || (!l.convertedDate && l.date === todayStr))).length;
+
 
   // Drill-down data
   const drillLeads = useMemo(() => monthLeads, [monthLeads]);
@@ -437,129 +424,165 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ── CEO Morning Briefing ─────────────────────────── */}
-      <div className="rounded-lg border overflow-hidden" style={{ background: "oklch(0.18 0.025 250)", borderColor: "oklch(0.72 0.12 75 / 30%)" }}>
-        <button
-          className="w-full flex items-center justify-between px-5 py-3.5 cursor-pointer select-none hover:bg-white/3 transition-colors"
-          onClick={() => setBriefingOpen(v => !v)}
-        >
-          <div className="flex items-center gap-2">
-            <Sunrise className="w-4 h-4" style={{ color: "oklch(0.72 0.12 75)" }} />
-            <span className="text-sm font-semibold uppercase tracking-wider" style={{ color: "oklch(0.72 0.12 75)" }}>
-              Morning Briefing
-            </span>
-            <span className="text-xs" style={{ color: "oklch(0.50 0.01 250)" }}>
-              {new Date().toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", weekday: "long", month: "long", day: "numeric" })}
-            </span>
-          </div>
-          {briefingOpen
-            ? <ChevronUp className="w-4 h-4" style={{ color: "oklch(0.55 0.01 250)" }} />
-            : <ChevronDown className="w-4 h-4" style={{ color: "oklch(0.55 0.01 250)" }} />}
-        </button>
-        {briefingOpen && (
-          <div className="px-5 pb-5 pt-1 border-t" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
-              {/* Yesterday Revenue */}
-              <div className="rounded-lg p-3" style={{ background: "oklch(0.22 0.025 250)" }}>
-                <div className="flex items-center gap-1.5 mb-1">
-                  <DollarSign className="w-3.5 h-3.5" style={{ color: "oklch(0.72 0.12 75)" }} />
-                  <span className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>Yesterday Revenue</span>
-                </div>
-                <div className="text-xl font-bold" style={{ color: yesterdayRevenue > 0 ? "oklch(0.72 0.12 75)" : "oklch(0.50 0.01 250)" }}>
-                  {formatCurrency(yesterdayRevenue)}
-                </div>
-                <div className="text-xs mt-0.5" style={{ color: "oklch(0.45 0.01 250)" }}>
-                  {yesterdayPayments.length} payment{yesterdayPayments.length !== 1 ? "s" : ""}
-                </div>
+      {/* ── Day Navigator ─────────────────────────────────── */}
+      {(() => {
+        const navPayments = payments.filter(p => p.date === dayNavDate);
+        const navLeads = leads.filter(l => l.date === dayNavDate);
+        const navFollowUps = followUps.filter(f => f.dueDate === dayNavDate && f.status === "Pending");
+        const navNew = navPayments.filter(p => p.paymentType === "New Client").reduce((s, p) => s + p.amount, 0);
+        const navExisting = navPayments.filter(p => p.paymentType === "Existing Client").reduce((s, p) => s + p.amount, 0);
+        const navTotal = navNew + navExisting;
+        const navConverted = leads.filter(l =>
+          l.stage === "Retained" && (l.convertedDate === dayNavDate || (!l.convertedDate && l.date === dayNavDate))
+        ).length;
+        const navDayLabel = new Date(dayNavDate + "T12:00:00").toLocaleDateString("en-US", {
+          timeZone: "America/Los_Angeles", weekday: "long", month: "long", day: "numeric", year: "numeric"
+        });
+        const isClosed = dayCloses.some((d: any) => d.date === dayNavDate);
+        return (
+          <div className="rounded-lg border overflow-hidden" style={{ background: "oklch(0.18 0.025 250)", borderColor: "oklch(0.72 0.12 75 / 30%)" }}>
+            {/* Header row with navigation */}
+            <div className="flex items-center justify-between px-5 py-3.5 border-b" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
+              <div className="flex items-center gap-3">
+                <CalendarCheck className="w-4 h-4" style={{ color: "oklch(0.72 0.12 75)" }} />
+                <span className="text-sm font-semibold uppercase tracking-wider" style={{ color: "oklch(0.72 0.12 75)" }}>
+                  {isToday ? "Today" : "Day View"}
+                </span>
+                <span className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>{navDayLabel}</span>
+                {isClosed && (
+                  <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: "oklch(0.55 0.18 145 / 15%)", color: "oklch(0.65 0.18 145)", border: "1px solid oklch(0.55 0.18 145 / 30%)" }}>
+                    Day Closed
+                  </span>
+                )}
               </div>
-              {/* Overdue Follow-Ups */}
-              <div className="rounded-lg p-3" style={{ background: overdueFollowUps.length > 0 ? "oklch(0.60 0.22 25 / 12%)" : "oklch(0.22 0.025 250)", border: overdueFollowUps.length > 0 ? "1px solid oklch(0.60 0.22 25 / 30%)" : "none" }}>
-                <div className="flex items-center gap-1.5 mb-1">
-                  <AlertTriangle className="w-3.5 h-3.5" style={{ color: overdueFollowUps.length > 0 ? "oklch(0.70 0.22 25)" : "oklch(0.55 0.01 250)" }} />
-                  <span className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>Overdue Follow-Ups</span>
-                </div>
-                <div className="text-xl font-bold" style={{ color: overdueFollowUps.length > 0 ? "oklch(0.70 0.22 25)" : "oklch(0.55 0.18 145)" }}>
-                  {overdueFollowUps.length}
-                </div>
-                <div className="text-xs mt-0.5" style={{ color: "oklch(0.45 0.01 250)" }}>
-                  {overdueFollowUps.length === 0 ? "All clear" : "need attention"}
-                </div>
-              </div>
-              {/* Due Today Follow-Ups */}
-              <div className="rounded-lg p-3" style={{ background: dueTodayFollowUps.length > 0 ? "oklch(0.72 0.12 75 / 8%)" : "oklch(0.22 0.025 250)" }}>
-                <div className="flex items-center gap-1.5 mb-1">
-                  <Clock3 className="w-3.5 h-3.5" style={{ color: "oklch(0.72 0.12 75)" }} />
-                  <span className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>Due Today</span>
-                </div>
-                <div className="text-xl font-bold" style={{ color: dueTodayFollowUps.length > 0 ? "oklch(0.80 0.12 75)" : "oklch(0.55 0.01 250)" }}>
-                  {dueTodayFollowUps.length}
-                </div>
-                <div className="text-xs mt-0.5" style={{ color: "oklch(0.45 0.01 250)" }}>follow-ups</div>
-              </div>
-              {/* Overdue Installments */}
-              <div className="rounded-lg p-3" style={{ background: overdueInstallments.length > 0 ? "oklch(0.60 0.22 25 / 12%)" : "oklch(0.22 0.025 250)", border: overdueInstallments.length > 0 ? "1px solid oklch(0.60 0.22 25 / 30%)" : "none" }}>
-                <div className="flex items-center gap-1.5 mb-1">
-                  <CheckSquare className="w-3.5 h-3.5" style={{ color: overdueInstallments.length > 0 ? "oklch(0.70 0.22 25)" : "oklch(0.55 0.01 250)" }} />
-                  <span className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>Overdue Payments</span>
-                </div>
-                <div className="text-xl font-bold" style={{ color: overdueInstallments.length > 0 ? "oklch(0.70 0.22 25)" : "oklch(0.55 0.18 145)" }}>
-                  {overdueInstallments.length}
-                </div>
-                <div className="text-xs mt-0.5" style={{ color: "oklch(0.45 0.01 250)" }}>
-                  {overdueInstallments.length === 0 ? "All on time" : "installments late"}
-                </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => shiftDayNav(-1)}
+                  className="p-1.5 rounded-lg transition-colors hover:bg-white/8"
+                  style={{ color: "oklch(0.55 0.01 250)" }}
+                  title="Previous day"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                {!isToday && (
+                  <button
+                    onClick={() => setDayNavDate(new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" }))}
+                    className="text-xs px-2.5 py-1 rounded-lg transition-colors hover:bg-white/8"
+                    style={{ color: "oklch(0.72 0.12 75)", border: "1px solid oklch(0.72 0.12 75 / 30%)" }}
+                  >
+                    Today
+                  </button>
+                )}
+                <button
+                  onClick={() => shiftDayNav(1)}
+                  className="p-1.5 rounded-lg transition-colors hover:bg-white/8"
+                  style={{ color: isToday ? "oklch(0.30 0.01 250)" : "oklch(0.55 0.01 250)", cursor: isToday ? "not-allowed" : "pointer" }}
+                  disabled={isToday}
+                  title="Next day"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
               </div>
             </div>
-            {/* Quick links */}
-            <div className="flex gap-3 mt-3 flex-wrap">
-              <Link href="/follow-ups">
-                <span className="text-xs px-3 py-1.5 rounded-lg cursor-pointer transition-all hover:opacity-90"
-                  style={{ background: "oklch(0.72 0.12 75 / 12%)", color: "oklch(0.72 0.12 75)", border: "1px solid oklch(0.72 0.12 75 / 30%)" }}>
-                  View Follow-Ups
-                </span>
-              </Link>
-              <Link href="/clients">
-                <span className="text-xs px-3 py-1.5 rounded-lg cursor-pointer transition-all hover:opacity-90"
-                  style={{ background: "oklch(0.72 0.12 75 / 12%)", color: "oklch(0.72 0.12 75)", border: "1px solid oklch(0.72 0.12 75 / 30%)" }}>
-                  Client Ledger
-                </span>
-              </Link>
-              <Link href="/leads">
-                <span className="text-xs px-3 py-1.5 rounded-lg cursor-pointer transition-all hover:opacity-90"
-                  style={{ background: "oklch(0.72 0.12 75 / 12%)", color: "oklch(0.72 0.12 75)", border: "1px solid oklch(0.72 0.12 75 / 30%)" }}>
-                  Leads Pipeline
-                </span>
-              </Link>
-            </div>
-          </div>
-        )}
-      </div>
 
-      {/* ── Today Strip ─────────────────────────────────────── */}
-      <div className="rounded-lg p-4 border" style={{ background: "oklch(0.18 0.025 250)", borderColor: "oklch(0.72 0.12 75 / 25%)" }}>
-        <div className="flex items-center gap-2 mb-3">
-          <CalendarCheck className="w-4 h-4" style={{ color: "oklch(0.72 0.12 75)" }} />
-          <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "oklch(0.72 0.12 75)" }}>
-            Today — {new Date().toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", weekday: "long", month: "long", day: "numeric" })}
-          </span>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-          {[
-            { label: "Leads In", value: todayLeads, icon: Users },
-            { label: "Converted", value: todayConverted, icon: UserCheck },
-            { label: "New Client $", value: formatCurrency(todayNew), icon: DollarSign },
-            { label: "Existing Client $", value: formatCurrency(todayExisting), icon: BookOpen },
-            { label: "Total Today", value: formatCurrency(todayTotal), icon: TrendingUp, highlight: true },
-          ].map(({ label, value, icon: Icon, highlight }) => (
-            <div key={label} className="text-center">
-              <div className="text-xs mb-1" style={{ color: "oklch(0.55 0.01 250)" }}>{label}</div>
-              <div className="text-lg font-bold" style={{ color: highlight ? "oklch(0.72 0.12 75)" : "oklch(0.93 0.005 250)" }}>
-                {value}
-              </div>
+            {/* Stat row */}
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-px" style={{ background: "oklch(1 0 0 / 6%)" }}>
+              {[
+                { label: "Leads In", value: navLeads.length, highlight: false },
+                { label: "Converted", value: navConverted, highlight: false },
+                { label: "New Client $", value: formatCurrency(navNew), highlight: false },
+                { label: "Existing Client $", value: formatCurrency(navExisting), highlight: false },
+                { label: "Total Revenue", value: formatCurrency(navTotal), highlight: true },
+              ].map(({ label, value, highlight }) => (
+                <div key={label} className="text-center py-4 px-3" style={{ background: "oklch(0.18 0.025 250)" }}>
+                  <div className="text-xs mb-1" style={{ color: "oklch(0.50 0.01 250)" }}>{label}</div>
+                  <div className="text-xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: highlight ? "oklch(0.72 0.12 75)" : "oklch(0.93 0.005 250)" }}>
+                    {value}
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      </div>
+
+            {/* Payments list for the day */}
+            {navPayments.length > 0 && (
+              <div className="px-5 py-4 border-t" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
+                <div className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "oklch(0.55 0.01 250)" }}>
+                  Payments — {navPayments.length} record{navPayments.length !== 1 ? "s" : ""}
+                </div>
+                <div className="space-y-2">
+                  {navPayments.map(p => (
+                    <div key={p.id} className="flex items-center justify-between gap-4 py-2 px-3 rounded-lg" style={{ background: "oklch(0.22 0.025 250)" }}>
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="text-xs px-2 py-0.5 rounded font-medium flex-shrink-0" style={{
+                          background: p.paymentType === "New Client" ? "oklch(0.55 0.18 145 / 15%)" : "oklch(0.65 0.15 250 / 15%)",
+                          color: p.paymentType === "New Client" ? "oklch(0.65 0.18 145)" : "oklch(0.70 0.12 250)",
+                        }}>
+                          {p.paymentType === "New Client" ? "New" : "Existing"}
+                        </span>
+                        <span className="text-sm font-medium truncate" style={{ color: "oklch(0.93 0.005 250)" }}>{p.clientName}</span>
+                        {p.caseType && <span className="text-xs flex-shrink-0" style={{ color: "oklch(0.50 0.01 250)" }}>{p.caseType}</span>}
+                        {p.receivedFor && <span className="text-xs truncate hidden sm:block" style={{ color: "oklch(0.45 0.01 250)" }}>{p.receivedFor}</span>}
+                      </div>
+                      <span className="text-sm font-bold flex-shrink-0" style={{ color: "oklch(0.72 0.12 75)" }}>{formatCurrency(p.amount)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Leads added that day */}
+            {navLeads.length > 0 && (
+              <div className="px-5 py-4 border-t" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
+                <div className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "oklch(0.55 0.01 250)" }}>
+                  Leads Added — {navLeads.length}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {navLeads.map(l => (
+                    <button
+                      key={l.id}
+                      onClick={() => setPanelLeadId(l.id)}
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-all hover:opacity-80"
+                      style={{ background: "oklch(0.22 0.025 250)", color: "oklch(0.93 0.005 250)", border: "1px solid oklch(1 0 0 / 8%)" }}
+                    >
+                      <span className="font-medium">{l.name}</span>
+                      <span style={{ color: "oklch(0.50 0.01 250)" }}>{l.caseType}</span>
+                      <span className="px-1.5 py-0.5 rounded text-xs" style={{ background: "oklch(0.72 0.12 75 / 15%)", color: "oklch(0.72 0.12 75)" }}>{l.stage}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Follow-ups due that day */}
+            {navFollowUps.length > 0 && (
+              <div className="px-5 py-4 border-t" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
+                <div className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "oklch(0.55 0.01 250)" }}>
+                  Follow-Ups Due — {navFollowUps.length}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {navFollowUps.map(f => {
+                    const lead = leads.find(l => l.id === f.leadId);
+                    return (
+                      <div key={f.id} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs" style={{ background: "oklch(0.22 0.025 250)", color: "oklch(0.80 0.01 250)" }}>
+                        {lead && <span className="font-medium" style={{ color: "oklch(0.93 0.005 250)" }}>{lead.name}</span>}
+                        <span style={{ color: "oklch(0.50 0.01 250)" }}>·</span>
+                        <span>{f.title}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Empty state */}
+            {navPayments.length === 0 && navLeads.length === 0 && navFollowUps.length === 0 && (
+              <div className="px-5 py-6 text-center border-t" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
+                <p className="text-sm" style={{ color: "oklch(0.40 0.01 250)" }}>No activity recorded for this day.</p>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* -- Due This Week Installments Strip */}
       {dueThisWeekInstallments.length > 0 && (
