@@ -424,6 +424,35 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* ── Quick Actions ──────────────────────────────────── */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { href: "/leads", label: "Add Lead", icon: Users, desc: "New intake" },
+          { href: "/payments", label: "Log Payment", icon: DollarSign, desc: "Record received" },
+          { href: "/clients", label: "Client Ledger", icon: BookOpen, desc: "View accounts" },
+          { href: "/close-day", label: "Close Day", icon: CalendarCheck, desc: "End of day register" },
+        ].map(({ href, label, icon: Icon, desc }) => (
+          <Link key={href} href={href}>
+            <div
+              className="flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98]"
+              style={{
+                background: "oklch(0.20 0.030 250)",
+                borderColor: "oklch(0.72 0.12 75 / 25%)",
+                boxShadow: "0 1px 8px oklch(0 0 0 / 20%)",
+              }}
+            >
+              <div className="flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: "oklch(0.72 0.12 75 / 12%)" }}>
+                <Icon className="w-4 h-4" style={{ color: "oklch(0.72 0.12 75)" }} />
+              </div>
+              <div className="min-w-0">
+                <div className="text-sm font-semibold" style={{ color: "oklch(0.93 0.005 250)" }}>{label}</div>
+                <div className="text-xs" style={{ color: "oklch(0.50 0.01 250)" }}>{desc}</div>
+              </div>
+            </div>
+          </Link>
+        ))}
+      </div>
+
       {/* ── Day Navigator ─────────────────────────────────── */}
       {(() => {
         const navPayments = payments.filter(p => p.date === dayNavDate);
@@ -1468,23 +1497,7 @@ export default function Dashboard() {
           </>
         );
       })()}
-      {/* ── Quick Actions ────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          { href: "/leads", label: "Add Lead", icon: Users },
-          { href: "/payments", label: "Log Payment", icon: DollarSign },
-          { href: "/clients", label: "Client Ledger", icon: BookOpen },
-          { href: "/close-day", label: "Close Day", icon: CalendarCheck },
-        ].map(({ href, label, icon: Icon }) => (
-          <Link key={href} href={href}>
-            <div className="flex items-center gap-3 p-4 rounded-lg border cursor-pointer transition-all hover:border-yellow-500/40 hover:bg-yellow-500/5"
-              style={{ background: "oklch(0.18 0.025 250)", borderColor: "oklch(1 0 0 / 8%)" }}>
-              <Icon className="w-4 h-4" style={{ color: "oklch(0.72 0.12 75)" }} />
-              <span className="text-sm font-medium" style={{ color: "oklch(0.80 0.005 250)" }}>{label}</span>
-            </div>
-          </Link>
-        ))}
-      </div>
+
     </div>
 
     {/* Lead Detail Panel — opened from overdue installment alert */}
