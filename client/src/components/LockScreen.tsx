@@ -6,7 +6,7 @@
    ============================================================ */
 
 import { useState, useRef, useEffect } from "react";
-import { Scale, Lock, Eye, EyeOff } from "lucide-react";
+import { Lock, Eye, EyeOff } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 
 interface LockScreenProps {
@@ -62,24 +62,12 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
         }}
       >
         {/* Logo */}
-        <div className="flex flex-col items-center gap-3 mb-8">
-          <div
-            className="flex items-center justify-center w-14 h-14 rounded-2xl shadow-lg"
-            style={{ background: "oklch(0.72 0.12 75)" }}
-          >
-            <Scale className="w-7 h-7" style={{ color: "oklch(0.13 0.025 250)" }} />
-          </div>
-          <div className="text-center">
-            <h1
-              className="text-xl font-bold tracking-wide"
-              style={{ color: "oklch(0.93 0.005 250)", fontFamily: "'Playfair Display', serif" }}
-            >
-              Graham Immigration Law, PC
-            </h1>
-            <p className="text-sm mt-0.5" style={{ color: "oklch(0.55 0.01 250)" }}>
-              Leads · Payments · Revenue
-            </p>
-          </div>
+        <div className="flex flex-col items-center gap-4 mb-8">
+          <img
+            src="/manus-storage/graham-logo_86d1eaea.png"
+            alt="Graham Immigration Law, P.C."
+            className="h-16 w-auto object-contain"
+          />
         </div>
 
         {/* Lock icon */}
