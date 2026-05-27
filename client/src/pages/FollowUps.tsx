@@ -6,14 +6,14 @@
    thread (lead notes). This page shows all leads that have a
    follow-up date set, sorted by date (overdue first, then today,
    then upcoming). Staff click a lead to open the detail panel,
-   log a note, and push the date forward. No separate task records.
+   log a note, and set the next follow-up date. No separate task records.
    ============================================================ */
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useCRM } from "@/contexts/CRMContext";
 import { trpc } from "@/lib/trpc";
 import { formatDate, type Lead } from "@/lib/store";
-import { todayPST, tomorrowPST } from "@/lib/timezone";
+import { todayPST } from "@/lib/timezone";
 import {
   Bell, AlertCircle, Clock, CheckCircle2, Calendar,
   Phone, MessageSquare, ChevronRight,
@@ -45,7 +45,6 @@ const stageColor: Record<string, string> = {
 export default function FollowUps() {
   const { leads, setLeadFollowUpDate } = useCRM();
   const today = todayPST();
-  const tomorrow = tomorrowPST();
 
   const [panelLeadId, setPanelLeadId] = useState<string | null>(null);
   const [filter, setFilter] = useState<"All" | "Overdue" | "Today" | "Upcoming">("All");
@@ -78,10 +77,9 @@ export default function FollowUps() {
     toast.success(`Follow-up cleared for ${lead.name}`);
   };
 
-  const handleSnooze = async (lead: Lead, e: React.MouseEvent) => {
-    e.stopPropagation();
-    await setLeadFollowUpDate(lead.id, tomorrow);
-    toast.success(`Snoozed to tomorrow`);
+  const handleSetDate = async (lead: Lead, date: string) => {
+    await setLeadFollowUpDate(lead.id, date);
+    toast.success(`Follow-up set to ${formatDate(date)}`);
   };
 
   return (
@@ -155,7 +153,7 @@ export default function FollowUps() {
                 stageColor={stageColor[lead.stage] ?? "oklch(0.55 0.01 250)"}
                 onOpen={() => setPanelLeadId(lead.id)}
                 onMarkDone={handleMarkDone}
-                onSnooze={handleSnooze}
+                onSetDate={handleSetDate}
               />
             );
           })}
@@ -181,15 +179,31 @@ function LeadFollowUpRow({
   stageColor,
   onOpen,
   onMarkDone,
-  onSnooze,
+  onSetDate,
 }: {
   lead: Lead;
   badge: { label: string; color: string; bg: string };
   stageColor: string;
   onOpen: () => void;
   onMarkDone: (lead: Lead, e: React.MouseEvent) => void;
-  onSnooze: (lead: Lead, e: React.MouseEvent) => void;
+  onSetDate: (lead: Lead, date: string) => void;
 }) {
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [dateInput, setDateInput] = useState(lead.followUpDate ?? "");
+  const datePickerRef = useRef<HTMLDivElement>(null);
+
+  // Close picker on outside click
+  useEffect(() => {
+    if (!showDatePicker) return;
+    const handler = (e: MouseEvent) => {
+      if (datePickerRef.current && !datePickerRef.current.contains(e.target as Node)) {
+        setShowDatePicker(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showDatePicker]);
+
   // Fetch latest note for preview
   const { data: notes = [] } = trpc.leads.getNotes.useQuery(
     { leadId: lead.id },
@@ -204,6 +218,13 @@ function LeadFollowUpRow({
     const d = new Date(iso);
     return d.toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", month: "short", day: "numeric" }) +
       " " + d.toLocaleTimeString("en-US", { timeZone: "America/Los_Angeles", hour: "numeric", minute: "2-digit" });
+  };
+
+  const handleDateConfirm = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!dateInput) return;
+    onSetDate(lead, dateInput);
+    setShowDatePicker(false);
   };
 
   return (
@@ -277,16 +298,95 @@ function LeadFollowUpRow({
         </div>
 
         {/* Right: quick actions + chevron */}
-        <div className="flex items-center gap-1.5 shrink-0 pt-0.5">
-          {/* Snooze to tomorrow */}
-          <button
-            onClick={e => onSnooze(lead, e)}
-            title="Snooze to tomorrow"
-            className="p-1.5 rounded hover:bg-white/8 transition-colors"
-            style={{ color: "oklch(0.55 0.01 250)" }}
-          >
-            <Clock className="w-3.5 h-3.5" />
-          </button>
+        <div className="flex items-center gap-1.5 shrink-0 pt-0.5 relative">
+
+          {/* Reschedule date picker trigger */}
+          <div ref={datePickerRef} className="relative">
+            <button
+              onClick={e => { e.stopPropagation(); setDateInput(lead.followUpDate ?? ""); setShowDatePicker(p => !p); }}
+              title="Reschedule follow-up"
+              className="p-1.5 rounded hover:bg-white/8 transition-colors flex items-center gap-1"
+              style={{ color: "oklch(0.65 0.15 200)" }}
+            >
+              <Clock className="w-3.5 h-3.5" />
+            </button>
+
+            {/* Date picker popup */}
+            {showDatePicker && (
+              <div
+                className="absolute right-0 top-full mt-1 z-50 rounded-xl shadow-2xl p-3 min-w-[220px]"
+                style={{
+                  background: "oklch(0.18 0.025 250)",
+                  border: "1px solid oklch(1 0 0 / 14%)",
+                }}
+                onClick={e => e.stopPropagation()}
+              >
+                <p className="text-xs font-semibold mb-2" style={{ color: "oklch(0.72 0.12 75)" }}>
+                  Set next follow-up date
+                </p>
+                <input
+                  type="date"
+                  value={dateInput}
+                  onChange={e => setDateInput(e.target.value)}
+                  className="w-full rounded-lg px-3 py-2 text-sm mb-2"
+                  style={{
+                    background: "oklch(0.22 0.025 250)",
+                    border: "1px solid oklch(1 0 0 / 12%)",
+                    color: "oklch(0.90 0.005 250)",
+                    colorScheme: "dark",
+                  }}
+                  autoFocus
+                />
+                {/* Quick-pick buttons */}
+                <div className="grid grid-cols-3 gap-1 mb-2">
+                  {[
+                    { label: "Tomorrow", days: 1 },
+                    { label: "3 Days",   days: 3 },
+                    { label: "1 Week",   days: 7 },
+                    { label: "2 Weeks",  days: 14 },
+                    { label: "1 Month",  days: 30 },
+                    { label: "2 Months", days: 60 },
+                  ].map(({ label, days }) => {
+                    const d = new Date();
+                    d.setDate(d.getDate() + days);
+                    const val = d.toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
+                    return (
+                      <button
+                        key={label}
+                        onClick={() => setDateInput(val)}
+                        className="text-[10px] px-1.5 py-1 rounded transition-colors hover:opacity-90"
+                        style={{
+                          background: dateInput === val ? "oklch(0.72 0.12 75 / 20%)" : "oklch(0.25 0.025 250)",
+                          color: dateInput === val ? "oklch(0.72 0.12 75)" : "oklch(0.60 0.01 250)",
+                          border: `1px solid ${dateInput === val ? "oklch(0.72 0.12 75 / 40%)" : "oklch(1 0 0 / 8%)"}`,
+                        }}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleDateConfirm}
+                    disabled={!dateInput}
+                    className="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-40"
+                    style={{ background: "oklch(0.72 0.12 75)", color: "oklch(0.13 0.025 250)" }}
+                  >
+                    Confirm
+                  </button>
+                  <button
+                    onClick={e => { e.stopPropagation(); setShowDatePicker(false); }}
+                    className="px-3 py-1.5 rounded-lg text-xs transition-colors"
+                    style={{ background: "oklch(0.25 0.025 250)", color: "oklch(0.55 0.01 250)" }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Mark done (clear follow-up date) */}
           <button
             onClick={e => onMarkDone(lead, e)}
