@@ -81,6 +81,8 @@ export default function LeadDetailPanel({
   const [editingDueDateId, setEditingDueDateId] = useState<string | null>(null);
   const [confirmDeleteNoteId, setConfirmDeleteNoteId] = useState<string | null>(null);
   const [stageDropdownOpen, setStageDropdownOpen] = useState(false);
+  const [editingLeadNotes, setEditingLeadNotes] = useState(false);
+  const [leadNotesText, setLeadNotesText] = useState("");
   const stageDropdownRef = useRef<HTMLDivElement>(null);
 
   // Close stage dropdown on outside click
@@ -638,12 +640,54 @@ export default function LeadDetailPanel({
                   </div>
                 ))}
               </div>
-              {lead.notes && (
-                <div className="rounded-lg p-3" style={{ background: "oklch(0.18 0.025 250)" }}>
-                  <div className="text-xs mb-1" style={{ color: "oklch(0.45 0.01 250)" }}>Notes</div>
-                  <div className="text-sm leading-relaxed" style={{ color: "oklch(0.75 0.01 250)" }}>{lead.notes}</div>
+              {/* Inline editable lead notes */}
+              <div className="rounded-lg p-3" style={{ background: "oklch(0.18 0.025 250)", border: "1px solid oklch(1 0 0 / 8%)" }}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: "oklch(0.45 0.01 250)" }}>Case Notes</div>
+                  {!editingLeadNotes && (
+                    <button
+                      onClick={() => { setLeadNotesText(lead.notes || ""); setEditingLeadNotes(true); }}
+                      className="text-xs px-2 py-0.5 rounded hover:opacity-80 transition-opacity"
+                      style={{ color: "oklch(0.72 0.12 75)", border: "1px solid oklch(0.72 0.12 75 / 30%)" }}
+                    >
+                      {lead.notes ? "Edit" : "+ Add Notes"}
+                    </button>
+                  )}
                 </div>
-              )}
+                {editingLeadNotes ? (
+                  <div className="space-y-2">
+                    <textarea
+                      value={leadNotesText}
+                      onChange={e => setLeadNotesText(e.target.value)}
+                      autoFocus
+                      rows={4}
+                      placeholder="Enter case notes, call summaries, client details..."
+                      className="w-full px-3 py-2 rounded text-sm outline-none resize-none"
+                      style={{ background: "oklch(0.22 0.025 250)", border: "1px solid oklch(0.72 0.12 75 / 40%)", color: "oklch(0.90 0.005 250)" }}
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={async () => { await updateLead(lead.id, { notes: leadNotesText }); setEditingLeadNotes(false); }}
+                        className="px-3 py-1 rounded text-xs font-semibold hover:opacity-90 transition-opacity"
+                        style={{ background: "oklch(0.72 0.12 75)", color: "oklch(0.13 0.025 250)" }}
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={() => setEditingLeadNotes(false)}
+                        className="px-3 py-1 rounded text-xs hover:bg-white/8 transition-colors"
+                        style={{ color: "oklch(0.55 0.01 250)" }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : lead.notes ? (
+                  <div className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: "oklch(0.75 0.01 250)" }}>{lead.notes}</div>
+                ) : (
+                  <div className="text-sm italic" style={{ color: "oklch(0.40 0.01 250)" }}>No case notes yet. Click "+ Add Notes" to add.</div>
+                )}
+              </div>
               {/* Retainer Balance Tracker */}
               {lead.stage === "Retained" && lead.retainerBooked > 0 && (() => {
                 const outstanding = lead.retainerBooked - totalReceived;

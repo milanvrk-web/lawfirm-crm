@@ -1016,6 +1016,12 @@ function LeadCard({
   const leadFollowUps = allFollowUps.filter(f => f.leadId === lead.id);
   const nextFU = getNextFollowUp(leadFollowUps);
   const pendingCount = leadFollowUps.filter(f => f.status === "Pending").length;
+  // Last contacted = most recent Done follow-up's dueDate
+  const lastContactedDate = leadFollowUps
+    .filter(f => f.status === "Done")
+    .map(f => f.dueDate)
+    .sort()
+    .at(-1) ?? null;
   const dueInfo = nextFU ? dueDateLabel(nextFU.dueDate) : null;
   const isOverdue = dueInfo?.isOverdue ?? false;
 
@@ -1054,6 +1060,17 @@ function LeadCard({
             {lead.stage === "Lost" && lead.lostReason && (
               <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: "oklch(0.60 0.22 25 / 12%)", color: "oklch(0.70 0.22 25)" }}>
                 {lead.lostReason}
+              </span>
+            )}
+            {lastContactedDate && (
+              <span className="text-xs flex items-center gap-1" style={{ color: "oklch(0.50 0.01 250)" }}>
+                <span>Last contacted:</span>
+                <span style={{ color: "oklch(0.65 0.12 200)" }}>{new Date(`${lastContactedDate}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "America/Los_Angeles" })}</span>
+              </span>
+            )}
+            {lead.notes && (
+              <span className="text-xs italic truncate max-w-[180px]" style={{ color: "oklch(0.45 0.01 250)" }} title={lead.notes}>
+                {lead.notes.length > 60 ? lead.notes.slice(0, 60) + "…" : lead.notes}
               </span>
             )}
           </div>
