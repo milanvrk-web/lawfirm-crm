@@ -16,10 +16,16 @@ export function formatPST(iso: string, opts?: Intl.DateTimeFormatOptions): strin
   return new Date(iso).toLocaleString("en-US", { timeZone: TZ, ...opts });
 }
 
-/** Formats a date-only string (YYYY-MM-DD) for display, treating it as a local date (no TZ shift). */
+/** Formats a date-only string (YYYY-MM-DD) for display, always in PST so IST/other TZ users see the same date. */
 export function formatDate(dateStr: string, opts?: Intl.DateTimeFormatOptions): string {
-  // Parse as local noon to avoid any UTC offset flipping the day
-  return new Date(dateStr + "T12:00:00").toLocaleDateString("en-US", opts);
+  return new Date(dateStr + "T12:00:00").toLocaleDateString("en-US", { timeZone: TZ, ...opts });
+}
+
+/** Formats a UTC timestamp for display in PST with date + time. */
+export function formatTimestampPST(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString("en-US", { timeZone: TZ, month: "short", day: "numeric" }) +
+    " " + d.toLocaleTimeString("en-US", { timeZone: TZ, hour: "numeric", minute: "2-digit" });
 }
 
 /** Returns current time as a PST-aware ISO string. */

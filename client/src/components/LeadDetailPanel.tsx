@@ -6,26 +6,30 @@ import { todayPST } from "@/lib/timezone";
    Opens as a right-side fixed panel over any page.
    Self-contained: calls useCRM() directly.
    ============================================================ */
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { useCRM } from "@/contexts/CRMContext";
 import { useActiveMember } from "@/contexts/ActiveMemberContext";
 import {
-  type Lead, type FollowUp, type FollowUpStatus,
+  type Lead, type FollowUp, type FollowUpStatus, type LeadStage,
   formatCurrency, formatDate, getLeadTotalReceived, getLeadFollowUps,
 } from "@/lib/store";
 import { toast } from "sonner";
 import {
   Bell, MessageSquare, FileText, X, Plus, CalendarClock,
   Phone, Edit2, CheckCircle, CheckCircle2, Circle, Clock,
-  CheckCheck, AlarmClock, Trash2, CreditCard, Check,
+  CheckCheck, AlarmClock, Trash2, CreditCard, Check, ChevronDown,
 } from "lucide-react";
 
 // ── Helpers ────────────────────────────────────────────────
+const ALL_STAGES: LeadStage[] = ["New Lead", "Consultation", "Follow-Up", "Retained", "Onboarding", "Lost"];
+
 const stageColor: Record<string, string> = {
   "New Lead": "oklch(0.55 0.18 250)",
   "Consultation": "oklch(0.72 0.15 80)",
+  "Follow-Up": "oklch(0.65 0.15 60)",
   "Retained": "oklch(0.55 0.18 145)",
+  "Onboarding": "oklch(0.55 0.18 200)",
   "Lost": "oklch(0.60 0.22 25)",
 };
 
@@ -64,7 +68,7 @@ export default function LeadDetailPanel({
   onConvertLead,
   initialTab = "followups",
 }: LeadDetailPanelProps) {
-  const { leads, payments, followUps: allFollowUps, addFollowUp, updateFollowUp, deleteFollowUp, addFollowUpComment, addLeadNote } = useCRM();
+  const { leads, payments, followUps: allFollowUps, addFollowUp, updateFollowUp, deleteFollowUp, addFollowUpComment, addLeadNote, updateLead } = useCRM();
 
   const utils = trpc.useUtils();
 
@@ -76,6 +80,27 @@ export default function LeadDetailPanel({
   const [commentText, setCommentText] = useState<Record<string, string>>({});
   const [editingDueDateId, setEditingDueDateId] = useState<string | null>(null);
   const [confirmDeleteNoteId, setConfirmDeleteNoteId] = useState<string | null>(null);
+  const [stageDropdownOpen, setStageDropdownOpen] = useState(false);
+  const stageDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close stage dropdown on outside click
+  useEffect(() => {
+    if (!stageDropdownOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (stageDropdownRef.current && !stageDropdownRef.current.contains(e.target as Node)) {
+        setStageDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [stageDropdownOpen]);
+
+  const handleStageChange = async (newStage: LeadStage) => {
+    setStageDropdownOpen(false);
+    if (!lead || newStage === lead.stage) return;
+    await updateLead(lead.id, { stage: newStage });
+    toast.success(`Moved to ${newStage}`);
+  };
 
   const today = todayPST();
 
@@ -197,10 +222,37 @@ export default function LeadDetailPanel({
               <h2 className="text-lg font-bold truncate" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.93 0.005 250)" }}>
                 {lead.name}
               </h2>
-              <span className="text-xs px-2 py-0.5 rounded font-medium flex-shrink-0"
-                style={{ background: `${stageColor[lead.stage] ?? "oklch(0.55 0.01 250)"}20`, color: stageColor[lead.stage] ?? "oklch(0.55 0.01 250)" }}>
-                {lead.stage}
-              </span>
+              {/* Stage change dropdown */}
+              <div className="relative flex-shrink-0" ref={stageDropdownRef}>
+                <button
+                  onClick={() => setStageDropdownOpen(v => !v)}
+                  className="flex items-center gap-1 text-xs px-2 py-0.5 rounded font-medium transition-all hover:opacity-80"
+                  style={{ background: `${stageColor[lead.stage] ?? "oklch(0.55 0.01 250)"}25`, color: stageColor[lead.stage] ?? "oklch(0.55 0.01 250)", border: `1px solid ${stageColor[lead.stage] ?? "oklch(0.55 0.01 250)"}40` }}
+                  title="Click to change stage"
+                >
+                  {lead.stage}
+                  <ChevronDown className="w-3 h-3" />
+                </button>
+                {stageDropdownOpen && (
+                  <div
+                    className="absolute left-0 top-full mt-1 z-50 rounded-lg shadow-xl py-1 min-w-[160px]"
+                    style={{ background: "oklch(0.20 0.03 250)", border: "1px solid oklch(1 0 0 / 15%)" }}
+                  >
+                    {ALL_STAGES.map(s => (
+                      <button
+                        key={s}
+                        onClick={() => handleStageChange(s)}
+                        className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 transition-colors hover:bg-white/8"
+                        style={{ color: s === lead.stage ? stageColor[s] : "oklch(0.80 0.005 250)" }}
+                      >
+                        {s === lead.stage && <Check className="w-3 h-3 flex-shrink-0" style={{ color: stageColor[s] }} />}
+                        {s !== lead.stage && <span className="w-3 h-3 flex-shrink-0" />}
+                        <span style={{ color: stageColor[s] ?? "oklch(0.80 0.005 250)" }}>{s}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-3 mt-1.5 flex-wrap">
               <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: "oklch(0.72 0.12 75 / 15%)", color: "oklch(0.72 0.12 75)" }}>

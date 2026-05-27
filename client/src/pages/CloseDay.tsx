@@ -75,7 +75,7 @@ export default function CloseDay() {
   };
 
   const displayDate = new Date(selectedDate + "T12:00:00").toLocaleDateString("en-US", {
-    weekday: "long", year: "numeric", month: "long", day: "numeric"
+    timeZone: "America/Los_Angeles", weekday: "long", year: "numeric", month: "long", day: "numeric"
   });
 
   return (
@@ -263,7 +263,7 @@ export default function CloseDay() {
             {!closed ? (
               <Button onClick={handleClose} style={{ background: "oklch(0.55 0.18 145)", color: "oklch(0.98 0 0)" }}>
                 <Lock className="w-4 h-4 mr-2" />
-                Close {new Date(selectedDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })} ✓
+                Close {new Date(selectedDate + "T12:00:00").toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", month: "short", day: "numeric" })} ✓
               </Button>
             ) : (
               <div className="flex items-center gap-2 px-4 py-2 rounded-lg" style={{ background: "oklch(0.55 0.18 145 / 15%)", color: "oklch(0.55 0.18 145)" }}>
@@ -301,7 +301,7 @@ export default function CloseDay() {
                 {history.map(dc => (
                   <tr key={dc.date} className="border-b group" style={{ borderColor: "oklch(1 0 0 / 5%)", background: dc.date === selectedDate ? "oklch(0.72 0.12 75 / 5%)" : undefined }}>
                     <td className="px-4 py-3 font-medium" style={{ color: "oklch(0.80 0.005 250)" }}>
-                      {new Date(dc.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+                      {new Date(dc.date + "T12:00:00").toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", weekday: "short", month: "short", day: "numeric" })}
                     </td>
                     <td className="px-4 py-3 text-right" style={{ color: "oklch(0.55 0.18 145)" }}>{formatCurrency(dc.totalNew)}</td>
                     <td className="px-4 py-3 text-right" style={{ color: "oklch(0.55 0.15 200)" }}>{formatCurrency(dc.totalExisting)}</td>
