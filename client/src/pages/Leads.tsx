@@ -104,6 +104,7 @@ export default function Leads() {
   const [convertForm, setConvertForm] = useState({ retainerBooked: "", downpayment: "", caseNumber: "", notes: "" });
   const [search, setSearch] = useState("");
   const [filterStage, setFilterStage] = useState<LeadStage | "All">("All");
+  const [filterCaseType, setFilterCaseType] = useState<string>("All");
   const [lostLeadPending, setLostLeadPending] = useState<Lead | null>(null);
   const [lostReason, setLostReason] = useState("");
   const [lostReasonCustom, setLostReasonCustom] = useState("");
@@ -133,9 +134,10 @@ export default function Leads() {
       const matchSearch = !search || l.name.toLowerCase().includes(search.toLowerCase()) ||
         l.phone.includes(search) || l.caseNumber.toLowerCase().includes(search.toLowerCase());
       const matchStage = filterStage === "All" || l.stage === filterStage;
-      return matchSearch && matchStage;
+      const matchCase = filterCaseType === "All" || l.caseType === filterCaseType;
+      return matchSearch && matchStage && matchCase;
     });
-  }, [leads, search, filterStage]);
+  }, [leads, search, filterStage, filterCaseType]);
 
   const byStage = useMemo(() => {
     const map: Record<string, Lead[]> = {};
@@ -434,7 +436,7 @@ export default function Leads() {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-3 flex-wrap">
+      <div className="flex gap-3 flex-wrap flex-col sm:flex-row">
         <div className="relative flex-1 min-w-48">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "oklch(0.55 0.01 250)" }} />
           <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search leads..."
@@ -450,6 +452,28 @@ export default function Leads() {
             {STAGES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
           </SelectContent>
         </Select>
+      </div>
+      {/* Case type quick-filter chips */}
+      <div className="flex gap-1.5 flex-wrap">
+        {["All", ...CASE_TYPES].map(ct => (
+          <button
+            key={ct}
+            onClick={() => setFilterCaseType(ct)}
+            className="text-xs px-2.5 py-1 rounded-full font-medium transition-all"
+            style={{
+              background: filterCaseType === ct ? "oklch(0.72 0.12 75 / 20%)" : "oklch(0.18 0.025 250)",
+              color: filterCaseType === ct ? "oklch(0.72 0.12 75)" : "oklch(0.55 0.01 250)",
+              border: `1px solid ${filterCaseType === ct ? "oklch(0.72 0.12 75 / 50%)" : "oklch(1 0 0 / 10%)"}`,
+            }}
+          >
+            {ct === "All" ? "All Cases" : ct}
+            {ct !== "All" && (
+              <span className="ml-1 opacity-60">
+                ({leads.filter(l => l.caseType === ct).length})
+              </span>
+            )}
+          </button>
+        ))}
       </div>
 
       {/* Pipeline columns — dynamic from DB */}
