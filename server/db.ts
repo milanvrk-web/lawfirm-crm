@@ -495,6 +495,12 @@ export async function deleteCrmMember(id: string) {
   await db.delete(crmMembers).where(eq(crmMembers.id, id));
 }
 
+export async function updateCrmMember(id: string, data: { name?: string; role?: string; color?: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(crmMembers).set(data).where(eq(crmMembers.id, id));
+}
+
 // ─── Onboarding Checklist ────────────────────────────────────────────────────
 export async function getOnboardingChecklist(leadId: string) {
   const db = await getDb();

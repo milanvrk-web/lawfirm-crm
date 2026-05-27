@@ -7,7 +7,7 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import { Users, Plus, Trash2, UserCircle2, Shield, User } from "lucide-react";
+import { Users, Plus, Trash2, UserCircle2, Shield, User, Pencil, Check, X } from "lucide-react";
 
 // Preset color palette for member avatars
 const COLOR_OPTIONS = [
@@ -49,14 +49,45 @@ export default function Members() {
     onError: () => toast.error("Failed to remove member"),
   });
 
+  const updateMut = trpc.members.update.useMutation({
+    onSuccess: () => {
+      utils.members.list.invalidate();
+      setEditingId(null);
+      toast.success("Member updated");
+    },
+    onError: () => toast.error("Failed to update member"),
+  });
+
+  // Add form state
   const [name, setName]   = useState("");
   const [role, setRole]   = useState("Staff");
   const [color, setColor] = useState(COLOR_OPTIONS[0].value);
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
 
+  // Inline edit state
+  const [editingId, setEditingId]       = useState<string | null>(null);
+  const [editName, setEditName]         = useState("");
+  const [editRole, setEditRole]         = useState("");
+
   const handleAdd = () => {
     if (!name.trim()) { toast.error("Enter a name"); return; }
     addMut.mutate({ name: name.trim(), role, color });
+  };
+
+  const startEdit = (m: { id: string; name: string; role: string }) => {
+    setEditingId(m.id);
+    setEditName(m.name);
+    setEditRole(m.role);
+    setConfirmRemoveId(null);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+  };
+
+  const saveEdit = (id: string) => {
+    if (!editName.trim()) { toast.error("Name cannot be empty"); return; }
+    updateMut.mutate({ id, name: editName.trim(), role: editRole });
   };
 
   return (
@@ -87,7 +118,7 @@ export default function Members() {
               value={name}
               onChange={e => setName(e.target.value)}
               onKeyDown={e => { if (e.key === "Enter") handleAdd(); }}
-              placeholder="e.g. Maria Garcia"
+              placeholder="e.g. Sachin Arora"
               className="w-full px-3 py-2 rounded-lg text-sm outline-none"
               style={{ background: "oklch(0.22 0.025 250)", border: "1px solid oklch(0.55 0.18 250 / 30%)", color: "oklch(0.90 0.005 250)" }}
             />
@@ -163,54 +194,125 @@ export default function Members() {
           </div>
         ) : (
           members.map(m => (
-            <div key={m.id} className="flex items-center gap-3 px-4 py-3 rounded-xl" style={{ background: "oklch(0.18 0.025 250)", border: "1px solid oklch(1 0 0 / 8%)" }}>
-              {/* Avatar */}
-              <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0" style={{ background: m.color, color: "oklch(0.10 0 0)" }}>
-                {getInitials(m.name)}
-              </div>
+            <div key={m.id} className="rounded-xl transition-all" style={{ background: "oklch(0.18 0.025 250)", border: "1px solid oklch(1 0 0 / 8%)" }}>
+              {editingId === m.id ? (
+                /* ── Inline Edit Mode ── */
+                <div className="flex items-center gap-3 px-4 py-3 flex-wrap">
+                  {/* Avatar preview */}
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0" style={{ background: m.color, color: "oklch(0.10 0 0)" }}>
+                    {getInitials(editName || m.name)}
+                  </div>
 
-              {/* Info */}
-              <div className="flex-1 min-w-0">
-                <div className="font-semibold text-sm" style={{ color: "oklch(0.88 0.005 250)" }}>{m.name}</div>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  {m.role === "Owner" || m.role === "Attorney" ? (
-                    <Shield className="w-3 h-3" style={{ color: "oklch(0.72 0.15 80)" }} />
-                  ) : (
-                    <User className="w-3 h-3" style={{ color: "oklch(0.45 0.01 250)" }} />
-                  )}
-                  <span className="text-xs" style={{ color: "oklch(0.50 0.01 250)" }}>{m.role}</span>
-                </div>
-              </div>
+                  {/* Name input */}
+                  <input
+                    type="text"
+                    value={editName}
+                    onChange={e => setEditName(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === "Enter") saveEdit(m.id);
+                      if (e.key === "Escape") cancelEdit();
+                    }}
+                    autoFocus
+                    className="flex-1 min-w-[140px] px-3 py-1.5 rounded-lg text-sm outline-none"
+                    style={{ background: "oklch(0.22 0.025 250)", border: "1px solid oklch(0.72 0.12 75 / 50%)", color: "oklch(0.90 0.005 250)" }}
+                    placeholder="Full name"
+                  />
 
-              {/* Remove */}
-              {confirmRemoveId === m.id ? (
-                <div className="flex items-center gap-1.5 flex-shrink-0">
-                  <span className="text-xs" style={{ color: "oklch(0.70 0.22 25)" }}>Remove?</span>
-                  <button
-                    onClick={() => removeMut.mutate({ id: m.id })}
-                    disabled={removeMut.isPending}
-                    className="px-2 py-0.5 rounded text-xs font-semibold disabled:opacity-50"
-                    style={{ background: "oklch(0.55 0.22 25)", color: "oklch(0.98 0 0)" }}
+                  {/* Role select */}
+                  <select
+                    value={editRole}
+                    onChange={e => setEditRole(e.target.value)}
+                    className="px-2 py-1.5 rounded-lg text-xs outline-none"
+                    style={{ background: "oklch(0.22 0.025 250)", border: "1px solid oklch(0.55 0.18 250 / 30%)", color: "oklch(0.90 0.005 250)" }}
                   >
-                    {removeMut.isPending ? "…" : "Yes"}
+                    {ROLE_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
+                  </select>
+
+                  {/* Save */}
+                  <button
+                    onClick={() => saveEdit(m.id)}
+                    disabled={updateMut.isPending}
+                    className="p-1.5 rounded-lg transition-opacity hover:opacity-80 disabled:opacity-50"
+                    style={{ background: "oklch(0.55 0.18 145 / 20%)", color: "oklch(0.65 0.18 145)" }}
+                    title="Save"
+                  >
+                    <Check className="w-4 h-4" />
                   </button>
+
+                  {/* Cancel */}
                   <button
-                    onClick={() => setConfirmRemoveId(null)}
-                    className="px-2 py-0.5 rounded text-xs font-semibold"
-                    style={{ background: "oklch(0.25 0.025 250)", color: "oklch(0.65 0.01 250)" }}
+                    onClick={cancelEdit}
+                    className="p-1.5 rounded-lg transition-opacity hover:opacity-80"
+                    style={{ background: "oklch(0.25 0.025 250)", color: "oklch(0.55 0.01 250)" }}
+                    title="Cancel"
                   >
-                    Cancel
+                    <X className="w-4 h-4" />
                   </button>
                 </div>
               ) : (
-                <button
-                  onClick={() => setConfirmRemoveId(m.id)}
-                  className="p-1.5 rounded-lg transition-opacity hover:opacity-80 flex-shrink-0"
-                  style={{ color: "oklch(0.55 0.22 25)" }}
-                  title="Remove member"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                /* ── View Mode ── */
+                <div className="flex items-center gap-3 px-4 py-3">
+                  {/* Avatar */}
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0" style={{ background: m.color, color: "oklch(0.10 0 0)" }}>
+                    {getInitials(m.name)}
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-sm" style={{ color: "oklch(0.88 0.005 250)" }}>{m.name}</div>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      {m.role === "Owner" || m.role === "Attorney" ? (
+                        <Shield className="w-3 h-3" style={{ color: "oklch(0.72 0.15 80)" }} />
+                      ) : (
+                        <User className="w-3 h-3" style={{ color: "oklch(0.45 0.01 250)" }} />
+                      )}
+                      <span className="text-xs" style={{ color: "oklch(0.50 0.01 250)" }}>{m.role}</span>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  {confirmRemoveId === m.id ? (
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <span className="text-xs" style={{ color: "oklch(0.70 0.22 25)" }}>Remove?</span>
+                      <button
+                        onClick={() => removeMut.mutate({ id: m.id })}
+                        disabled={removeMut.isPending}
+                        className="px-2 py-0.5 rounded text-xs font-semibold disabled:opacity-50"
+                        style={{ background: "oklch(0.55 0.22 25)", color: "oklch(0.98 0 0)" }}
+                      >
+                        {removeMut.isPending ? "…" : "Yes"}
+                      </button>
+                      <button
+                        onClick={() => setConfirmRemoveId(null)}
+                        className="px-2 py-0.5 rounded text-xs font-semibold"
+                        style={{ background: "oklch(0.25 0.025 250)", color: "oklch(0.65 0.01 250)" }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      {/* Edit button */}
+                      <button
+                        onClick={() => startEdit(m)}
+                        className="p-1.5 rounded-lg transition-opacity hover:opacity-80"
+                        style={{ color: "oklch(0.72 0.12 75)" }}
+                        title="Edit name / role"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      {/* Delete button */}
+                      <button
+                        onClick={() => setConfirmRemoveId(m.id)}
+                        className="p-1.5 rounded-lg transition-opacity hover:opacity-80"
+                        style={{ color: "oklch(0.55 0.22 25)" }}
+                        title="Remove member"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           ))

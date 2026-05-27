@@ -686,6 +686,19 @@ export const appRouter = router({
         await db.deleteCrmMember(input.id);
         return { ok: true };
       }),
+
+    update: publicProcedure
+      .input(z.object({
+        id: z.string(),
+        name: z.string().min(1).optional(),
+        role: z.string().optional(),
+        color: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        await db.updateCrmMember(id, data);
+        return { ok: true };
+      }),
   }),
 
   // ─── Pipeline Stage Editor ─────────────────────────────────
