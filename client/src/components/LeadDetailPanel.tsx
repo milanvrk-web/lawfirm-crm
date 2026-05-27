@@ -1,4 +1,4 @@
-import { todayPST } from "@/lib/timezone";
+import { todayPST, tomorrowPST } from "@/lib/timezone";
 /* ============================================================
    LeadDetailPanel — shared slide-over component
    Design: Dark luxury navy/gold — Playfair Display headings
@@ -184,9 +184,7 @@ export default function LeadDetailPanel({
   };
 
   const handleSnooze = (fu: FollowUp) => {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    updateFollowUp(fu.id, { status: "Pending", dueDate: tomorrow.toISOString().split("T")[0] });
+    updateFollowUp(fu.id, { status: "Pending", dueDate: tomorrowPST() });
     toast.success("Snoozed to tomorrow");
   };
 

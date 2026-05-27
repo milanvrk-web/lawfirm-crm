@@ -1,4 +1,4 @@
-import { todayPST } from "@/lib/timezone";
+import { todayPST, tomorrowPST } from "@/lib/timezone";
 /* ============================================================
    Law Firm CRM — Leads Page
    Design: Dark luxury navy/gold — Playfair Display headings
@@ -293,9 +293,7 @@ export default function Leads() {
       if (targetStage === "Consultation" || targetStage === "Follow-Up") {
         const hasPending = followUps.some(f => f.leadId === leadId && f.status === "Pending");
         if (!hasPending) {
-          const tomorrow = new Date();
-          tomorrow.setDate(tomorrow.getDate() + 1);
-          const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, "0")}-${String(tomorrow.getDate()).padStart(2, "0")}`;
+          const tomorrowStr = tomorrowPST();
           const title = targetStage === "Follow-Up" ? "Follow up with client" : "Follow up after consultation";
           addFollowUp({
             leadId,
@@ -407,9 +405,7 @@ export default function Leads() {
   // Card-level quick actions (still used on the kanban card strip)
   const handleMarkDone = (fu: FollowUp) => { updateFollowUp(fu.id, { status: "Done" }); toast.success("Marked as done"); };
   const handleSnooze = (fu: FollowUp) => {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    updateFollowUp(fu.id, { status: "Pending", dueDate: tomorrow.toISOString().split("T")[0] });
+    updateFollowUp(fu.id, { status: "Pending", dueDate: tomorrowPST() });
     toast.success("Snoozed to tomorrow");
   };
   const handleReschedule = (fu: FollowUp, newDate: string) => {

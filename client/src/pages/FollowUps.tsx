@@ -1,4 +1,4 @@
-import { todayPST } from "@/lib/timezone";
+import { todayPST, addDaysPST } from "@/lib/timezone";
 /* ============================================================
    Law Firm CRM — Follow-Ups Page
    Design: Dark Luxury Legal — Navy + Gold
@@ -155,12 +155,11 @@ export default function FollowUps() {
   // Weekly Digest: next 7 days grouped by day
   const weeklyDigest = useMemo(() => {
     const days: { dateStr: string; label: string; items: FollowUp[] }[] = [];
+    const todayStr = todayPST();
     for (let i = 0; i < 7; i++) {
-      const d = new Date();
-      d.setDate(d.getDate() + i);
-      const dateStr = d.toISOString().split("T")[0];
+      const dateStr = addDaysPST(todayStr, i);
       const label = i === 0 ? "Today" : i === 1 ? "Tomorrow" :
-        d.toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", weekday: "long", month: "short", day: "numeric" });
+        new Date(dateStr + "T12:00:00").toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", weekday: "long", month: "short", day: "numeric" });
       const items = followUps.filter(f => f.status === "Pending" && f.dueDate === dateStr);
       days.push({ dateStr, label, items });
     }

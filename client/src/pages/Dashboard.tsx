@@ -1325,7 +1325,7 @@ export default function Dashboard() {
           {(() => {
             // Filter leads created in the selected month/year
             const monthLeads = leads.filter(l => {
-              const d = new Date(l.date);
+              const d = new Date(l.date + "T12:00:00");
               return d.getFullYear() === selectedYear && (d.getMonth() + 1) === selectedMonth;
             });
             const sourceMap: Record<string, { leads: number; converted: number; revenue: number }> = {};

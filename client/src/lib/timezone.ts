@@ -28,6 +28,21 @@ export function formatTimestampPST(iso: string): string {
     " " + d.toLocaleTimeString("en-US", { timeZone: TZ, hour: "numeric", minute: "2-digit" });
 }
 
+/**
+ * Adds N days to a YYYY-MM-DD date string, returning a new YYYY-MM-DD string.
+ * Uses midday anchor to avoid any DST/UTC boundary issues.
+ */
+export function addDaysPST(dateStr: string, days: number): string {
+  const d = new Date(dateStr + "T12:00:00");
+  d.setDate(d.getDate() + days);
+  return d.toLocaleDateString("en-CA", { timeZone: TZ }); // YYYY-MM-DD in PST
+}
+
+/** Returns tomorrow's date string in YYYY-MM-DD format, in PST. */
+export function tomorrowPST(): string {
+  return addDaysPST(todayPST(), 1);
+}
+
 /** Returns current time as a PST-aware ISO string. */
 export function nowPST(): string {
   return new Date().toLocaleString("en-CA", {
