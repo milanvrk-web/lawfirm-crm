@@ -1,4 +1,4 @@
-import { todayPST } from "@/lib/timezone";
+import { todayPST, addDaysPST } from "@/lib/timezone";
 /* ============================================================
    Graham Immigration Law, PC — Layout Component
    Design: Dark Luxury Legal — Fixed left sidebar, gold accents
@@ -118,9 +118,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   // Count leads with no follow-up activity in 7+ days (escalation)
   const stalePipelineCount = useMemo(() => {
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - 7);
-    const cutoffStr = cutoff.toISOString().split("T")[0];
+    const cutoffStr = addDaysPST(todayPST(), -7);
     return leads.filter(l => {
       if (l.stage === "Lost" || l.stage === "Retained") return false;
       const lastActivity = l.date;

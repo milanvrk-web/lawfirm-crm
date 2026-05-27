@@ -381,6 +381,7 @@ export default function LeadDetailPanel({
                         className="flex-1 px-2 py-1.5 rounded text-xs outline-none"
                         style={{ background: "oklch(0.22 0.025 250)", border: "1px solid oklch(0.72 0.12 75 / 30%)", color: "oklch(0.90 0.005 250)", colorScheme: "dark" }}
                       />
+                      <span className="text-xs whitespace-nowrap px-1.5 py-0.5 rounded" style={{ background: "oklch(0.72 0.12 75 / 15%)", color: "oklch(0.72 0.12 75)" }}>PST: {todayPST()}</span>
                     </div>
                     <button onClick={handleSaveFollowUp} className="px-3 py-1.5 rounded text-xs font-semibold hover:opacity-90 transition-opacity" style={{ background: "oklch(0.72 0.12 75)", color: "oklch(0.13 0.025 250)" }}>
                       Add

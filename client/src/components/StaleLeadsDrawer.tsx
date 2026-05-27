@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { useCRM } from "@/contexts/CRMContext";
 import { useActiveMember } from "@/contexts/ActiveMemberContext";
 import type { Lead } from "@/lib/store";
+import { todayPST, tomorrowPST } from "@/lib/timezone";
 
 interface StaleLead {
   lead: Lead;
@@ -28,14 +29,11 @@ function formatRelativeDate(ms: number): string {
 }
 
 function getTodayStr(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return todayPST();
 }
 
 function getDefaultDueDate(): string {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return tomorrowPST();
 }
 
 function stageColor(stage: string): string {

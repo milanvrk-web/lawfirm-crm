@@ -272,7 +272,10 @@ export default function FollowUps() {
             </div>
             {/* Due date */}
             <div className="space-y-1">
-              <label className="text-xs font-medium" style={{ color: "oklch(0.65 0.01 250)" }}>Due Date *</label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-medium" style={{ color: "oklch(0.65 0.01 250)" }}>Due Date *</label>
+                <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: "oklch(0.72 0.12 75 / 15%)", color: "oklch(0.72 0.12 75)" }}>Today (PST): {todayPST()}</span>
+              </div>
               <input
                 type="date"
                 value={addDueDate}
