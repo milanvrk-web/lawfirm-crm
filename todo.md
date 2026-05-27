@@ -306,3 +306,11 @@
 - [x] Add collapsible Client Info section (collapsed by default)
 - [x] Add collapsible Payment Plans section (collapsed by default)
 - [x] Add collapsible Onboarding Checklist section (only for Onboarding stage, expanded by default)
+
+## LeadDetailPanel Layout v2 — Client Info + Notes Combined
+
+- [x] Merge Client Info and Case Notes into a single top section (always visible, no collapsible)
+- [x] Show all lead fields (name, phone, case type, source, referred by, quoted amount, stage, date added, email) inline with the case notes textarea
+- [x] Remove the separate Follow-Up task management from the panel (Add Follow-Up button, task list) — keep only activity/comments log
+- [x] Activity/comments section below the combined info+notes section
+- [x] Keep collapsible Payment Plans and Onboarding Checklist at the bottom

@@ -5,14 +5,32 @@ import { todayPST, tomorrowPST } from "@/lib/timezone";
    Used by: Leads page, FollowUps page
    Opens as a right-side fixed panel over any page.
    Self-contained: calls useCRM() directly.
+
+   Layout (v3 — unified):
+   ┌─────────────────────────────────────────┐
+   │ HEADER: name · stage badge · phone · X  │
+   │ (retainer bar if Retained)              │
+   ├─────────────────────────────────────────┤
+   │ SECTION 1 — CLIENT INFO + CASE NOTES   │
+   │  • All lead fields (case type, source,  │
+   │    date, quoted, email, referred by…)   │
+   │  • Case notes textarea (inline edit)    │
+   ├─────────────────────────────────────────┤
+   │ SECTION 2 — ACTIVITY / COMMENTS        │
+   │  • Per follow-up comments log           │
+   │  • Quick comment input                  │
+   ├─────────────────────────────────────────┤
+   │ SECTION 3 — PAYMENT PLANS (collapsible)│
+   │ SECTION 4 — ONBOARDING (collapsible)   │
+   └─────────────────────────────────────────┘
    ============================================================ */
 import { useState, useMemo, useRef, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { useCRM } from "@/contexts/CRMContext";
 import { useActiveMember } from "@/contexts/ActiveMemberContext";
 import {
-  type Lead, type FollowUp, type FollowUpStatus, type LeadStage,
-  formatCurrency, formatDate, getLeadTotalReceived, getLeadFollowUps,
+  type Lead, type FollowUp, type LeadStage,
+  formatCurrency, formatDate,
 } from "@/lib/store";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -21,48 +39,37 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import {
-  Bell, MessageSquare, FileText, X, Plus, CalendarClock,
-  Phone, Edit2, CheckCircle, CheckCircle2, Circle, Clock,
-  CheckCheck, AlarmClock, Trash2, CreditCard, Check, ChevronDown,
+  FileText, X, Phone, Edit2, CheckCircle, CheckCircle2, Circle,
+  Check, ChevronDown, CreditCard, MessageSquare, Trash2, Plus,
 } from "lucide-react";
 
 // ── Helpers ────────────────────────────────────────────────
 const ALL_STAGES: LeadStage[] = ["New Lead", "Consultation", "Follow-Up", "Retained", "Onboarding", "Lost"];
 
 const stageColor: Record<string, string> = {
-  "New Lead": "oklch(0.55 0.18 250)",
+  "New Lead":     "oklch(0.55 0.18 250)",
   "Consultation": "oklch(0.72 0.15 80)",
-  "Follow-Up": "oklch(0.65 0.15 60)",
-  "Retained": "oklch(0.55 0.18 145)",
-  "Onboarding": "oklch(0.55 0.18 200)",
-  "Lost": "oklch(0.60 0.22 25)",
+  "Follow-Up":    "oklch(0.65 0.15 60)",
+  "Retained":     "oklch(0.55 0.18 145)",
+  "Onboarding":   "oklch(0.55 0.18 200)",
+  "Lost":         "oklch(0.60 0.22 25)",
 };
-
-function dueDateLabel(dueDate: string): { label: string; color: string; isOverdue: boolean } {
-  const today = todayPST();
-  const diff = new Date(dueDate + "T12:00:00").getTime() - new Date(today + "T12:00:00").getTime();
-  const days = Math.round(diff / (1000 * 60 * 60 * 24));
-  if (days < 0) return { label: `${Math.abs(days)}d overdue`, color: "oklch(0.65 0.22 25)", isOverdue: true };
-  if (days === 0) return { label: "Due today", color: "oklch(0.72 0.15 80)", isOverdue: false };
-  if (days === 1) return { label: "Due tomorrow", color: "oklch(0.72 0.12 75)", isOverdue: false };
-  return { label: `Due in ${days}d`, color: "oklch(0.55 0.01 250)", isOverdue: false };
-}
 
 function formatTimestamp(iso: string) {
   const d = new Date(iso);
-  return d.toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", month: "short", day: "numeric" }) +
-    " " + d.toLocaleTimeString("en-US", { timeZone: "America/Los_Angeles", hour: "numeric", minute: "2-digit" });
+  return (
+    d.toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", month: "short", day: "numeric" }) +
+    " " +
+    d.toLocaleTimeString("en-US", { timeZone: "America/Los_Angeles", hour: "numeric", minute: "2-digit" })
+  );
 }
 
 // ── Props ──────────────────────────────────────────────────
 interface LeadDetailPanelProps {
   leadId: string | null;
   onClose: () => void;
-  /** Optional: open the edit-lead dialog for this lead */
   onEditLead?: (lead: Lead) => void;
-  /** Optional: open the convert-to-retained dialog */
   onConvertLead?: (lead: Lead) => void;
-  /** Initial tab to show when opening */
   initialTab?: "followups" | "notes" | "info" | "installments" | "onboarding";
 }
 
@@ -71,29 +78,23 @@ export default function LeadDetailPanel({
   onClose,
   onEditLead,
   onConvertLead,
-  initialTab = "followups",
 }: LeadDetailPanelProps) {
-  const { leads, payments, followUps: allFollowUps, addFollowUp, updateFollowUp, deleteFollowUp, addFollowUpComment, addLeadNote, updateLead, addPayment } = useCRM();
+  const {
+    leads, payments, followUps: allFollowUps,
+    addFollowUpComment, updateLead, addPayment,
+  } = useCRM();
 
   const utils = trpc.useUtils();
+  const { activeMember } = useActiveMember();
 
-  // Single-view panel — no tabs; sections are always visible
-  const [infoExpanded, setInfoExpanded] = useState(false);
-  const [paymentsExpanded, setPaymentsExpanded] = useState(false);
-  const [installmentsExpanded, setInstallmentsExpanded] = useState(false);
-  const [onboardingExpanded, setOnboardingExpanded] = useState(true);
-  // Keep initialTab for backward compat (scroll to section on open)
-  const _initialTab = initialTab;
-  const [fuTitle, setFuTitle] = useState("Call back");
-  const [fuDate, setFuDate] = useState(todayPST());
-  const [showFuForm, setShowFuForm] = useState(false);
-  const [noteText, setNoteText] = useState("");
-  const [commentText, setCommentText] = useState<Record<string, string>>({});
-  const [editingDueDateId, setEditingDueDateId] = useState<string | null>(null);
-  const [confirmDeleteNoteId, setConfirmDeleteNoteId] = useState<string | null>(null);
+  // UI state
   const [stageDropdownOpen, setStageDropdownOpen] = useState(false);
   const [editingLeadNotes, setEditingLeadNotes] = useState(false);
   const [leadNotesText, setLeadNotesText] = useState("");
+  const [commentText, setCommentText] = useState<Record<string, string>>({});
+  const [paymentsExpanded, setPaymentsExpanded] = useState(false);
+  const [installmentsExpanded, setInstallmentsExpanded] = useState(false);
+  const [onboardingExpanded, setOnboardingExpanded] = useState(true);
   const [showInlineConvert, setShowInlineConvert] = useState(false);
   const [inlineConvertForm, setInlineConvertForm] = useState({ retainerBooked: "", downpayment: "", caseNumber: "", notes: "" });
   const stageDropdownRef = useRef<HTMLDivElement>(null);
@@ -113,7 +114,6 @@ export default function LeadDetailPanel({
   const handleStageChange = async (newStage: LeadStage) => {
     setStageDropdownOpen(false);
     if (!lead || newStage === lead.stage) return;
-    // Intercept "Retained" — open convert modal instead of direct stage update
     if (newStage === "Retained") {
       if (onConvertLead) {
         onConvertLead(lead);
@@ -157,68 +157,33 @@ export default function LeadDetailPanel({
     setInlineConvertForm({ retainerBooked: "", downpayment: "", caseNumber: "", notes: "" });
   };
 
-  const today = todayPST();
-
-  const lead = useMemo(() =>
-    leadId ? leads.find(l => l.id === leadId) ?? null : null,
+  const lead = useMemo(
+    () => (leadId ? leads.find(l => l.id === leadId) ?? null : null),
     [leadId, leads]
   );
 
-  const leadFollowUps = useMemo(() =>
-    lead ? allFollowUps.filter(f => f.leadId === lead.id).sort((a, b) => {
-      if (a.status === "Done" && b.status !== "Done") return 1;
-      if (b.status === "Done" && a.status !== "Done") return -1;
-      return a.dueDate.localeCompare(b.dueDate);
-    }) : [],
+  const leadFollowUps = useMemo(
+    () =>
+      lead
+        ? allFollowUps
+            .filter(f => f.leadId === lead.id)
+            .sort((a, b) => {
+              if (a.status === "Done" && b.status !== "Done") return 1;
+              if (b.status === "Done" && a.status !== "Done") return -1;
+              return a.dueDate.localeCompare(b.dueDate);
+            })
+        : [],
     [lead, allFollowUps]
   );
 
-  const leadPayments = useMemo(() =>
-    lead ? payments.filter(p => p.leadId === lead.id) : [],
+  const leadPayments = useMemo(
+    () => (lead ? payments.filter(p => p.leadId === lead.id) : []),
     [lead, payments]
   );
 
-  // ── Notes from DB ──────────────────────────────────────────
-  const { data: dbNotes = [], isLoading: notesLoading } = trpc.leads.getNotes.useQuery(
-    { leadId: lead?.id ?? "" },
-    { enabled: !!lead?.id }
-  );
-  const [isSavingNote, setIsSavingNote] = useState(false);
-  const { activeMember } = useActiveMember();
-
-  const deleteNoteMut = trpc.leads.deleteNote.useMutation({
-    onSuccess: (_data, variables) => {
-      utils.leads.getNotes.invalidate({ leadId: variables.leadId });
-      setConfirmDeleteNoteId(null);
-      toast.success("Note deleted");
-    },
-    onError: () => toast.error("Failed to delete note"),
-  });
+  const totalReceived = leadPayments.reduce((s, p) => s + p.amount, 0);
 
   if (!lead) return null;
-
-  const handleSaveFollowUp = () => {
-    if (!fuTitle.trim()) { toast.error("Enter a task title"); return; }
-    if (!fuDate) { toast.error("Select a due date"); return; }
-    addFollowUp({ leadId: lead.id, dueDate: fuDate, status: "Pending", title: fuTitle.trim(), assignedTo: activeMember?.name ?? null });
-    setFuTitle("Call back");
-    setFuDate(todayPST());
-    setShowFuForm(false);
-    toast.success("Follow-up added");
-  };
-
-  const handleSaveNote = async () => {
-    if (!noteText.trim() || isSavingNote) return;
-    setIsSavingNote(true);
-    try {
-      await addLeadNote(lead.id, noteText.trim(), activeMember?.name ?? undefined);
-      await utils.leads.getNotes.invalidate({ leadId: lead.id });
-      setNoteText("");
-      toast.success("Note saved");
-    } finally {
-      setIsSavingNote(false);
-    }
-  };
 
   const handleAddComment = (fuId: string) => {
     const text = (commentText[fuId] || "").trim();
@@ -228,29 +193,7 @@ export default function LeadDetailPanel({
     toast.success("Comment added");
   };
 
-  const handleStatusCycle = (fu: FollowUp) => {
-    const next: Record<FollowUpStatus, FollowUpStatus> = { Pending: "Done", Done: "Snoozed", Snoozed: "Pending" };
-    updateFollowUp(fu.id, { status: next[fu.status] });
-  };
-
-  const handleMarkDone = (fu: FollowUp) => {
-    updateFollowUp(fu.id, { status: "Done" });
-    toast.success("Marked as done");
-  };
-
-  const handleSnooze = (fu: FollowUp) => {
-    updateFollowUp(fu.id, { status: "Pending", dueDate: tomorrowPST() });
-    toast.success("Snoozed to tomorrow");
-  };
-
-  const handleReschedule = (fu: FollowUp, newDate: string) => {
-    updateFollowUp(fu.id, { dueDate: newDate });
-    toast.success("Due date updated");
-  };
-
-  const totalReceived = leadPayments.reduce((s, p) => s + p.amount, 0);
-  const pendingCount = leadFollowUps.filter(f => f.status === "Pending").length;
-
+  // ── Render ─────────────────────────────────────────────────
   return (
     <>
       {/* Backdrop */}
@@ -263,24 +206,34 @@ export default function LeadDetailPanel({
       <div
         className="fixed right-0 top-0 bottom-0 z-50 flex flex-col shadow-2xl"
         style={{
-          width: "min(480px, 100vw)",
+          width: "min(520px, 100vw)",
           background: "oklch(0.15 0.025 250)",
           borderLeft: "1px solid oklch(0.72 0.12 75 / 25%)",
         }}
       >
-        {/* Panel Header */}
-        <div className="flex items-start justify-between px-5 py-4 border-b flex-shrink-0" style={{ borderColor: "oklch(1 0 0 / 10%)" }}>
+        {/* ── Panel Header ── */}
+        <div
+          className="flex items-start justify-between px-5 py-4 border-b flex-shrink-0"
+          style={{ borderColor: "oklch(1 0 0 / 10%)" }}
+        >
           <div className="flex-1 min-w-0 pr-3">
             <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-lg font-bold truncate" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.93 0.005 250)" }}>
+              <h2
+                className="text-lg font-bold truncate"
+                style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.93 0.005 250)" }}
+              >
                 {lead.name}
               </h2>
-              {/* Stage change dropdown */}
+              {/* Stage dropdown */}
               <div className="relative flex-shrink-0" ref={stageDropdownRef}>
                 <button
                   onClick={() => setStageDropdownOpen(v => !v)}
                   className="flex items-center gap-1 text-xs px-2 py-0.5 rounded font-medium transition-all hover:opacity-80"
-                  style={{ background: `${stageColor[lead.stage] ?? "oklch(0.55 0.01 250)"}25`, color: stageColor[lead.stage] ?? "oklch(0.55 0.01 250)", border: `1px solid ${stageColor[lead.stage] ?? "oklch(0.55 0.01 250)"}40` }}
+                  style={{
+                    background: `${stageColor[lead.stage] ?? "oklch(0.55 0.01 250)"}25`,
+                    color: stageColor[lead.stage] ?? "oklch(0.55 0.01 250)",
+                    border: `1px solid ${stageColor[lead.stage] ?? "oklch(0.55 0.01 250)"}40`,
+                  }}
                   title="Click to change stage"
                 >
                   {lead.stage}
@@ -298,8 +251,9 @@ export default function LeadDetailPanel({
                         className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 transition-colors hover:bg-white/8"
                         style={{ color: s === lead.stage ? stageColor[s] : "oklch(0.80 0.005 250)" }}
                       >
-                        {s === lead.stage && <Check className="w-3 h-3 flex-shrink-0" style={{ color: stageColor[s] }} />}
-                        {s !== lead.stage && <span className="w-3 h-3 flex-shrink-0" />}
+                        {s === lead.stage
+                          ? <Check className="w-3 h-3 flex-shrink-0" style={{ color: stageColor[s] }} />
+                          : <span className="w-3 h-3 flex-shrink-0" />}
                         <span style={{ color: stageColor[s] ?? "oklch(0.80 0.005 250)" }}>{s}</span>
                       </button>
                     ))}
@@ -307,13 +261,23 @@ export default function LeadDetailPanel({
                 )}
               </div>
             </div>
+            {/* Phone + case type row */}
             <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-              <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: "oklch(0.72 0.12 75 / 15%)", color: "oklch(0.72 0.12 75)" }}>
+              <span
+                className="text-xs px-1.5 py-0.5 rounded"
+                style={{ background: "oklch(0.72 0.12 75 / 15%)", color: "oklch(0.72 0.12 75)" }}
+              >
                 {lead.caseType}
               </span>
-              {lead.caseNumber && <span className="text-xs" style={{ color: "oklch(0.50 0.01 250)" }}>#{lead.caseNumber}</span>}
+              {lead.caseNumber && (
+                <span className="text-xs" style={{ color: "oklch(0.50 0.01 250)" }}>#{lead.caseNumber}</span>
+              )}
               {lead.phone && (
-                <a href={`tel:${lead.phone}`} className="flex items-center gap-1 text-xs hover:underline" style={{ color: "oklch(0.65 0.01 250)" }}>
+                <a
+                  href={`tel:${lead.phone}`}
+                  className="flex items-center gap-1 text-xs hover:underline"
+                  style={{ color: "oklch(0.65 0.01 250)" }}
+                >
                   <Phone className="w-3 h-3" />{lead.phone}
                 </a>
               )}
@@ -321,31 +285,54 @@ export default function LeadDetailPanel({
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
             {onEditLead && (
-              <button onClick={() => onEditLead(lead)} className="p-1.5 rounded hover:bg-white/8 transition-colors" title="Edit lead" style={{ color: "oklch(0.72 0.12 75)" }}>
+              <button
+                onClick={() => onEditLead(lead)}
+                className="p-1.5 rounded hover:bg-white/8 transition-colors"
+                title="Edit lead"
+                style={{ color: "oklch(0.72 0.12 75)" }}
+              >
                 <Edit2 className="w-4 h-4" />
               </button>
             )}
             {onConvertLead && lead.stage !== "Retained" && lead.stage !== "Lost" && (
-              <button onClick={() => onConvertLead(lead)} className="flex items-center gap-1 text-xs px-2 py-1 rounded font-medium transition-colors"
-                style={{ background: "oklch(0.55 0.18 145 / 15%)", color: "oklch(0.55 0.18 145)", border: "1px solid oklch(0.55 0.18 145 / 30%)" }}>
+              <button
+                onClick={() => onConvertLead(lead)}
+                className="flex items-center gap-1 text-xs px-2 py-1 rounded font-medium transition-colors"
+                style={{
+                  background: "oklch(0.55 0.18 145 / 15%)",
+                  color: "oklch(0.55 0.18 145)",
+                  border: "1px solid oklch(0.55 0.18 145 / 30%)",
+                }}
+              >
                 <CheckCircle className="w-3 h-3" /> Convert
               </button>
             )}
-            <button onClick={onClose} className="p-1.5 rounded hover:bg-white/8 transition-colors" style={{ color: "oklch(0.55 0.01 250)" }}>
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded hover:bg-white/8 transition-colors"
+              style={{ color: "oklch(0.55 0.01 250)" }}
+            >
               <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        {/* Retainer bar (Retained leads only) */}
+        {/* ── Retainer bar (Retained leads only) ── */}
         {lead.stage === "Retained" && lead.retainerBooked > 0 && (() => {
           const pct = Math.min(100, (totalReceived / lead.retainerBooked) * 100);
           const outstanding = lead.retainerBooked - totalReceived;
           return (
-            <div className="px-5 py-3 border-b flex-shrink-0" style={{ borderColor: "oklch(1 0 0 / 8%)", background: "oklch(0.17 0.025 250)" }}>
+            <div
+              className="px-5 py-3 border-b flex-shrink-0"
+              style={{ borderColor: "oklch(1 0 0 / 8%)", background: "oklch(0.17 0.025 250)" }}
+            >
               <div className="flex justify-between text-xs mb-1.5">
-                <span style={{ color: "oklch(0.55 0.01 250)" }}>Retainer: <strong style={{ color: "oklch(0.72 0.12 75)" }}>{formatCurrency(lead.retainerBooked)}</strong></span>
-                <span style={{ color: "oklch(0.55 0.01 250)" }}>Rcvd: <strong style={{ color: "oklch(0.65 0.18 145)" }}>{formatCurrency(totalReceived)}</strong></span>
+                <span style={{ color: "oklch(0.55 0.01 250)" }}>
+                  Retainer: <strong style={{ color: "oklch(0.72 0.12 75)" }}>{formatCurrency(lead.retainerBooked)}</strong>
+                </span>
+                <span style={{ color: "oklch(0.55 0.01 250)" }}>
+                  Rcvd: <strong style={{ color: "oklch(0.65 0.18 145)" }}>{formatCurrency(totalReceived)}</strong>
+                </span>
                 <span style={{ color: "oklch(0.55 0.01 250)" }}>
                   {outstanding <= 0
                     ? <strong style={{ color: "oklch(0.65 0.18 145)" }}>PAID ✓</strong>
@@ -354,406 +341,259 @@ export default function LeadDetailPanel({
                 </span>
               </div>
               <div className="h-2 rounded-full overflow-hidden" style={{ background: "oklch(0.22 0.025 250)" }}>
-                <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: outstanding <= 0 ? "oklch(0.55 0.18 145)" : "oklch(0.72 0.12 75)" }} />
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{
+                    width: `${pct}%`,
+                    background: outstanding <= 0 ? "oklch(0.55 0.18 145)" : "oklch(0.72 0.12 75)",
+                  }}
+                />
               </div>
             </div>
           );
         })()}
 
-        {/* Section summary strip (replaces tabs) */}
-        <div className="flex items-center gap-2 px-4 py-2 border-b flex-shrink-0" style={{ borderColor: "oklch(1 0 0 / 8%)", background: "oklch(0.17 0.025 250)" }}>
-          {pendingCount > 0 && (
-            <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ background: "oklch(0.65 0.22 25 / 20%)", color: "oklch(0.70 0.22 25)" }}>
-              {pendingCount} pending
-            </span>
-          )}
-          {dbNotes.length > 0 && (
-            <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ background: "oklch(0.55 0.18 250 / 15%)", color: "oklch(0.70 0.12 250)" }}>
-              {dbNotes.length} notes
-            </span>
-          )}
-          {leadPayments.length > 0 && (
-            <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ background: "oklch(0.72 0.12 75 / 15%)", color: "oklch(0.72 0.12 75)" }}>
-              {leadPayments.length} payments
-            </span>
-          )}
-        </div>
-
-        {/* Panel Body — single scrollable view */}
+        {/* ── Scrollable body ── */}
         <div className="flex-1 overflow-y-auto">
 
-          {/* ── SECTION 1: Case Notes ── */}
-          <div className="px-4 pt-4 pb-3" style={{ borderBottom: "1px solid oklch(1 0 0 / 8%)" }}>
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <FileText className="w-3.5 h-3.5" style={{ color: "oklch(0.72 0.12 75)" }} />
-                <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "oklch(0.72 0.12 75)" }}>Case Notes</span>
-              </div>
-              {!editingLeadNotes && (
-                <button
-                  onClick={() => { setLeadNotesText(lead.notes || ""); setEditingLeadNotes(true); }}
-                  className="text-xs px-2 py-0.5 rounded hover:opacity-80 transition-opacity"
-                  style={{ color: "oklch(0.72 0.12 75)", border: "1px solid oklch(0.72 0.12 75 / 30%)" }}
-                >
-                  {lead.notes ? "Edit" : "+ Add"}
-                </button>
-              )}
-            </div>
-            {editingLeadNotes ? (
-              <div className="space-y-2">
-                <textarea
-                  value={leadNotesText}
-                  onChange={e => setLeadNotesText(e.target.value)}
-                  autoFocus
-                  rows={4}
-                  placeholder="Enter case notes, call summaries, client details..."
-                  className="w-full px-3 py-2 rounded text-sm outline-none resize-none"
-                  style={{ background: "oklch(0.22 0.025 250)", border: "1px solid oklch(0.72 0.12 75 / 40%)", color: "oklch(0.90 0.005 250)" }}
-                />
-                <div className="flex gap-2">
-                  <button
-                    onClick={async () => { await updateLead(lead.id, { notes: leadNotesText }); setEditingLeadNotes(false); }}
-                    className="px-3 py-1 rounded text-xs font-semibold hover:opacity-90 transition-opacity"
-                    style={{ background: "oklch(0.72 0.12 75)", color: "oklch(0.13 0.025 250)" }}
-                  >
-                    Save
-                  </button>
-                  <button
-                    onClick={() => setEditingLeadNotes(false)}
-                    className="px-3 py-1 rounded text-xs hover:bg-white/8 transition-colors"
-                    style={{ color: "oklch(0.55 0.01 250)" }}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            ) : lead.notes ? (
-              <div
-                className="text-sm leading-relaxed whitespace-pre-wrap px-3 py-2.5 rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
-                style={{ background: "oklch(0.18 0.025 250)", color: "oklch(0.82 0.005 250)", border: "1px solid oklch(0.72 0.12 75 / 15%)" }}
-                onClick={() => { setLeadNotesText(lead.notes || ""); setEditingLeadNotes(true); }}
-                title="Click to edit"
+          {/* ══════════════════════════════════════════════════
+              SECTION 1 — CLIENT INFO + CASE NOTES (combined)
+              ══════════════════════════════════════════════════ */}
+          <div className="px-5 pt-5 pb-4" style={{ borderBottom: "1px solid oklch(1 0 0 / 8%)" }}>
+
+            {/* Section label */}
+            <div className="flex items-center gap-2 mb-4">
+              <FileText className="w-3.5 h-3.5" style={{ color: "oklch(0.72 0.12 75)" }} />
+              <span
+                className="text-xs font-bold uppercase tracking-wider"
+                style={{ color: "oklch(0.72 0.12 75)" }}
               >
-                {lead.notes}
-              </div>
-            ) : (
-              <button
-                onClick={() => { setLeadNotesText(""); setEditingLeadNotes(true); }}
-                className="w-full text-left px-3 py-2.5 rounded-lg border border-dashed text-sm italic transition-all hover:border-solid hover:bg-white/5"
-                style={{ borderColor: "oklch(0.72 0.12 75 / 25%)", color: "oklch(0.40 0.01 250)" }}
-              >
-                + Click to add case notes...
-              </button>
-            )}
-          </div>
-
-          {/* ── SECTION 2: Follow-Ups & Activity ── */}
-          <div className="p-4 space-y-3">
-              {/* Add follow-up button / inline form */}
-              {!showFuForm ? (
-                <button
-                  onClick={() => setShowFuForm(true)}
-                  className="w-full flex items-center gap-2 px-4 py-2.5 rounded-lg border border-dashed text-sm font-medium transition-all hover:border-solid hover:bg-white/5"
-                  style={{ borderColor: "oklch(0.72 0.12 75 / 40%)", color: "oklch(0.72 0.12 75)" }}
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Follow-Up Task
-                </button>
-              ) : (
-                <div className="rounded-lg border p-3 space-y-2" style={{ background: "oklch(0.18 0.025 250)", borderColor: "oklch(0.72 0.12 75 / 35%)" }}>
-                  <input
-                    type="text"
-                    value={fuTitle}
-                    onChange={e => setFuTitle(e.target.value)}
-                    placeholder="Task title (e.g. Call back)"
-                    autoFocus
-                    className="w-full px-3 py-2 rounded text-sm outline-none"
-                    style={{ background: "oklch(0.22 0.025 250)", border: "1px solid oklch(0.72 0.12 75 / 30%)", color: "oklch(0.90 0.005 250)" }}
-                    onKeyDown={e => { if (e.key === "Enter") handleSaveFollowUp(); if (e.key === "Escape") setShowFuForm(false); }}
-                  />
-                  <div className="flex gap-2 items-center">
-                    <div className="flex items-center gap-1.5 flex-1">
-                      <CalendarClock className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "oklch(0.55 0.01 250)" }} />
-                      <input
-                        type="date"
-                        value={fuDate}
-                        onChange={e => setFuDate(e.target.value)}
-                        className="flex-1 px-2 py-1.5 rounded text-xs outline-none"
-                        style={{ background: "oklch(0.22 0.025 250)", border: "1px solid oklch(0.72 0.12 75 / 30%)", color: "oklch(0.90 0.005 250)", colorScheme: "dark" }}
-                      />
-                      <span className="text-xs whitespace-nowrap px-1.5 py-0.5 rounded" style={{ background: "oklch(0.72 0.12 75 / 15%)", color: "oklch(0.72 0.12 75)" }}>PST: {todayPST()}</span>
-                    </div>
-                    <button onClick={handleSaveFollowUp} className="px-3 py-1.5 rounded text-xs font-semibold hover:opacity-90 transition-opacity" style={{ background: "oklch(0.72 0.12 75)", color: "oklch(0.13 0.025 250)" }}>
-                      Add
-                    </button>
-                    <button onClick={() => setShowFuForm(false)} className="p-1.5 rounded hover:bg-white/8" style={{ color: "oklch(0.50 0.01 250)" }}>
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Follow-up list */}
-              {leadFollowUps.length === 0 ? (
-                <div className="text-center py-8">
-                  <Bell className="w-8 h-8 mx-auto mb-2" style={{ color: "oklch(0.30 0.01 250)" }} />
-                  <p className="text-sm" style={{ color: "oklch(0.45 0.01 250)" }}>No follow-ups yet.</p>
-                  <p className="text-xs mt-1" style={{ color: "oklch(0.35 0.01 250)" }}>Click "Add Follow-Up Task" above.</p>
-                </div>
-              ) : (
-                leadFollowUps.map(fu => {
-                  const dueInfo = dueDateLabel(fu.dueDate);
-                  const isOverdue = fu.status === "Pending" && fu.dueDate < today;
-                  const isDueToday = fu.status === "Pending" && fu.dueDate === today;
-                  const myComment = commentText[fu.id] || "";
-
-                  return (
-                    <div
-                      key={fu.id}
-                      className="rounded-lg border overflow-hidden"
-                      style={{
-                        background: "oklch(0.18 0.025 250)",
-                        borderColor: isOverdue ? "oklch(0.60 0.22 25 / 40%)" : isDueToday ? "oklch(0.72 0.12 75 / 30%)" : "oklch(1 0 0 / 8%)",
-                        borderLeftWidth: "3px",
-                        borderLeftColor: isOverdue ? "oklch(0.65 0.22 25)" : isDueToday ? "oklch(0.72 0.12 75)" : fu.status === "Done" ? "oklch(0.55 0.18 145)" : "oklch(0.55 0.01 250 / 30%)",
-                      }}
-                    >
-                      <div className="flex items-start gap-2.5 p-3">
-                        {/* Status circle — click to cycle */}
-                        <button
-                          onClick={() => handleStatusCycle(fu)}
-                          className="mt-0.5 flex-shrink-0 transition-transform hover:scale-110"
-                          title={`${fu.status} — click to cycle`}
-                        >
-                          {fu.status === "Done"
-                            ? <CheckCircle2 style={{ color: "oklch(0.70 0.18 145)", width: "18px", height: "18px" }} />
-                            : fu.status === "Snoozed"
-                            ? <Clock style={{ color: "oklch(0.65 0.01 250)", width: "18px", height: "18px" }} />
-                            : <Circle style={{ color: "oklch(0.72 0.12 75)", width: "18px", height: "18px" }} />
-                          }
-                        </button>
-
-                        {/* Content */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm font-medium" style={{
-                              color: fu.status === "Done" ? "oklch(0.45 0.01 250)" : "oklch(0.90 0.005 250)",
-                              textDecoration: fu.status === "Done" ? "line-through" : "none",
-                            }}>
-                              {fu.title}
-                            </span>
-                            {isOverdue && <span className="text-xs font-bold px-1.5 py-0 rounded" style={{ background: "oklch(0.65 0.22 25 / 15%)", color: "oklch(0.70 0.22 25)" }}>OVERDUE</span>}
-                            {isDueToday && <span className="text-xs font-bold px-1.5 py-0 rounded" style={{ background: "oklch(0.72 0.12 75 / 15%)", color: "oklch(0.72 0.12 75)" }}>TODAY</span>}
-                          </div>
-
-                          {/* Due date — click to reschedule inline */}
-                          <div className="flex items-center gap-2 mt-1">
-                            <CalendarClock className="w-3 h-3 flex-shrink-0" style={{ color: "oklch(0.45 0.01 250)" }} />
-                            {editingDueDateId === fu.id ? (
-                              <input
-                                type="date"
-                                defaultValue={fu.dueDate}
-                                autoFocus
-                                className="text-xs px-1.5 py-0.5 rounded outline-none"
-                                style={{ background: "oklch(0.22 0.025 250)", border: "1px solid oklch(0.72 0.12 75 / 60%)", color: "oklch(0.90 0.005 250)", colorScheme: "dark" }}
-                                onChange={e => { if (e.target.value) { handleReschedule(fu, e.target.value); setEditingDueDateId(null); } }}
-                                onBlur={() => setEditingDueDateId(null)}
-                                onKeyDown={e => { if (e.key === "Escape") setEditingDueDateId(null); }}
-                              />
-                            ) : (
-                              <button
-                                className="text-xs flex items-center gap-1 px-1 py-0.5 rounded hover:bg-white/8 group transition-colors"
-                                style={{ color: dueInfo.color }}
-                                onClick={() => setEditingDueDateId(fu.id)}
-                                title="Click to change due date"
-                              >
-                                {formatDate(fu.dueDate)} · {dueInfo.label}
-                                <span className="opacity-0 group-hover:opacity-60 transition-opacity" style={{ fontSize: "10px" }}>✎</span>
-                              </button>
-                            )}
-                            {fu.assignedTo && (
-                              <span className="text-xs px-1.5 py-0.5 rounded-full font-medium" style={{ background: "oklch(0.55 0.18 250 / 20%)", color: "oklch(0.70 0.12 250)" }}>
-                                {fu.assignedTo}
-                              </span>
-                            )}
-                          </div>
-                          {/* Comments */}
-                          {fu.comments.length > 0 && (
-                            <div className="mt-2 space-y-1">
-                              {fu.comments.map(c => (
-                                <div key={c.id} className="text-xs px-2 py-1 rounded" style={{ background: "oklch(0.20 0.025 250)", borderLeft: "2px solid oklch(0.72 0.12 75 / 30%)" }}>
-                                  <span style={{ color: "oklch(0.80 0.005 250)" }}>{c.text}</span>
-                                  <span className="ml-2" style={{ color: "oklch(0.38 0.01 250)" }}>{formatTimestamp(c.timestamp)}</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* Add comment */}
-                          <div className="flex gap-1.5 mt-2">
-                            <input
-                              type="text"
-                              placeholder="Add a note (e.g. M: called, no answer)"
-                              value={myComment}
-                              onChange={e => setCommentText(prev => ({ ...prev, [fu.id]: e.target.value }))}
-                              onKeyDown={e => { if (e.key === "Enter" && myComment.trim()) handleAddComment(fu.id); }}
-                              className="flex-1 px-2 py-1 rounded text-xs outline-none"
-                              style={{ background: "oklch(0.20 0.025 250)", border: "1px solid oklch(1 0 0 / 10%)", color: "oklch(0.85 0.005 250)" }}
-                            />
-                            {myComment.trim() && (
-                              <button onClick={() => handleAddComment(fu.id)} className="px-2 py-1 rounded text-xs font-medium transition-all hover:opacity-90"
-                                style={{ background: "oklch(0.72 0.12 75 / 20%)", color: "oklch(0.72 0.12 75)", border: "1px solid oklch(0.72 0.12 75 / 30%)" }}>
-                                Add
-                              </button>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Quick actions */}
-                        <div className="flex flex-col gap-1 flex-shrink-0">
-                          {fu.status !== "Done" && (
-                            <button onClick={() => handleMarkDone(fu)} title="Mark done" className="p-1 rounded hover:bg-white/8 transition-colors" style={{ color: "oklch(0.55 0.18 145)" }}>
-                              <CheckCheck className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                          {fu.status === "Pending" && (
-                            <button onClick={() => handleSnooze(fu)} title="Snooze to tomorrow" className="p-1 rounded hover:bg-white/8 transition-colors" style={{ color: "oklch(0.65 0.12 250)" }}>
-                              <AlarmClock className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                          <button onClick={() => { deleteFollowUp(fu.id); toast.success("Task deleted"); }} title="Delete task" className="p-1 rounded hover:bg-red-500/15 transition-colors" style={{ color: "oklch(0.55 0.01 250)" }}>
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
+                Client Info &amp; Case Notes
+              </span>
             </div>
 
-          {/* ── SECTION 3: Client Info (collapsible) ── */}
-          <div style={{ borderBottom: "1px solid oklch(1 0 0 / 8%)" }}>
-            <button
-              onClick={() => setInfoExpanded(v => !v)}
-              className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors"
-            >
-              <div className="flex items-center gap-2">
-                <FileText className="w-3.5 h-3.5" style={{ color: "oklch(0.55 0.01 250)" }} />
-                <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "oklch(0.55 0.01 250)" }}>Client Info</span>
-              </div>
-              <ChevronDown className="w-4 h-4 transition-transform" style={{ color: "oklch(0.45 0.01 250)", transform: infoExpanded ? "rotate(180deg)" : "rotate(0deg)" }} />
-            </button>
-            {infoExpanded && (
-              <div className="px-4 pb-4 space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { label: "Case Type", value: lead.caseType },
-                    { label: "Case Number", value: lead.caseNumber || "—" },
-                    { label: "Date Added", value: formatDate(lead.date) },
-                    { label: "Stage", value: lead.stage },
-                    { label: "Source", value: lead.source || "—" },
-                    { label: "Referred By", value: lead.referredBy || "—" },
-                    { label: "Quoted", value: lead.quotedAmount > 0 ? formatCurrency(lead.quotedAmount) : "—" },
-                    { label: "Email", value: lead.email || "—" },
-                  ].map(({ label, value }) => (
-                    <div key={label} className="rounded-lg p-2.5" style={{ background: "oklch(0.18 0.025 250)" }}>
-                      <div className="text-[10px] uppercase tracking-wider mb-0.5" style={{ color: "oklch(0.40 0.01 250)" }}>{label}</div>
-                      <div className="text-sm font-medium truncate" style={{ color: "oklch(0.82 0.005 250)" }}>{value}</div>
-                    </div>
-                  ))}
-                </div>
-                {lead.retainerBooked > 0 && (() => {
-                  const totalReceived = leadPayments.reduce((s, p) => s + p.amount, 0);
-                  const outstanding = lead.retainerBooked - totalReceived;
-                  const pct = Math.min(100, totalReceived > 0 ? Math.round((totalReceived / lead.retainerBooked) * 100) : 0);
-                  const balanceColor = outstanding <= 0 ? "oklch(0.65 0.18 145)" : totalReceived === 0 ? "oklch(0.70 0.22 25)" : "oklch(0.72 0.12 75)";
-                  const balanceLabel = outstanding <= 0 ? "Fully Paid" : totalReceived === 0 ? "Nothing Collected" : "Partially Paid";
-                  return (
-                    <div className="rounded-lg p-4 border" style={{ background: "oklch(0.18 0.025 250)", borderColor: `${balanceColor} / 30%` }}>
-                      <div className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "oklch(0.45 0.01 250)" }}>Retainer Balance</div>
-                      <div className="grid grid-cols-3 gap-3 mb-3">
-                        <div className="text-center">
-                          <div className="text-xs mb-0.5" style={{ color: "oklch(0.45 0.01 250)" }}>Booked</div>
-                          <div className="text-sm font-bold" style={{ color: "oklch(0.72 0.12 75)" }}>{formatCurrency(lead.retainerBooked)}</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-xs mb-0.5" style={{ color: "oklch(0.45 0.01 250)" }}>Collected</div>
-                          <div className="text-sm font-bold" style={{ color: "oklch(0.65 0.18 145)" }}>{formatCurrency(totalReceived)}</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-xs mb-0.5" style={{ color: "oklch(0.45 0.01 250)" }}>Outstanding</div>
-                          <div className="text-sm font-bold" style={{ color: balanceColor }}>{formatCurrency(Math.max(0, outstanding))}</div>
-                        </div>
-                      </div>
-                      <div className="relative h-2 rounded-full overflow-hidden mb-1" style={{ background: "oklch(0.22 0.025 250)" }}>
-                        <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: balanceColor }} />
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs" style={{ color: "oklch(0.45 0.01 250)" }}>{pct}% collected</span>
-                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: `${balanceColor} / 15%`, color: balanceColor }}>{balanceLabel}</span>
-                      </div>
-                    </div>
-                  );
-                })()}
-                {leadPayments.length > 0 && (
-                  <div>
-                    <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "oklch(0.45 0.01 250)" }}>Payment History</div>
-                    <div className="space-y-1.5">
-                      {[...leadPayments].sort((a, b) => b.date.localeCompare(a.date)).map(p => (
-                        <div key={p.id} className="flex items-center justify-between text-xs px-3 py-2 rounded" style={{ background: "oklch(0.18 0.025 250)" }}>
-                          <div className="flex flex-col gap-0.5">
-                            <div>
-                              <span style={{ color: "oklch(0.65 0.01 250)" }}>{formatDate(p.date)}</span>
-                              <span className="ml-2" style={{ color: "oklch(0.75 0.01 250)" }}>{p.receivedFor}</span>
-                            </div>
-                          </div>
-                          <span className="font-bold" style={{ color: "oklch(0.72 0.12 75)" }}>{formatCurrency(p.amount)}</span>
-                        </div>
-                      ))}
-                    </div>
+            {/* Lead fields grid */}
+            <div className="grid grid-cols-2 gap-2.5 mb-4">
+              {[
+                { label: "Case Type",   value: lead.caseType },
+                { label: "Date Added",  value: formatDate(lead.date) },
+                { label: "Source",      value: lead.source || "—" },
+                { label: "Referred By", value: lead.referredBy || "—" },
+                { label: "Quoted",      value: lead.quotedAmount > 0 ? formatCurrency(lead.quotedAmount) : "—" },
+                { label: "Email",       value: lead.email || "—" },
+                ...(lead.caseNumber ? [{ label: "Case #", value: lead.caseNumber }] : []),
+                ...(lead.retainerBooked > 0 ? [{ label: "Retainer", value: formatCurrency(lead.retainerBooked) }] : []),
+              ].map(({ label, value }) => (
+                <div
+                  key={label}
+                  className="rounded-lg p-2.5"
+                  style={{ background: "oklch(0.18 0.025 250)" }}
+                >
+                  <div
+                    className="text-[10px] uppercase tracking-wider mb-0.5"
+                    style={{ color: "oklch(0.40 0.01 250)" }}
+                  >
+                    {label}
                   </div>
+                  <div
+                    className="text-sm font-medium truncate"
+                    style={{ color: "oklch(0.82 0.005 250)" }}
+                  >
+                    {value}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Case Notes */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span
+                  className="text-xs font-semibold uppercase tracking-wider"
+                  style={{ color: "oklch(0.55 0.01 250)" }}
+                >
+                  Case Notes
+                </span>
+                {!editingLeadNotes && (
+                  <button
+                    onClick={() => { setLeadNotesText(lead.notes || ""); setEditingLeadNotes(true); }}
+                    className="text-xs px-2 py-0.5 rounded hover:opacity-80 transition-opacity"
+                    style={{ color: "oklch(0.72 0.12 75)", border: "1px solid oklch(0.72 0.12 75 / 30%)" }}
+                  >
+                    {lead.notes ? "Edit" : "+ Add"}
+                  </button>
                 )}
               </div>
+
+              {editingLeadNotes ? (
+                <div className="space-y-2">
+                  <textarea
+                    value={leadNotesText}
+                    onChange={e => setLeadNotesText(e.target.value)}
+                    autoFocus
+                    rows={6}
+                    placeholder="Enter case notes, call summaries, client details..."
+                    className="w-full px-3 py-2.5 rounded text-sm outline-none resize-none"
+                    style={{
+                      background: "oklch(0.20 0.025 250)",
+                      border: "1px solid oklch(0.72 0.12 75 / 40%)",
+                      color: "oklch(0.90 0.005 250)",
+                    }}
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={async () => {
+                        await updateLead(lead.id, { notes: leadNotesText });
+                        setEditingLeadNotes(false);
+                        toast.success("Notes saved");
+                      }}
+                      className="px-3 py-1 rounded text-xs font-semibold hover:opacity-90 transition-opacity"
+                      style={{ background: "oklch(0.72 0.12 75)", color: "oklch(0.13 0.025 250)" }}
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={() => setEditingLeadNotes(false)}
+                      className="px-3 py-1 rounded text-xs hover:bg-white/8 transition-colors"
+                      style={{ color: "oklch(0.55 0.01 250)" }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : lead.notes ? (
+                <div
+                  className="text-sm leading-relaxed whitespace-pre-wrap px-3 py-2.5 rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                  style={{
+                    background: "oklch(0.18 0.025 250)",
+                    color: "oklch(0.82 0.005 250)",
+                    border: "1px solid oklch(0.72 0.12 75 / 15%)",
+                  }}
+                  onClick={() => { setLeadNotesText(lead.notes || ""); setEditingLeadNotes(true); }}
+                  title="Click to edit"
+                >
+                  {lead.notes}
+                </div>
+              ) : (
+                <button
+                  onClick={() => { setLeadNotesText(""); setEditingLeadNotes(true); }}
+                  className="w-full text-left px-3 py-3 rounded-lg border border-dashed text-sm italic transition-all hover:border-solid hover:bg-white/5"
+                  style={{ borderColor: "oklch(0.72 0.12 75 / 25%)", color: "oklch(0.40 0.01 250)" }}
+                >
+                  + Click to add case notes...
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* ══════════════════════════════════════════════════
+              SECTION 2 — ACTIVITY / COMMENTS
+              (follow-up task comments log — no task management)
+              ══════════════════════════════════════════════════ */}
+          <div className="px-5 pt-4 pb-4" style={{ borderBottom: "1px solid oklch(1 0 0 / 8%)" }}>
+            <div className="flex items-center gap-2 mb-3">
+              <MessageSquare className="w-3.5 h-3.5" style={{ color: "oklch(0.55 0.18 250)" }} />
+              <span
+                className="text-xs font-bold uppercase tracking-wider"
+                style={{ color: "oklch(0.55 0.18 250)" }}
+              >
+                Activity &amp; Comments
+              </span>
+            </div>
+
+            {leadFollowUps.length === 0 ? (
+              <div
+                className="text-center py-6 rounded-lg"
+                style={{ background: "oklch(0.17 0.025 250)", border: "1px solid oklch(1 0 0 / 6%)" }}
+              >
+                <MessageSquare className="w-6 h-6 mx-auto mb-1.5" style={{ color: "oklch(0.30 0.01 250)" }} />
+                <p className="text-sm" style={{ color: "oklch(0.45 0.01 250)" }}>No follow-up activity yet.</p>
+                <p className="text-xs mt-0.5" style={{ color: "oklch(0.35 0.01 250)" }}>
+                  Add follow-ups from the Follow-Ups page.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {leadFollowUps.map(fu => (
+                  <ActivityCard
+                    key={fu.id}
+                    fu={fu}
+                    commentText={commentText[fu.id] || ""}
+                    onCommentChange={text => setCommentText(prev => ({ ...prev, [fu.id]: text }))}
+                    onAddComment={() => handleAddComment(fu.id)}
+                  />
+                ))}
+              </div>
             )}
           </div>
 
-          {/* ── SECTION 4: Installment Plans (collapsible) ── */}
+          {/* ══════════════════════════════════════════════════
+              SECTION 3 — PAYMENT PLANS (collapsible)
+              ══════════════════════════════════════════════════ */}
           {leadId && (
             <div style={{ borderBottom: "1px solid oklch(1 0 0 / 8%)" }}>
               <button
                 onClick={() => setInstallmentsExpanded(v => !v)}
-                className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors"
+                className="w-full flex items-center justify-between px-5 py-3 hover:bg-white/5 transition-colors"
               >
                 <div className="flex items-center gap-2">
                   <CreditCard className="w-3.5 h-3.5" style={{ color: "oklch(0.55 0.01 250)" }} />
-                  <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "oklch(0.55 0.01 250)" }}>Payment Plans</span>
+                  <span
+                    className="text-xs font-bold uppercase tracking-wider"
+                    style={{ color: "oklch(0.55 0.01 250)" }}
+                  >
+                    Payment Plans
+                  </span>
                 </div>
-                <ChevronDown className="w-4 h-4 transition-transform" style={{ color: "oklch(0.45 0.01 250)", transform: installmentsExpanded ? "rotate(180deg)" : "rotate(0deg)" }} />
+                <ChevronDown
+                  className="w-4 h-4 transition-transform"
+                  style={{
+                    color: "oklch(0.45 0.01 250)",
+                    transform: installmentsExpanded ? "rotate(180deg)" : "rotate(0deg)",
+                  }}
+                />
               </button>
               {installmentsExpanded && <InstallmentsTab leadId={leadId} />}
             </div>
           )}
 
-          {/* ── SECTION 5: Onboarding Checklist (only for Onboarding stage) ── */}
+          {/* ══════════════════════════════════════════════════
+              SECTION 4 — ONBOARDING CHECKLIST (collapsible)
+              ══════════════════════════════════════════════════ */}
           {lead.stage === "Onboarding" && leadId && (
             <div style={{ borderBottom: "1px solid oklch(1 0 0 / 8%)" }}>
               <button
                 onClick={() => setOnboardingExpanded(v => !v)}
-                className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors"
+                className="w-full flex items-center justify-between px-5 py-3 hover:bg-white/5 transition-colors"
               >
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-3.5 h-3.5" style={{ color: "oklch(0.65 0.18 145)" }} />
-                  <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "oklch(0.65 0.18 145)" }}>Onboarding Checklist</span>
+                  <span
+                    className="text-xs font-bold uppercase tracking-wider"
+                    style={{ color: "oklch(0.65 0.18 145)" }}
+                  >
+                    Onboarding Checklist
+                  </span>
                 </div>
-                <ChevronDown className="w-4 h-4 transition-transform" style={{ color: "oklch(0.45 0.01 250)", transform: onboardingExpanded ? "rotate(180deg)" : "rotate(0deg)" }} />
+                <ChevronDown
+                  className="w-4 h-4 transition-transform"
+                  style={{
+                    color: "oklch(0.45 0.01 250)",
+                    transform: onboardingExpanded ? "rotate(180deg)" : "rotate(0deg)",
+                  }}
+                />
               </button>
-              {onboardingExpanded && <OnboardingTab leadId={leadId} activeMemberName={activeMember?.name ?? "Staff"} />}
+              {onboardingExpanded && (
+                <OnboardingTab leadId={leadId} activeMemberName={activeMember?.name ?? "Staff"} />
+              )}
             </div>
           )}
 
         </div>
+        {/* end scrollable body */}
+
       </div>
+      {/* end panel */}
 
       {/* ── Inline Convert to Retained Modal ── */}
       <Dialog open={showInlineConvert} onOpenChange={open => { if (!open) setShowInlineConvert(false); }}>
@@ -808,14 +648,138 @@ export default function LeadDetailPanel({
             <Button onClick={handleInlineConvert} style={{ background: "oklch(0.55 0.18 145)", color: "oklch(0.98 0 0)" }}>
               <CheckCircle className="w-4 h-4 mr-2" /> Confirm Conversion
             </Button>
-            <Button variant="outline" onClick={() => setShowInlineConvert(false)}
-              style={{ borderColor: "oklch(1 0 0 / 20%)", color: "oklch(0.65 0.01 250)" }}>
+            <Button
+              variant="outline"
+              onClick={() => setShowInlineConvert(false)}
+              style={{ borderColor: "oklch(1 0 0 / 20%)", color: "oklch(0.65 0.01 250)" }}
+            >
               Cancel
             </Button>
           </div>
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ActivityCard — renders one follow-up with its comments + quick comment input
+// ─────────────────────────────────────────────────────────────────────────────
+function ActivityCard({
+  fu,
+  commentText,
+  onCommentChange,
+  onAddComment,
+}: {
+  fu: FollowUp;
+  commentText: string;
+  onCommentChange: (text: string) => void;
+  onAddComment: () => void;
+}) {
+  const statusColor: Record<string, string> = {
+    Pending:  "oklch(0.72 0.12 75)",
+    Done:     "oklch(0.55 0.18 145)",
+    Snoozed:  "oklch(0.55 0.01 250)",
+  };
+  const color = statusColor[fu.status] ?? "oklch(0.55 0.01 250)";
+
+  return (
+    <div
+      className="rounded-lg overflow-hidden"
+      style={{
+        background: "oklch(0.18 0.025 250)",
+        border: "1px solid oklch(1 0 0 / 8%)",
+        borderLeft: `3px solid ${color}`,
+      }}
+    >
+      {/* Task title row */}
+      <div className="flex items-center justify-between px-3 py-2.5 gap-2">
+        <div className="flex-1 min-w-0">
+          <span
+            className="text-sm font-medium"
+            style={{
+              color: fu.status === "Done" ? "oklch(0.45 0.01 250)" : "oklch(0.90 0.005 250)",
+              textDecoration: fu.status === "Done" ? "line-through" : "none",
+            }}
+          >
+            {fu.title}
+          </span>
+          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+            <span className="text-xs" style={{ color: "oklch(0.45 0.01 250)" }}>
+              {formatDate(fu.dueDate)}
+            </span>
+            <span
+              className="text-[10px] px-1.5 py-0 rounded font-semibold"
+              style={{
+                background: `${color}20`,
+                color,
+              }}
+            >
+              {fu.status}
+            </span>
+            {fu.assignedTo && (
+              <span
+                className="text-xs px-1.5 py-0 rounded-full"
+                style={{ background: "oklch(0.55 0.18 250 / 20%)", color: "oklch(0.70 0.12 250)" }}
+              >
+                {fu.assignedTo}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Comments log */}
+      {fu.comments.length > 0 && (
+        <div className="px-3 pb-2 space-y-1.5">
+          {fu.comments.map(c => (
+            <div
+              key={c.id}
+              className="text-xs px-2.5 py-1.5 rounded"
+              style={{
+                background: "oklch(0.20 0.025 250)",
+                borderLeft: "2px solid oklch(0.72 0.12 75 / 30%)",
+              }}
+            >
+              <span style={{ color: "oklch(0.80 0.005 250)" }}>{c.text}</span>
+              <span className="ml-2" style={{ color: "oklch(0.38 0.01 250)" }}>
+                {formatTimestamp(c.timestamp)}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Quick comment input */}
+      <div className="flex gap-1.5 px-3 pb-2.5">
+        <input
+          type="text"
+          placeholder="Add a comment..."
+          value={commentText}
+          onChange={e => onCommentChange(e.target.value)}
+          onKeyDown={e => { if (e.key === "Enter" && commentText.trim()) onAddComment(); }}
+          className="flex-1 px-2.5 py-1.5 rounded text-xs outline-none"
+          style={{
+            background: "oklch(0.20 0.025 250)",
+            border: "1px solid oklch(1 0 0 / 10%)",
+            color: "oklch(0.85 0.005 250)",
+          }}
+        />
+        {commentText.trim() && (
+          <button
+            onClick={onAddComment}
+            className="px-2.5 py-1.5 rounded text-xs font-medium transition-all hover:opacity-90"
+            style={{
+              background: "oklch(0.72 0.12 75 / 20%)",
+              color: "oklch(0.72 0.12 75)",
+              border: "1px solid oklch(0.72 0.12 75 / 30%)",
+            }}
+          >
+            <Plus className="w-3 h-3" />
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -868,7 +832,6 @@ function InstallmentsTab({ leadId }: { leadId: string }) {
 
   return (
     <div className="p-4 space-y-4">
-      {/* Add plan button */}
       {!showForm ? (
         <button
           onClick={() => setShowForm(true)}
@@ -934,12 +897,11 @@ function InstallmentsTab({ leadId }: { leadId: string }) {
         </div>
       )}
 
-      {/* Plans list */}
       {plans.length === 0 && !showForm && (
         <div className="text-center py-10">
           <CreditCard className="w-8 h-8 mx-auto mb-2" style={{ color: "oklch(0.30 0.01 250)" }} />
           <p className="text-sm" style={{ color: "oklch(0.45 0.01 250)" }}>No installment plans yet.</p>
-          <p className="text-xs mt-1" style={{ color: "oklch(0.35 0.01 250)" }}>Click “New Installment Plan” to create one.</p>
+          <p className="text-xs mt-1" style={{ color: "oklch(0.35 0.01 250)" }}>Click "New Installment Plan" to create one.</p>
         </div>
       )}
 
@@ -952,7 +914,6 @@ function InstallmentsTab({ leadId }: { leadId: string }) {
 
         return (
           <div key={plan.id} className="rounded-xl border overflow-hidden" style={{ background: "oklch(0.17 0.025 250)", borderColor: "oklch(1 0 0 / 10%)" }}>
-            {/* Plan header */}
             <div className="px-4 py-3 border-b" style={{ borderColor: "oklch(1 0 0 / 8%)", background: "oklch(0.19 0.025 250)" }}>
               <div className="flex items-start justify-between gap-2">
                 <div>
@@ -978,8 +939,6 @@ function InstallmentsTab({ leadId }: { leadId: string }) {
                   </button>
                 )}
               </div>
-
-              {/* Progress bar */}
               <div className="mt-3">
                 <div className="flex justify-between text-xs mb-1">
                   <span style={{ color: "oklch(0.55 0.01 250)" }}>Collected: <strong style={{ color: "oklch(0.65 0.18 145)" }}>{formatCurrency(collected)}</strong></span>
@@ -991,52 +950,34 @@ function InstallmentsTab({ leadId }: { leadId: string }) {
                   </span>
                 </div>
                 <div className="h-2 rounded-full overflow-hidden" style={{ background: "oklch(0.22 0.025 250)" }}>
-                  <div
-                    className="h-full rounded-full transition-all duration-500"
-                    style={{ width: `${pct}%`, background: outstanding <= 0 ? "oklch(0.55 0.18 145)" : "oklch(0.72 0.12 75)" }}
-                  />
+                  <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: outstanding <= 0 ? "oklch(0.55 0.18 145)" : "oklch(0.72 0.12 75)" }} />
                 </div>
-                <div className="text-xs mt-1" style={{ color: "oklch(0.45 0.01 250)" }}>
-                  {paidCount} of {plan.installmentCount} paid
-                </div>
+                <div className="text-xs mt-1" style={{ color: "oklch(0.45 0.01 250)" }}>{paidCount} of {plan.installmentCount} paid</div>
               </div>
             </div>
-
-            {/* Installment schedule */}
             <div className="divide-y divide-white/[0.06]">
               {plan.items.map(item => {
                 const isOverdue = !item.isPaid && item.dueDate < today;
                 const isDueToday = !item.isPaid && item.dueDate === today;
                 const isEditingDate = editingDueDateItemId === item.id;
-
                 return (
                   <div
                     key={item.id}
                     className="flex items-center gap-3 px-4 py-2.5"
                     style={{
                       background: item.isPaid ? "oklch(0.55 0.18 145 / 5%)" : isOverdue ? "oklch(0.65 0.22 25 / 5%)" : "transparent",
-                      borderLeft: `3px solid ${
-                        item.isPaid ? "oklch(0.55 0.18 145)" : isOverdue ? "oklch(0.65 0.22 25)" : isDueToday ? "oklch(0.72 0.15 80)" : "transparent"
-                      }`,
+                      borderLeft: `3px solid ${item.isPaid ? "oklch(0.55 0.18 145)" : isOverdue ? "oklch(0.65 0.22 25)" : isDueToday ? "oklch(0.72 0.15 80)" : "transparent"}`,
                     }}
                   >
-                    {/* Paid toggle */}
                     <button
                       onClick={() => togglePaid.mutate({ id: item.id, isPaid: !item.isPaid, paidDate: !item.isPaid ? today : null })}
                       className="flex-shrink-0 w-5 h-5 rounded border flex items-center justify-center transition-all"
-                      style={{
-                        background: item.isPaid ? "oklch(0.55 0.18 145)" : "transparent",
-                        borderColor: item.isPaid ? "oklch(0.55 0.18 145)" : "oklch(0.40 0.01 250)",
-                      }}
+                      style={{ background: item.isPaid ? "oklch(0.55 0.18 145)" : "transparent", borderColor: item.isPaid ? "oklch(0.55 0.18 145)" : "oklch(0.40 0.01 250)" }}
                       title={item.isPaid ? "Mark as unpaid" : "Mark as paid"}
                     >
                       {item.isPaid && <Check className="w-3 h-3" style={{ color: "oklch(0.13 0.025 250)" }} />}
                     </button>
-
-                    {/* Installment number */}
                     <span className="text-xs font-mono flex-shrink-0 w-5 text-center" style={{ color: "oklch(0.45 0.01 250)" }}>#{item.installmentNumber}</span>
-
-                    {/* Due date (clickable to edit) */}
                     <div className="flex-1 min-w-0">
                       {isEditingDate ? (
                         <input
@@ -1076,12 +1017,7 @@ function InstallmentsTab({ leadId }: { leadId: string }) {
                         </div>
                       )}
                     </div>
-
-                    {/* Amount */}
-                    <span
-                      className="text-sm font-bold flex-shrink-0"
-                      style={{ color: item.isPaid ? "oklch(0.55 0.18 145)" : "oklch(0.72 0.12 75)" }}
-                    >
+                    <span className="text-sm font-bold flex-shrink-0" style={{ color: item.isPaid ? "oklch(0.55 0.18 145)" : "oklch(0.72 0.12 75)" }}>
                       {formatCurrency(item.amount)}
                     </span>
                   </div>
@@ -1100,10 +1036,10 @@ function InstallmentsTab({ leadId }: { leadId: string }) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const ONBOARDING_STEPS = [
-  { key: "consultation_booked" as const, label: "Consultation Booked", description: "Attorney consultation has been scheduled and confirmed with the client" },
-  { key: "case_notes_created" as const, label: "Case Notes Created", description: "Initial case notes and intake information documented in the system" },
-  { key: "task_added_cerenade" as const, label: "Task Added in Cerenade", description: "Case task created and assigned in Cerenade case management" },
-  { key: "task_added_planner" as const, label: "Task Added in Planner", description: "Task added to team planner for workflow tracking" },
+  { key: "consultation_booked" as const,  label: "Consultation Booked",      description: "Attorney consultation has been scheduled and confirmed with the client" },
+  { key: "case_notes_created" as const,   label: "Case Notes Created",        description: "Initial case notes and intake information documented in the system" },
+  { key: "task_added_cerenade" as const,  label: "Task Added in Cerenade",    description: "Case task created and assigned in Cerenade case management" },
+  { key: "task_added_planner" as const,   label: "Task Added in Planner",     description: "Task added to team planner for workflow tracking" },
 ];
 
 function OnboardingTab({ leadId, activeMemberName }: { leadId: string; activeMemberName: string }) {
@@ -1139,7 +1075,6 @@ function OnboardingTab({ leadId, activeMemberName }: { leadId: string; activeMem
 
   return (
     <div className="p-4 space-y-4">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-sm font-semibold" style={{ color: "oklch(0.93 0.005 250)" }}>Onboarding Checklist</h3>
@@ -1155,19 +1090,12 @@ function OnboardingTab({ leadId, activeMemberName }: { leadId: string; activeMem
           </span>
         )}
       </div>
-
-      {/* Progress bar */}
       <div className="h-2 rounded-full overflow-hidden" style={{ background: "oklch(0.22 0.025 250)" }}>
         <div
           className="h-full rounded-full transition-all duration-500"
-          style={{
-            width: `${(completedCount / 4) * 100}%`,
-            background: allDone ? "oklch(0.55 0.18 145)" : "oklch(0.65 0.18 200)",
-          }}
+          style={{ width: `${(completedCount / 4) * 100}%`, background: allDone ? "oklch(0.55 0.18 145)" : "oklch(0.65 0.18 200)" }}
         />
       </div>
-
-      {/* Steps */}
       <div className="space-y-2">
         {ONBOARDING_STEPS.map(({ key, label, description }) => {
           const done = completedSteps.has(key);
@@ -1194,10 +1122,7 @@ function OnboardingTab({ leadId, activeMemberName }: { leadId: string; activeMem
                   <div className="flex items-center justify-between gap-2">
                     <span
                       className="text-sm font-medium"
-                      style={{
-                        color: done ? "oklch(0.55 0.18 145)" : "oklch(0.82 0.005 250)",
-                        textDecoration: done ? "line-through" : "none",
-                      }}
+                      style={{ color: done ? "oklch(0.55 0.18 145)" : "oklch(0.82 0.005 250)", textDecoration: done ? "line-through" : "none" }}
                     >
                       {label}
                     </span>
@@ -1220,7 +1145,6 @@ function OnboardingTab({ leadId, activeMemberName }: { leadId: string; activeMem
           );
         })}
       </div>
-
       {allDone && (
         <div className="rounded-lg p-3 text-center" style={{ background: "oklch(0.55 0.18 145 / 10%)", border: "1px solid oklch(0.55 0.18 145 / 25%)" }}>
           <p className="text-sm font-semibold" style={{ color: "oklch(0.55 0.18 145)" }}>🎉 Onboarding Complete</p>
