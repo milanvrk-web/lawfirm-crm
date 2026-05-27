@@ -15,6 +15,11 @@ import {
   formatCurrency, formatDate, getLeadTotalReceived, getLeadFollowUps,
 } from "@/lib/store";
 import { toast } from "sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 import {
   Bell, MessageSquare, FileText, X, Plus, CalendarClock,
   Phone, Edit2, CheckCircle, CheckCircle2, Circle, Clock,
@@ -68,7 +73,7 @@ export default function LeadDetailPanel({
   onConvertLead,
   initialTab = "followups",
 }: LeadDetailPanelProps) {
-  const { leads, payments, followUps: allFollowUps, addFollowUp, updateFollowUp, deleteFollowUp, addFollowUpComment, addLeadNote, updateLead } = useCRM();
+  const { leads, payments, followUps: allFollowUps, addFollowUp, updateFollowUp, deleteFollowUp, addFollowUpComment, addLeadNote, updateLead, addPayment } = useCRM();
 
   const utils = trpc.useUtils();
 
@@ -83,6 +88,8 @@ export default function LeadDetailPanel({
   const [stageDropdownOpen, setStageDropdownOpen] = useState(false);
   const [editingLeadNotes, setEditingLeadNotes] = useState(false);
   const [leadNotesText, setLeadNotesText] = useState("");
+  const [showInlineConvert, setShowInlineConvert] = useState(false);
+  const [inlineConvertForm, setInlineConvertForm] = useState({ retainerBooked: "", downpayment: "", caseNumber: "", notes: "" });
   const stageDropdownRef = useRef<HTMLDivElement>(null);
 
   // Close stage dropdown on outside click
@@ -100,8 +107,48 @@ export default function LeadDetailPanel({
   const handleStageChange = async (newStage: LeadStage) => {
     setStageDropdownOpen(false);
     if (!lead || newStage === lead.stage) return;
+    // Intercept "Retained" — open convert modal instead of direct stage update
+    if (newStage === "Retained") {
+      if (onConvertLead) {
+        onConvertLead(lead);
+      } else {
+        setInlineConvertForm({ retainerBooked: "", downpayment: "", caseNumber: lead.caseNumber || "", notes: "" });
+        setShowInlineConvert(true);
+      }
+      return;
+    }
     await updateLead(lead.id, { stage: newStage });
     toast.success(`Moved to ${newStage}`);
+  };
+
+  const handleInlineConvert = async () => {
+    if (!lead) return;
+    const retainer = parseFloat(inlineConvertForm.retainerBooked) || 0;
+    const dp = parseFloat(inlineConvertForm.downpayment) || 0;
+    if (retainer <= 0) { toast.error("Enter retainer amount"); return; }
+    await updateLead(lead.id, {
+      stage: "Retained",
+      retainerBooked: retainer,
+      downpayment: dp,
+      caseNumber: inlineConvertForm.caseNumber || lead.caseNumber,
+      convertedDate: todayPST(),
+    });
+    if (dp > 0) {
+      await addPayment({
+        date: todayPST(),
+        clientName: lead.name,
+        leadId: lead.id,
+        caseType: lead.caseType,
+        caseNumber: inlineConvertForm.caseNumber || lead.caseNumber,
+        paymentType: "New Client",
+        amount: dp,
+        receivedFor: "Retainer downpayment",
+        notes: inlineConvertForm.notes,
+      });
+    }
+    toast.success(`${lead.name} converted to Retained`);
+    setShowInlineConvert(false);
+    setInlineConvertForm({ retainerBooked: "", downpayment: "", caseNumber: "", notes: "" });
   };
 
   const today = todayPST();
@@ -759,6 +806,67 @@ export default function LeadDetailPanel({
 
         </div>
       </div>
+
+      {/* ── Inline Convert to Retained Modal ── */}
+      <Dialog open={showInlineConvert} onOpenChange={open => { if (!open) setShowInlineConvert(false); }}>
+        <DialogContent style={{ background: "oklch(0.18 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }}>
+          <DialogHeader>
+            <DialogTitle style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.93 0.005 250)" }}>
+              Convert {lead?.name} to Retained
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <div>
+              <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Total Retainer Amount *</Label>
+              <Input
+                type="number"
+                value={inlineConvertForm.retainerBooked}
+                onChange={e => setInlineConvertForm(f => ({ ...f, retainerBooked: e.target.value }))}
+                placeholder="e.g. 9000"
+                style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }}
+              />
+            </div>
+            <div>
+              <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Downpayment Received Today</Label>
+              <Input
+                type="number"
+                value={inlineConvertForm.downpayment}
+                onChange={e => setInlineConvertForm(f => ({ ...f, downpayment: e.target.value }))}
+                placeholder="e.g. 2500"
+                style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }}
+              />
+            </div>
+            <div>
+              <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Case Number</Label>
+              <Input
+                value={inlineConvertForm.caseNumber}
+                onChange={e => setInlineConvertForm(f => ({ ...f, caseNumber: e.target.value }))}
+                placeholder={lead?.caseNumber || "e.g. 512"}
+                style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }}
+              />
+            </div>
+            <div>
+              <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Notes</Label>
+              <Textarea
+                value={inlineConvertForm.notes}
+                onChange={e => setInlineConvertForm(f => ({ ...f, notes: e.target.value }))}
+                placeholder="Optional notes..."
+                rows={2}
+                style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }}
+              />
+            </div>
+          </div>
+          <div className="flex gap-3 mt-4">
+            <Button onClick={handleInlineConvert} style={{ background: "oklch(0.55 0.18 145)", color: "oklch(0.98 0 0)" }}>
+              <CheckCircle className="w-4 h-4 mr-2" /> Confirm Conversion
+            </Button>
+            <Button variant="outline" onClick={() => setShowInlineConvert(false)}
+              style={{ borderColor: "oklch(1 0 0 / 20%)", color: "oklch(0.65 0.01 250)" }}>
+              Cancel
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
