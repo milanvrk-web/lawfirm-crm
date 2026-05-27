@@ -1021,12 +1021,13 @@ function LeadCard({
 
   return (
     <div
-      className="rounded-lg border p-3 transition-all"
+      onClick={onOpenDetail}
+      className="rounded-lg border p-3 transition-all cursor-pointer hover:border-white/20 hover:bg-[oklch(0.21_0.025_250)]"
       style={{
         background: "oklch(0.19 0.025 250)",
         borderColor: isOverdue ? "oklch(0.60 0.22 25 / 60%)" : "oklch(1 0 0 / 8%)",
         borderLeftWidth: "3px",
-        borderLeftColor: isOverdue ? "oklch(0.65 0.22 25)" : "oklch(1 0 0 / 8%)",
+        borderLeftColor: isOverdue ? "oklch(0.65 0.22 25)" : "oklch(0.72 0.12 75 / 40%)",
       }}
     >
       {/* Card header */}
@@ -1034,16 +1035,14 @@ function LeadCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             {/* Clickable name opens detail panel */}
-            <button
-              onClick={onOpenDetail}
-              className="font-medium text-sm hover:underline text-left transition-colors"
+            <span
+              className="font-medium text-sm text-left"
               style={{ color: "oklch(0.93 0.005 250)" }}
-              title="Open lead detail"
             >
               {lead.name}
-            </button>
+            </span>
             {lead.phone && (
-              <a href={`tel:${lead.phone}`} className="flex items-center gap-1 text-xs hover:underline" style={{ color: "oklch(0.65 0.01 250)" }} onClick={e => e.stopPropagation()}>
+              <a href={`tel:${lead.phone}`} className="flex items-center gap-1 text-xs hover:underline" style={{ color: "oklch(0.65 0.01 250)" }} onClick={e => { e.stopPropagation(); }}>
                 <Phone className="w-3 h-3" />{lead.phone}
               </a>
             )}
@@ -1059,18 +1058,16 @@ function LeadCard({
             )}
           </div>
         </div>
-        {/* Open detail panel button */}
-        <button
-          onClick={onOpenDetail}
-          className="flex items-center gap-1 text-xs px-2 py-1 rounded transition-colors hover:bg-white/8 relative flex-shrink-0"
-          style={{ color: "oklch(0.72 0.12 75)", border: "1px solid oklch(0.72 0.12 75 / 25%)" }}
-          title="Open detail panel"
+        {/* Follow-up badge — click anywhere on card opens detail */}
+        <div
+          className="flex items-center gap-1 text-xs px-2 py-1 rounded flex-shrink-0"
+          style={{ color: pendingCount > 0 ? "oklch(0.72 0.12 75)" : "oklch(0.45 0.01 250)", border: `1px solid ${pendingCount > 0 ? "oklch(0.72 0.12 75 / 35%)" : "oklch(1 0 0 / 8%)"}` }}
         >
           <Bell className="w-3 h-3" />
           {pendingCount > 0 && (
             <span className="font-bold" style={{ fontSize: "10px" }}>{pendingCount}</span>
           )}
-        </button>
+        </div>
       </div>
 
       {/* ── Checklist Progress Bar (visible on all cards with stage templates) ── */}
@@ -1128,7 +1125,7 @@ function LeadCard({
               <button
                 className="text-xs flex-shrink-0 font-medium flex items-center gap-0.5 px-1 py-0.5 rounded hover:bg-white/10 group transition-colors"
                 style={{ color: dueInfo!.color }}
-                onClick={() => setEditingDueDate(true)}
+                onClick={e => { e.stopPropagation(); setEditingDueDate(true); }}
                 title="Click to change due date"
               >
                 {dueInfo!.label}
@@ -1139,7 +1136,7 @@ function LeadCard({
           {/* One-tap Done / Snooze */}
           <div className="flex items-center gap-1 flex-shrink-0">
             <button
-              onClick={() => onMarkDone(nextFU)}
+              onClick={e => { e.stopPropagation(); onMarkDone(nextFU); }}
               className="flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded transition-colors hover:opacity-90"
               style={{ background: "oklch(0.55 0.18 145 / 20%)", color: "oklch(0.55 0.18 145)", border: "1px solid oklch(0.55 0.18 145 / 30%)" }}
               title="Mark done"
@@ -1147,7 +1144,7 @@ function LeadCard({
               <CheckCheck className="w-3 h-3" />
             </button>
             <button
-              onClick={() => onSnooze(nextFU)}
+              onClick={e => { e.stopPropagation(); onSnooze(nextFU); }}
               className="flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded transition-colors hover:opacity-90"
               style={{ background: "oklch(0.55 0.18 250 / 20%)", color: "oklch(0.65 0.12 250)", border: "1px solid oklch(0.55 0.18 250 / 30%)" }}
               title="Snooze to tomorrow"
@@ -1227,7 +1224,7 @@ function LeadCard({
               return (
                 <button
                   key={t.id}
-                  onClick={() => handleToggleCompletion(t.id)}
+                  onClick={e => { e.stopPropagation(); handleToggleCompletion(t.id); }}
                   className="w-full flex items-center gap-2 text-left transition-opacity hover:opacity-80"
                   disabled={toggleCompletionMut.isPending}
                 >
@@ -1267,7 +1264,7 @@ function LeadCard({
               return (
                 <button
                   key={key}
-                  onClick={() => handleToggleStep(key)}
+                  onClick={e => { e.stopPropagation(); handleToggleStep(key); }}
                   className="w-full flex items-center gap-2 text-left transition-opacity hover:opacity-80"
                   disabled={toggleStepMut.isPending}
                 >
@@ -1304,15 +1301,15 @@ function LeadCard({
       {/* Action row */}
       <div className="flex items-center gap-2 mt-2.5">
         {lead.stage !== "Retained" && lead.stage !== "Lost" && (
-          <button onClick={onConvert} className="flex items-center gap-1 text-xs px-2 py-1 rounded font-medium transition-colors"
+          <button onClick={e => { e.stopPropagation(); onConvert(); }} className="flex items-center gap-1 text-xs px-2 py-1 rounded font-medium transition-colors"
             style={{ background: "oklch(0.55 0.18 145 / 15%)", color: "oklch(0.55 0.18 145)", border: "1px solid oklch(0.55 0.18 145 / 30%)" }}>
             <CheckCircle className="w-3 h-3" /> Convert
           </button>
         )}
-        <button onClick={onEdit} className="p-1.5 rounded transition-colors hover:bg-white/8" title="Edit lead" style={{ color: "oklch(0.72 0.12 75)" }}>
+        <button onClick={e => { e.stopPropagation(); onEdit(); }} className="p-1.5 rounded transition-colors hover:bg-white/8" title="Edit lead" style={{ color: "oklch(0.72 0.12 75)" }}>
           <Edit2 className="w-3.5 h-3.5" />
         </button>
-        <button onClick={onDelete} className="p-1.5 rounded transition-colors hover:bg-red-500/10" title="Delete lead" style={{ color: "oklch(0.65 0.18 25)" }}>
+        <button onClick={e => { e.stopPropagation(); onDelete(); }} className="p-1.5 rounded transition-colors hover:bg-red-500/10" title="Delete lead" style={{ color: "oklch(0.65 0.18 25)" }}>
           <Trash2 className="w-3.5 h-3.5" />
         </button>
       </div>
