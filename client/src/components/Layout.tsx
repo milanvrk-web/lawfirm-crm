@@ -110,11 +110,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     setSearchQuery("");
   }, [navigate]);
 
-  // ── Follow-up urgency badge ───────────────────────────────
+  // ── Follow-up urgency badge (uses followUpDate on leads) ───
   const urgentCount = useMemo(() => {
     const today = todayPST();
-    return followUps.filter(f => f.status === "Pending" && (f.dueDate === today || f.dueDate < today)).length;
-  }, [followUps]);
+    return leads.filter(l => l.followUpDate && l.followUpDate <= today).length;
+  }, [leads]);
 
   // Count leads with no follow-up activity in 7+ days (escalation)
   const stalePipelineCount = useMemo(() => {

@@ -1,0 +1,46 @@
+{
+  "query": "\nSELECT 'leads' as tbl, COUNT(*) as cnt FROM leads\nUNION ALL SELECT 'payments', COUNT(*) FROM payments\nUNION ALL SELECT 'follow_ups', COUNT(*) FROM follow_ups\nUNION ALL SELECT 'lead_notes', COUNT(*) FROM lead_notes\nUNION ALL SELECT 'crm_members', COUNT(*) FROM crm_members\nUNION ALL SELECT 'pipeline_stages', COUNT(*) FROM pipeline_stages\nUNION ALL SELECT 'onboarding_checklist', COUNT(*) FROM onboarding_checklist\nUNION ALL SELECT 'installment_plans', COUNT(*) FROM installment_plans\nUNION ALL SELECT 'day_closes', COUNT(*) FROM day_closes;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute \nSELECT 'leads' as tbl, COUNT(*) as cnt FROM leads\nUNION ALL SELECT 'payments', COUNT(*) FROM payments\nUNION ALL SELECT 'follow_ups', COUNT(*) FROM follow_ups\nUNION ALL SELECT 'lead_notes', COUNT(*) FROM lead_notes\nUNION ALL SELECT 'crm_members', COUNT(*) FROM crm_members\nUNION ALL SELECT 'pipeline_stages', COUNT(*) FROM pipeline_stages\nUNION ALL SELECT 'onboarding_checklist', COUNT(*) FROM onboarding_checklist\nUNION ALL SELECT 'installment_plans', COUNT(*) FROM installment_plans\nUNION ALL SELECT 'day_closes', COUNT(*) FROM day_closes;\n",
+  "rows": [
+    {
+      "tbl": "lead_notes",
+      "cnt": "11"
+    },
+    {
+      "tbl": "follow_ups",
+      "cnt": "13"
+    },
+    {
+      "tbl": "payments",
+      "cnt": "53"
+    },
+    {
+      "tbl": "crm_members",
+      "cnt": "3"
+    },
+    {
+      "tbl": "leads",
+      "cnt": "21"
+    },
+    {
+      "tbl": "pipeline_stages",
+      "cnt": "6"
+    },
+    {
+      "tbl": "onboarding_checklist",
+      "cnt": "4"
+    },
+    {
+      "tbl": "day_closes",
+      "cnt": "6"
+    },
+    {
+      "tbl": "installment_plans",
+      "cnt": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "tbl\tcnt\nlead_notes\t11\nfollow_ups\t13\npayments\t53\ncrm_members\t3\nleads\t21\npipeline_stages\t6\nonboarding_checklist\t4\nday_closes\t6\ninstallment_plans\t0\n",
+  "stderr": "",
+  "execution_time_ms": 293
+}

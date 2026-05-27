@@ -1,0 +1,8 @@
+{
+  "query": "\nSELECT 'leads' as tbl, COUNT(*) as cnt FROM leads\nUNION ALL SELECT 'payments', COUNT(*) FROM payments\nUNION ALL SELECT 'follow_ups', COUNT(*) FROM follow_ups\nUNION ALL SELECT 'lead_notes', COUNT(*) FROM lead_notes\nUNION ALL SELECT 'team_members', COUNT(*) FROM team_members\nUNION ALL SELECT 'pipeline_stages', COUNT(*) FROM pipeline_stages\nUNION ALL SELECT 'onboarding_checklists', COUNT(*) FROM onboarding_checklists;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute \nSELECT 'leads' as tbl, COUNT(*) as cnt FROM leads\nUNION ALL SELECT 'payments', COUNT(*) FROM payments\nUNION ALL SELECT 'follow_ups', COUNT(*) FROM follow_ups\nUNION ALL SELECT 'lead_notes', COUNT(*) FROM lead_notes\nUNION ALL SELECT 'team_members', COUNT(*) FROM team_members\nUNION ALL SELECT 'pipeline_stages', COUNT(*) FROM pipeline_stages\nUNION ALL SELECT 'onboarding_checklists', COUNT(*) FROM onboarding_checklists;\n",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1146 (42S02) at line 2: Table '4rzsaze476y7zwabxnfwj2.team_members' doesn't exist"
+  ]
+}
