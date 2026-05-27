@@ -143,21 +143,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         }}
       >
         {/* Logo */}
-        <div className="flex items-center gap-3 px-6 py-5 border-b" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
-          <div
-            className="flex items-center justify-center w-9 h-9 rounded-lg"
-            style={{ background: "oklch(0.72 0.12 75)" }}
-          >
-            <Scale className="w-5 h-5" style={{ color: "oklch(0.13 0.025 250)" }} />
-          </div>
-          <div>
-            <div className="text-sm font-bold tracking-wide" style={{ color: "oklch(0.93 0.005 250)", fontFamily: "'Playfair Display', serif" }}>
-              Graham Immigration Law, PC
-            </div>
-            <div className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>Leads · Payments · Revenue</div>
-          </div>
+        <div className="flex items-center justify-between px-4 py-4 border-b" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
+          <img
+            src="/manus-storage/graham-logo_86d1eaea.png"
+            alt="Graham Immigration Law, P.C."
+            className="h-12 w-auto object-contain"
+          />
           <button
-            className="ml-auto lg:hidden"
+            className="ml-2 lg:hidden"
             onClick={() => setMobileOpen(false)}
             style={{ color: "oklch(0.55 0.01 250)" }}
           >
@@ -322,12 +315,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <button onClick={() => setMobileOpen(true)} style={{ color: "oklch(0.65 0.01 250)" }}>
             <Menu className="w-5 h-5" />
           </button>
-          <div className="flex items-center gap-2">
-            <Scale className="w-4 h-4" style={{ color: "oklch(0.72 0.12 75)" }} />
-            <span className="text-sm font-semibold" style={{ color: "oklch(0.93 0.005 250)", fontFamily: "'Playfair Display', serif" }}>
-              Graham Immigration Law, PC
-            </span>
-          </div>
+          <img
+            src="/manus-storage/graham-logo_86d1eaea.png"
+            alt="Graham Immigration Law, P.C."
+            className="h-8 w-auto object-contain"
+          />
           {/* Mobile search trigger */}
           <button
             onClick={() => setSearchOpen(true)}
