@@ -40,8 +40,164 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import {
   FileText, X, Phone, Edit2, CheckCircle, CheckCircle2, Circle,
-  Check, ChevronDown, CreditCard, MessageSquare, Trash2, Plus, Calendar,
+  Check, ChevronDown, CreditCard, MessageSquare, Trash2, Plus, Calendar, CheckCheck,
 } from "lucide-react";
+
+// ── CompleteFollowUpModal ──────────────────────────────────
+function CompleteFollowUpModal({
+  lead,
+  onConfirm,
+  onCancel,
+}: {
+  lead: Lead;
+  onConfirm: (note: string, nextDate: string) => void;
+  onCancel: () => void;
+}) {
+  const [note, setNote] = useState("");
+  const [nextDate, setNextDate] = useState("");
+  const today = todayPST();
+  const canSubmit = note.trim().length > 0 && nextDate.length > 0;
+
+  const getQuickDate = (days: number) => {
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    return d.toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
+  };
+
+  const QUICK_PICKS = [
+    { label: "Tomorrow", days: 1 },
+    { label: "3 Days",   days: 3 },
+    { label: "1 Week",   days: 7 },
+    { label: "2 Weeks",  days: 14 },
+    { label: "1 Month",  days: 30 },
+    { label: "2 Months", days: 60 },
+  ];
+
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+      style={{ background: "oklch(0 0 0 / 70%)" }}
+      onClick={onCancel}
+    >
+      <div
+        className="w-full max-w-md rounded-2xl shadow-2xl p-5 space-y-4"
+        style={{ background: "oklch(0.18 0.025 250)", border: "1px solid oklch(1 0 0 / 14%)" }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <CheckCheck className="w-4 h-4" style={{ color: "oklch(0.55 0.18 145)" }} />
+              <h2 className="text-sm font-bold" style={{ color: "oklch(0.93 0.005 250)", fontFamily: "'Playfair Display', serif" }}>
+                Complete Follow-Up
+              </h2>
+            </div>
+            <p className="text-xs mt-0.5" style={{ color: "oklch(0.55 0.01 250)" }}>
+              {lead.name} · {lead.caseType}
+            </p>
+          </div>
+          <button onClick={onCancel} className="p-1 rounded hover:bg-white/8 transition-colors" style={{ color: "oklch(0.45 0.01 250)" }}>
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Field 1: Closing note (mandatory) */}
+        <div>
+          <label className="text-xs font-semibold block mb-1.5" style={{ color: "oklch(0.72 0.12 75)" }}>
+            What happened? <span style={{ color: "oklch(0.70 0.22 25)" }}>*</span>
+          </label>
+          <textarea
+            autoFocus
+            rows={3}
+            placeholder='e.g. "Spoke with client — sending retainer agreement", "No answer, left voicemail"'
+            value={note}
+            onChange={e => setNote(e.target.value)}
+            className="w-full rounded-lg px-3 py-2 text-xs resize-none outline-none"
+            style={{
+              background: "oklch(0.22 0.025 250)",
+              border: `1px solid ${note.trim() ? "oklch(0.55 0.18 145 / 40%)" : "oklch(1 0 0 / 12%)"}`,
+              color: "oklch(0.90 0.005 250)",
+            }}
+          />
+          {!note.trim() && (
+            <p className="text-[10px] mt-1" style={{ color: "oklch(0.50 0.01 250)" }}>Required — describe what happened in this follow-up</p>
+          )}
+        </div>
+
+        {/* Field 2: Next follow-up date (mandatory) */}
+        <div>
+          <label className="text-xs font-semibold block mb-1.5" style={{ color: "oklch(0.72 0.12 75)" }}>
+            Next follow-up date <span style={{ color: "oklch(0.70 0.22 25)" }}>*</span>
+          </label>
+          <div className="grid grid-cols-3 gap-1.5 mb-2">
+            {QUICK_PICKS.map(({ label, days }) => {
+              const val = getQuickDate(days);
+              const isSelected = nextDate === val;
+              return (
+                <button
+                  key={label}
+                  onClick={() => setNextDate(val)}
+                  className="text-[11px] px-2 py-1.5 rounded-lg font-medium transition-all"
+                  style={{
+                    background: isSelected ? "oklch(0.72 0.12 75 / 20%)" : "oklch(0.25 0.025 250)",
+                    color: isSelected ? "oklch(0.72 0.12 75)" : "oklch(0.60 0.01 250)",
+                    border: `1px solid ${isSelected ? "oklch(0.72 0.12 75 / 50%)" : "oklch(1 0 0 / 8%)"}`,
+                  }}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+          <input
+            type="date"
+            value={nextDate}
+            min={today}
+            onChange={e => setNextDate(e.target.value)}
+            className="w-full rounded-lg px-3 py-2 text-xs outline-none"
+            style={{
+              background: "oklch(0.22 0.025 250)",
+              border: `1px solid ${nextDate ? "oklch(0.55 0.18 145 / 40%)" : "oklch(1 0 0 / 12%)"}`,
+              color: "oklch(0.90 0.005 250)",
+              colorScheme: "dark",
+            }}
+          />
+          {!nextDate && (
+            <p className="text-[10px] mt-1" style={{ color: "oklch(0.50 0.01 250)" }}>Required — set when to follow up next</p>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2 pt-1">
+          <button
+            onClick={() => canSubmit && onConfirm(note.trim(), nextDate)}
+            disabled={!canSubmit}
+            className="flex-1 py-2 rounded-xl text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{
+              background: canSubmit ? "oklch(0.55 0.18 145)" : "oklch(0.30 0.025 250)",
+              color: canSubmit ? "oklch(0.13 0.025 250)" : "oklch(0.45 0.01 250)",
+            }}
+          >
+            Complete &amp; Set Next Date
+          </button>
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 rounded-xl text-sm transition-colors"
+            style={{ background: "oklch(0.25 0.025 250)", color: "oklch(0.55 0.01 250)" }}
+          >
+            Cancel
+          </button>
+        </div>
+        {!canSubmit && (
+          <p className="text-[10px] text-center" style={{ color: "oklch(0.45 0.01 250)" }}>
+            Both fields are required to complete this follow-up
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
 
 // ── Helpers ────────────────────────────────────────────────
 const ALL_STAGES: LeadStage[] = ["New Lead", "Consultation", "Follow-Up", "Retained", "Onboarding", "Lost"];
@@ -94,6 +250,7 @@ export default function LeadDetailPanel({
   const [activityComment, setActivityComment] = useState("");
   const [showFollowUpDatePicker, setShowFollowUpDatePicker] = useState(false);
   const [followUpDateInput, setFollowUpDateInput] = useState("");
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
   const followUpDatePickerRef = useRef<HTMLDivElement>(null);
 
   // Close follow-up date picker on outside click
@@ -209,6 +366,22 @@ export default function LeadDetailPanel({
     setShowFollowUpDatePicker(false);
     if (date) toast.success(`Follow-up set for ${formatDate(date)}`);
     else toast.success("Follow-up date cleared");
+  };
+
+  const handleCompleteFollowUp = async (note: string, nextDate: string) => {
+    setShowCompleteModal(false);
+    const completedOn = new Date().toLocaleDateString("en-US", {
+      timeZone: "America/Los_Angeles", month: "short", day: "numeric", year: "numeric",
+    });
+    const memberSuffix = activeMember ? ` by ${activeMember.name}` : "";
+    // 1. Save the closing note
+    await addLeadNote(lead.id, note, activeMember?.name ?? undefined);
+    // 2. Auto-log the completion entry
+    await addLeadNote(lead.id, `✓ Follow-up completed on ${completedOn}${memberSuffix}`, activeMember?.name ?? undefined);
+    // 3. Set the next follow-up date
+    await setLeadFollowUpDate(lead.id, nextDate);
+    refetchNotes();
+    toast.success(`Follow-up done · Next: ${formatDate(nextDate)}`);
   };
 
   // ── Render ─────────────────────────────────────────────────
@@ -521,14 +694,31 @@ export default function LeadDetailPanel({
 
             {/* Follow-Up Date row */}
             <div
-              className="flex items-center justify-between rounded-lg px-3 py-2.5 mb-3"
+              className="rounded-lg px-3 py-2.5 mb-3"
               style={{ background: "oklch(0.18 0.025 250)", border: "1px solid oklch(1 0 0 / 8%)" }}
             >
-              <div className="flex items-center gap-2">
-                <Calendar className="w-3.5 h-3.5" style={{ color: "oklch(0.72 0.12 75)" }} />
-                <span className="text-xs font-semibold" style={{ color: "oklch(0.72 0.12 75)" }}>Follow-Up Date</span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-3.5 h-3.5" style={{ color: "oklch(0.72 0.12 75)" }} />
+                  <span className="text-xs font-semibold" style={{ color: "oklch(0.72 0.12 75)" }}>Follow-Up Date</span>
+                </div>
+                {lead.followUpDate && (
+                  <button
+                    onClick={() => setShowCompleteModal(true)}
+                    className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg font-semibold transition-all hover:opacity-90"
+                    style={{
+                      background: "oklch(0.55 0.18 145 / 15%)",
+                      color: "oklch(0.65 0.18 145)",
+                      border: "1px solid oklch(0.55 0.18 145 / 35%)",
+                    }}
+                    title="Mark follow-up as done and set next date"
+                  >
+                    <CheckCheck className="w-3 h-3" />
+                    Done
+                  </button>
+                )}
               </div>
-              <div ref={followUpDatePickerRef} className="relative flex items-center gap-2">
+              <div ref={followUpDatePickerRef} className="relative flex items-center gap-2 mt-2">
                 <button
                   onClick={() => { setFollowUpDateInput(lead.followUpDate ?? ""); setShowFollowUpDatePicker(p => !p); }}
                   className="text-xs px-2.5 py-1 rounded hover:opacity-80 transition-opacity"
@@ -829,11 +1019,20 @@ export default function LeadDetailPanel({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Complete Follow-Up Modal */}
+      {showCompleteModal && lead && (
+        <CompleteFollowUpModal
+          lead={lead}
+          onConfirm={handleCompleteFollowUp}
+          onCancel={() => setShowCompleteModal(false)}
+        />
+      )}
     </>
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────────
 // ActivityCard — renders one follow-up with its comments + quick comment input
 // ─────────────────────────────────────────────────────────────────────────────
 function ActivityCard({
