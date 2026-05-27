@@ -297,3 +297,12 @@
 - [x] Rename app title to "Graham Immigration Law, PC"
 - [x] Update subtitle to "Leads · Payments · Revenue"
 - [x] Set PST (America/Los_Angeles) as default timezone for all date/time display throughout the app
+
+## LeadDetailPanel Redesign
+
+- [x] Remove tab navigation from LeadDetailPanel
+- [x] Add Case Notes section at top (always visible, inline editable)
+- [x] Add Follow-Ups & Activity section below notes (always visible)
+- [x] Add collapsible Client Info section (collapsed by default)
+- [x] Add collapsible Payment Plans section (collapsed by default)
+- [x] Add collapsible Onboarding Checklist section (only for Onboarding stage, expanded by default)

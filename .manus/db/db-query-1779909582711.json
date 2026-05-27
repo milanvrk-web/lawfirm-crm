@@ -1,0 +1,86 @@
+{
+  "query": "SELECT caseType, COUNT(*) as cnt FROM leads GROUP BY caseType ORDER BY cnt DESC LIMIT 10; SELECT receivedFor, COUNT(*) as cnt FROM payments GROUP BY receivedFor ORDER BY cnt DESC LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute SELECT caseType, COUNT(*) as cnt FROM leads GROUP BY caseType ORDER BY cnt DESC LIMIT 10; SELECT receivedFor, COUNT(*) as cnt FROM payments GROUP BY receivedFor ORDER BY cnt DESC LIMIT 10;",
+  "rows": [
+    {
+      "caseType": "DA",
+      "cnt": "11"
+    },
+    {
+      "caseType": "Other",
+      "cnt": "3"
+    },
+    {
+      "caseType": "SIJS",
+      "cnt": "2"
+    },
+    {
+      "caseType": "AOS",
+      "cnt": "1"
+    },
+    {
+      "caseType": "I-130",
+      "cnt": "1"
+    },
+    {
+      "caseType": "U-Visa",
+      "cnt": "1"
+    },
+    {
+      "caseType": "AO",
+      "cnt": "1"
+    },
+    {
+      "caseType": "Asylum",
+      "cnt": "1"
+    },
+    {
+      "caseType": "receivedFor",
+      "cnt": "cnt"
+    },
+    {
+      "caseType": "Retainer downpayment",
+      "cnt": "8"
+    },
+    {
+      "caseType": "Additional docs filing",
+      "cnt": "3"
+    },
+    {
+      "caseType": "Declaration review",
+      "cnt": "2"
+    },
+    {
+      "caseType": "N-400",
+      "cnt": "2"
+    },
+    {
+      "caseType": "I-589 updates and ID's,",
+      "cnt": "1"
+    },
+    {
+      "caseType": "SIJS court step",
+      "cnt": "1"
+    },
+    {
+      "caseType": "SIJS court hearing",
+      "cnt": "1"
+    },
+    {
+      "caseType": "$1000 is our payment and $560 is filing fee for work permit process",
+      "cnt": "1"
+    },
+    {
+      "caseType": "Filing second filing of her case",
+      "cnt": "1"
+    },
+    {
+      "caseType": "Additional filing",
+      "cnt": "1"
+    }
+  ],
+  "messages": [],
+  "stdout": "caseType\tcnt\nDA\t11\nOther\t3\nSIJS\t2\nAOS\t1\nI-130\t1\nU-Visa\t1\nAO\t1\nAsylum\t1\nreceivedFor\tcnt\nRetainer downpayment\t8\nAdditional docs filing\t3\nDeclaration review\t2\nN-400\t2\nI-589 updates and ID's,\t1\nSIJS court step\t1\nSIJS court hearing\t1\n$1000 is our payment and $560 is filing fee for work permit process\t1\nFiling second filing of her case\t1\nAdditional filing\t1\n",
+  "stderr": "",
+  "execution_time_ms": 292
+}
