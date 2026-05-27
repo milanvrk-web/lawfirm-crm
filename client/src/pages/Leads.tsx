@@ -19,7 +19,7 @@ import {
 import { toast } from "sonner";
 import {
   Plus, Phone,
-  Edit2, Trash2, CheckCircle, Search, Filter, Bell, Clock,
+  Edit2, Trash2, CheckCircle, Search, Filter, Clock,
   MessageSquare, CheckCheck, AlertCircle, X,
   CalendarClock, FileText, Circle, CheckCircle2,
   ChevronLeft, ChevronRight, Settings2, GripVertical
@@ -1028,17 +1028,8 @@ function LeadCard({
   const outstanding = lead.retainerBooked > 0 ? lead.retainerBooked - totalReceived : 0;
   const pct = lead.retainerBooked > 0 ? Math.min(100, (totalReceived / lead.retainerBooked) * 100) : 0;
   const paidFull = lead.retainerBooked > 0 && totalReceived >= lead.retainerBooked;
-  const leadFollowUps = allFollowUps.filter(f => f.leadId === lead.id);
-  const nextFU = getNextFollowUp(leadFollowUps);
-  const pendingCount = leadFollowUps.filter(f => f.status === "Pending").length;
-  // Last contacted = most recent Done follow-up's dueDate
-  const lastContactedDate = leadFollowUps
-    .filter(f => f.status === "Done")
-    .map(f => f.dueDate)
-    .sort()
-    .at(-1) ?? null;
-  const dueInfo = nextFU ? dueDateLabel(nextFU.dueDate) : null;
-  const isOverdue = dueInfo?.isOverdue ?? false;
+  // isOverdue: follow-up date is set and is in the past
+  const isOverdue = !!lead.followUpDate && lead.followUpDate < todayPST();
 
   return (
     <div
@@ -1077,12 +1068,7 @@ function LeadCard({
                 {lead.lostReason}
               </span>
             )}
-            {lastContactedDate && (
-              <span className="text-xs flex items-center gap-1" style={{ color: "oklch(0.50 0.01 250)" }}>
-                <span>Last contacted:</span>
-                <span style={{ color: "oklch(0.65 0.12 200)" }}>{new Date(`${lastContactedDate}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "America/Los_Angeles" })}</span>
-              </span>
-            )}
+
             {lead.notes && (
               <span className="text-xs italic truncate max-w-[180px]" style={{ color: "oklch(0.45 0.01 250)" }} title={lead.notes}>
                 {lead.notes.length > 60 ? lead.notes.slice(0, 60) + "…" : lead.notes}
@@ -1090,16 +1076,7 @@ function LeadCard({
             )}
           </div>
         </div>
-        {/* Follow-up badge — click anywhere on card opens detail */}
-        <div
-          className="flex items-center gap-1 text-xs px-2 py-1 rounded flex-shrink-0"
-          style={{ color: pendingCount > 0 ? "oklch(0.72 0.12 75)" : "oklch(0.45 0.01 250)", border: `1px solid ${pendingCount > 0 ? "oklch(0.72 0.12 75 / 35%)" : "oklch(1 0 0 / 8%)"}` }}
-        >
-          <Bell className="w-3 h-3" />
-          {pendingCount > 0 && (
-            <span className="font-bold" style={{ fontSize: "10px" }}>{pendingCount}</span>
-          )}
-        </div>
+
       </div>
 
       {/* ── Checklist Progress Bar (visible on all cards with stage templates) ── */}
