@@ -95,7 +95,7 @@ function LeadAgeBadge({ dateStr }: { dateStr: string }) {
 
 // ── Main Component ─────────────────────────────────────────
 export default function Leads() {
-  const { leads, payments, followUps, addLead, updateLead, deleteLead, addPayment, updateFollowUp, addFollowUp } = useCRM();
+  const { leads, payments, followUps, addLead, updateLead, deleteLead, addPayment, updateFollowUp, addFollowUp, setLeadFollowUpDate } = useCRM();
   const { activeMember } = useActiveMember();
   const [showAdd, setShowAdd] = useState(false);
   const [editLead, setEditLead] = useState<Lead | null>(null);
@@ -671,6 +671,7 @@ export default function Leads() {
                       onMarkDone={handleMarkDone}
                       onSnooze={handleSnooze}
                       onReschedule={handleReschedule}
+                      onSetFollowUpDate={(date) => setLeadFollowUpDate(lead.id, date)}
                     />
                   </div>
                 ))}
@@ -943,7 +944,7 @@ export default function Leads() {
 type ChecklistTemplate = { id: string; stageId: string; label: string; description: string | null; order: number; createdAt: Date; };
 
 function LeadCard({
-  lead, stageTemplates = [], stageColor: cardStageColor, onOpenDetail, onEdit, onDelete, onConvert, onMarkDone, onSnooze, onReschedule,
+  lead, stageTemplates = [], stageColor: cardStageColor, onOpenDetail, onEdit, onDelete, onConvert, onMarkDone, onSnooze, onReschedule, onSetFollowUpDate,
 }: {
   lead: Lead;
   stageTemplates?: ChecklistTemplate[];
@@ -955,6 +956,7 @@ function LeadCard({
   onMarkDone: (fu: FollowUp) => void;
   onSnooze: (fu: FollowUp) => void;
   onReschedule: (fu: FollowUp, newDate: string) => void;
+  onSetFollowUpDate: (date: string | null) => void;
 }) {
   const [editingDueDate, setEditingDueDate] = useState(false);
   const { payments: allPayments, followUps: allFollowUps } = useCRM();
@@ -1172,37 +1174,35 @@ function LeadCard({
         </div>
       )}
 
-      {/* ── Follow-Up Date Picker (Follow-Up stage only) ── */}
-      {lead.stage === "Follow-Up" && (
-        <div className="mt-2 flex items-center gap-2">
-          <CalendarClock className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "oklch(0.65 0.20 300)" }} />
-          <span className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>Follow-up date:</span>
-          <input
-            type="date"
-            value={nextFU?.dueDate ?? ""}
-            min={todayPST()}
-            onChange={e => {
-              const newDate = e.target.value;
-              if (!newDate) return;
-              if (nextFU) {
-                onReschedule(nextFU, newDate);
-              }
-            }}
-            onClick={e => e.stopPropagation()}
-            className="text-xs px-2 py-0.5 rounded border"
-            style={{
-              background: "oklch(0.22 0.025 250)",
-              borderColor: "oklch(0.65 0.20 300 / 40%)",
-              color: "oklch(0.80 0.005 250)",
-              colorScheme: "dark",
-              outline: "none",
-            }}
-          />
-          {!nextFU && (
-            <span className="text-xs italic" style={{ color: "oklch(0.45 0.01 250)" }}>task pending…</span>
-          )}
-        </div>
-      )}
+      {/* ── Follow-Up Date (all stages — uses lead.followUpDate) ── */}
+      <div className="mt-2 flex items-center gap-2" onClick={e => e.stopPropagation()}>
+        <CalendarClock className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "oklch(0.65 0.20 300)" }} />
+        <span className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>Follow-up:</span>
+        <input
+          type="date"
+          value={lead.followUpDate ?? ""}
+          onChange={e => {
+            const newDate = e.target.value;
+            onSetFollowUpDate(newDate || null);
+          }}
+          className="text-xs px-2 py-0.5 rounded border"
+          style={{
+            background: "oklch(0.22 0.025 250)",
+            borderColor: lead.followUpDate ? "oklch(0.65 0.20 300 / 60%)" : "oklch(0.65 0.20 300 / 30%)",
+            color: lead.followUpDate ? "oklch(0.85 0.005 250)" : "oklch(0.50 0.01 250)",
+            colorScheme: "dark",
+            outline: "none",
+          }}
+        />
+        {lead.followUpDate && (
+          <button
+            onClick={e => { e.stopPropagation(); onSetFollowUpDate(null); }}
+            className="text-xs hover:opacity-70"
+            style={{ color: "oklch(0.50 0.01 250)" }}
+            title="Clear follow-up date"
+          >✕</button>
+        )}
+      </div>
 
       {/* Consultation fee + quoted amount (Consultation / Follow-Up stages) */}
       {(lead.stage === "Consultation" || lead.stage === "Follow-Up") && (

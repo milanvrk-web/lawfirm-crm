@@ -1,0 +1,13 @@
+{
+  "query": "\nUPDATE leads l\nJOIN (\n  SELECT leadId, MIN(dueDate) as earliest_due\n  FROM follow_ups\n  WHERE status = 'Pending'\n  GROUP BY leadId\n) f ON l.id = f.leadId\nSET l.followUpDate = f.earliest_due\nWHERE l.followUpDate IS NULL;\n\nSELECT COUNT(*) as migrated FROM leads WHERE followUpDate IS NOT NULL;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute \nUPDATE leads l\nJOIN (\n  SELECT leadId, MIN(dueDate) as earliest_due\n  FROM follow_ups\n  WHERE status = 'Pending'\n  GROUP BY leadId\n) f ON l.id = f.leadId\nSET l.followUpDate = f.earliest_due\nWHERE l.followUpDate IS NULL;\n\nSELECT COUNT(*) as migrated FROM leads WHERE followUpDate IS NOT NULL;\n",
+  "rows": [
+    {
+      "migrated": "3"
+    }
+  ],
+  "messages": [],
+  "stdout": "migrated\n3\n",
+  "stderr": "",
+  "execution_time_ms": 290
+}

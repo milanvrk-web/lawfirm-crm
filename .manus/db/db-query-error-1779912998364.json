@@ -1,0 +1,10 @@
+{
+  "query": "\nSELECT COUNT(*) as total_followups FROM follow_ups;\nSELECT COUNT(*) as leads_with_followup_date FROM leads WHERE follow_up_date IS NOT NULL;\nSELECT f.id, f.lead_id, f.due_date, f.status, f.title, l.name as lead_name FROM follow_ups f JOIN leads l ON f.lead_id = l.id WHERE f.status = 'Pending' LIMIT 10;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute \nSELECT COUNT(*) as total_followups FROM follow_ups;\nSELECT COUNT(*) as leads_with_followup_date FROM leads WHERE follow_up_date IS NOT NULL;\nSELECT f.id, f.lead_id, f.due_date, f.status, f.title, l.name as lead_name FROM follow_ups f JOIN leads l ON f.lead_id = l.id WHERE f.status = 'Pending' LIMIT 10;\n",
+  "returncode": 1,
+  "logs": [
+    "total_followups",
+    "13",
+    "ERROR 1054 (42S22) at line 3: Unknown column 'follow_up_date' in 'where clause'"
+  ]
+}

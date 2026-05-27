@@ -1,0 +1,18 @@
+{
+  "query": "SHOW COLUMNS FROM leads LIKE '%follow%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute SHOW COLUMNS FROM leads LIKE '%follow%';",
+  "rows": [
+    {
+      "Field": "followUpDate",
+      "Type": "varchar(10)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    }
+  ],
+  "messages": [],
+  "stdout": "Field\tType\tNull\tKey\tDefault\tExtra\nfollowUpDate\tvarchar(10)\tYES\t\tNULL\t\n",
+  "stderr": "",
+  "execution_time_ms": 265
+}

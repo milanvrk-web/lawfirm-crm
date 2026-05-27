@@ -1,0 +1,28 @@
+{
+  "query": "SELECT l.id, l.name, l.followUpDate, l.stage FROM leads l WHERE l.followUpDate IS NOT NULL ORDER BY l.followUpDate;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute SELECT l.id, l.name, l.followUpDate, l.stage FROM leads l WHERE l.followUpDate IS NOT NULL ORDER BY l.followUpDate;",
+  "rows": [
+    {
+      "id": "5luMdYbvZwtCMmtH_sdDv",
+      "name": "Isamary Perez Tovar",
+      "followUpDate": "2026-05-28",
+      "stage": "Follow-Up"
+    },
+    {
+      "id": "RsD9_-8N_ccc2mGAZOXJx",
+      "name": "Milan Preet Singh",
+      "followUpDate": "2026-05-28",
+      "stage": "Follow-Up"
+    },
+    {
+      "id": "xaWqfnS6ZBTRCnChX0mBj",
+      "name": "Balwant singh",
+      "followUpDate": "2026-05-28",
+      "stage": "New Lead"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tfollowUpDate\tstage\n5luMdYbvZwtCMmtH_sdDv\tIsamary Perez Tovar\t2026-05-28\tFollow-Up\nRsD9_-8N_ccc2mGAZOXJx\tMilan Preet Singh\t2026-05-28\tFollow-Up\nxaWqfnS6ZBTRCnChX0mBj\tBalwant singh\t2026-05-28\tNew Lead\n",
+  "stderr": "",
+  "execution_time_ms": 261
+}
