@@ -10,7 +10,7 @@ import { todayPST, tomorrowPST } from "@/lib/timezone";
      - Follow-up strip on card: next due date, one-tap Done/Snooze/Reschedule
      - Overdue red border highlight
    ============================================================ */
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { useCRM } from "@/contexts/CRMContext";
 import {
   type Lead, type LeadStage, type CaseType, type FollowUp, type FollowUpStatus,
@@ -959,6 +959,21 @@ function LeadCard({
   onSetFollowUpDate: (date: string | null) => void;
 }) {
   const [editingDueDate, setEditingDueDate] = useState(false);
+  const [showFUDatePicker, setShowFUDatePicker] = useState(false);
+  const [fuDateInput, setFUDateInput] = useState(lead.followUpDate ?? "");
+  const fuDatePickerRef = useRef<HTMLDivElement>(null);
+
+  // Close date picker on outside click
+  useEffect(() => {
+    if (!showFUDatePicker) return;
+    const handler = (e: MouseEvent) => {
+      if (fuDatePickerRef.current && !fuDatePickerRef.current.contains(e.target as Node)) {
+        setShowFUDatePicker(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showFUDatePicker]);
   const { payments: allPayments, followUps: allFollowUps } = useCRM();
   const { activeMember } = useActiveMember();
 
@@ -1174,26 +1189,103 @@ function LeadCard({
         </div>
       )}
 
-      {/* ── Follow-Up Date (all stages — uses lead.followUpDate) ── */}
+      {/* ── Follow-Up Date (popup date picker) ── */}
       <div className="mt-2 flex items-center gap-2" onClick={e => e.stopPropagation()}>
         <CalendarClock className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "oklch(0.65 0.20 300)" }} />
         <span className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>Follow-up:</span>
-        <input
-          type="date"
-          value={lead.followUpDate ?? ""}
-          onChange={e => {
-            const newDate = e.target.value;
-            onSetFollowUpDate(newDate || null);
-          }}
-          className="text-xs px-2 py-0.5 rounded border"
-          style={{
-            background: "oklch(0.22 0.025 250)",
-            borderColor: lead.followUpDate ? "oklch(0.65 0.20 300 / 60%)" : "oklch(0.65 0.20 300 / 30%)",
-            color: lead.followUpDate ? "oklch(0.85 0.005 250)" : "oklch(0.50 0.01 250)",
-            colorScheme: "dark",
-            outline: "none",
-          }}
-        />
+        <div ref={fuDatePickerRef} className="relative">
+          <button
+            onClick={e => { e.stopPropagation(); setFUDateInput(lead.followUpDate ?? ""); setShowFUDatePicker(p => !p); }}
+            className="text-xs px-2 py-0.5 rounded border transition-colors hover:opacity-90"
+            style={{
+              background: "oklch(0.22 0.025 250)",
+              borderColor: lead.followUpDate ? "oklch(0.65 0.20 300 / 60%)" : "oklch(0.65 0.20 300 / 30%)",
+              color: lead.followUpDate ? "oklch(0.85 0.005 250)" : "oklch(0.50 0.01 250)",
+            }}
+          >
+            {lead.followUpDate ? formatDate(lead.followUpDate) : "Set date"}
+          </button>
+
+          {showFUDatePicker && (
+            <div
+              className="absolute left-0 top-full mt-1 z-50 rounded-xl shadow-2xl p-3 min-w-[220px]"
+              style={{
+                background: "oklch(0.18 0.025 250)",
+                border: "1px solid oklch(1 0 0 / 14%)",
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              <p className="text-xs font-semibold mb-2" style={{ color: "oklch(0.72 0.12 75)" }}>
+                Set follow-up date
+              </p>
+              <input
+                type="date"
+                value={fuDateInput}
+                onChange={e => setFUDateInput(e.target.value)}
+                className="w-full rounded-lg px-3 py-2 text-sm mb-2"
+                style={{
+                  background: "oklch(0.22 0.025 250)",
+                  border: "1px solid oklch(1 0 0 / 12%)",
+                  color: "oklch(0.90 0.005 250)",
+                  colorScheme: "dark",
+                }}
+                autoFocus
+              />
+              {/* Quick-pick buttons */}
+              <div className="grid grid-cols-3 gap-1 mb-2">
+                {[
+                  { label: "Tomorrow", days: 1 },
+                  { label: "3 Days",   days: 3 },
+                  { label: "1 Week",   days: 7 },
+                  { label: "2 Weeks",  days: 14 },
+                  { label: "1 Month",  days: 30 },
+                  { label: "2 Months", days: 60 },
+                ].map(({ label, days }) => {
+                  const d = new Date();
+                  d.setDate(d.getDate() + days);
+                  const val = d.toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
+                  return (
+                    <button
+                      key={label}
+                      onClick={() => setFUDateInput(val)}
+                      className="text-[10px] px-1.5 py-1 rounded transition-colors hover:opacity-90"
+                      style={{
+                        background: fuDateInput === val ? "oklch(0.72 0.12 75 / 20%)" : "oklch(0.25 0.025 250)",
+                        color: fuDateInput === val ? "oklch(0.72 0.12 75)" : "oklch(0.60 0.01 250)",
+                        border: `1px solid ${fuDateInput === val ? "oklch(0.72 0.12 75 / 40%)" : "oklch(1 0 0 / 8%)"}`,
+                      }}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={e => {
+                    e.stopPropagation();
+                    if (!fuDateInput) return;
+                    onSetFollowUpDate(fuDateInput);
+                    setShowFUDatePicker(false);
+                    toast.success(`Follow-up set to ${formatDate(fuDateInput)}`);
+                  }}
+                  disabled={!fuDateInput}
+                  className="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-40"
+                  style={{ background: "oklch(0.72 0.12 75)", color: "oklch(0.13 0.025 250)" }}
+                >
+                  Confirm
+                </button>
+                <button
+                  onClick={e => { e.stopPropagation(); setShowFUDatePicker(false); }}
+                  className="px-3 py-1.5 rounded-lg text-xs transition-colors"
+                  style={{ background: "oklch(0.25 0.025 250)", color: "oklch(0.55 0.01 250)" }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
         {lead.followUpDate && (
           <button
             onClick={e => { e.stopPropagation(); onSetFollowUpDate(null); }}
