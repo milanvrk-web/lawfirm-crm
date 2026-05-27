@@ -16,7 +16,7 @@ import { formatDate, type Lead } from "@/lib/store";
 import { todayPST } from "@/lib/timezone";
 import {
   Bell, AlertCircle, CheckCircle2, Calendar,
-  Phone, MessageSquare, ChevronRight,
+  Phone, MessageSquare, ChevronRight, X,
 } from "lucide-react";
 import { toast } from "sonner";
 import LeadDetailPanel from "@/components/LeadDetailPanel";
@@ -43,7 +43,7 @@ const stageColor: Record<string, string> = {
 // ── Component ──────────────────────────────────────────────
 
 export default function FollowUps() {
-  const { leads, setLeadFollowUpDate } = useCRM();
+  const { leads, setLeadFollowUpDate, addLeadNote } = useCRM();
   const today = todayPST();
 
   const [panelLeadId, setPanelLeadId] = useState<string | null>(null);
@@ -71,10 +71,23 @@ export default function FollowUps() {
     return [...list].sort((a, b) => a.followUpDate!.localeCompare(b.followUpDate!));
   }, [filter, leadsWithFollowUp, overdueLeads, todayLeads, upcomingLeads]);
 
-  const handleMarkDone = async (lead: Lead, e: React.MouseEvent) => {
+  const [closingNoteLeadId, setClosingNoteLeadId] = useState<string | null>(null);
+  const [closingNoteText, setClosingNoteText] = useState("");
+
+  const handleMarkDoneClick = (lead: Lead, e: React.MouseEvent) => {
     e.stopPropagation();
+    setClosingNoteLeadId(lead.id);
+    setClosingNoteText("");
+  };
+
+  const handleMarkDoneConfirm = async (lead: Lead) => {
+    if (closingNoteText.trim()) {
+      await addLeadNote(lead.id, closingNoteText.trim());
+    }
     await setLeadFollowUpDate(lead.id, null);
-    toast.success(`Follow-up cleared for ${lead.name}`);
+    setClosingNoteLeadId(null);
+    setClosingNoteText("");
+    toast.success(`Follow-up done for ${lead.name}`);
   };
 
   const handleSetDate = async (lead: Lead, date: string) => {
@@ -152,8 +165,13 @@ export default function FollowUps() {
                 badge={badge}
                 stageColor={stageColor[lead.stage] ?? "oklch(0.55 0.01 250)"}
                 onOpen={() => setPanelLeadId(lead.id)}
-                onMarkDone={handleMarkDone}
+                onMarkDone={handleMarkDoneClick}
                 onSetDate={handleSetDate}
+                closingNoteLeadId={closingNoteLeadId}
+                closingNoteText={closingNoteText}
+                onClosingNoteChange={setClosingNoteText}
+                onClosingNoteConfirm={() => handleMarkDoneConfirm(lead)}
+                onClosingNoteCancel={() => setClosingNoteLeadId(null)}
               />
             );
           })}
@@ -180,6 +198,11 @@ function LeadFollowUpRow({
   onOpen,
   onMarkDone,
   onSetDate,
+  closingNoteLeadId,
+  closingNoteText,
+  onClosingNoteChange,
+  onClosingNoteConfirm,
+  onClosingNoteCancel,
 }: {
   lead: Lead;
   badge: { label: string; color: string; bg: string };
@@ -187,6 +210,11 @@ function LeadFollowUpRow({
   onOpen: () => void;
   onMarkDone: (lead: Lead, e: React.MouseEvent) => void;
   onSetDate: (lead: Lead, date: string) => void;
+  closingNoteLeadId: string | null;
+  closingNoteText: string;
+  onClosingNoteChange: (text: string) => void;
+  onClosingNoteConfirm: () => void;
+  onClosingNoteCancel: () => void;
 }) {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [dateInput, setDateInput] = useState(lead.followUpDate ?? "");
@@ -387,15 +415,69 @@ function LeadFollowUpRow({
             )}
           </div>
 
-          {/* Mark done (clear follow-up date) */}
-          <button
-            onClick={e => onMarkDone(lead, e)}
-            title="Mark done (clear follow-up date)"
-            className="p-1.5 rounded hover:bg-white/8 transition-colors"
-            style={{ color: "oklch(0.55 0.18 145)" }}
-          >
-            <CheckCircle2 className="w-3.5 h-3.5" />
-          </button>
+          {/* Mark done — with closing note prompt */}
+          <div className="relative">
+            <button
+              onClick={e => onMarkDone(lead, e)}
+              title="Mark done"
+              className="p-1.5 rounded hover:bg-white/8 transition-colors"
+              style={{ color: "oklch(0.55 0.18 145)" }}
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" />
+            </button>
+            {closingNoteLeadId === lead.id && (
+              <div
+                className="absolute right-0 bottom-full mb-2 z-50 rounded-xl shadow-2xl p-3 w-72"
+                style={{
+                  background: "oklch(0.18 0.025 250)",
+                  border: "1px solid oklch(1 0 0 / 14%)",
+                }}
+                onClick={e => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-semibold" style={{ color: "oklch(0.55 0.18 145)" }}>
+                    Add a closing note (optional)
+                  </p>
+                  <button onClick={onClosingNoteCancel} style={{ color: "oklch(0.45 0.01 250)" }}>
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  autoFocus
+                  placeholder='e.g. "Retained", "No answer — closed", "Sent docs"'
+                  value={closingNoteText}
+                  onChange={e => onClosingNoteChange(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") onClosingNoteConfirm(); if (e.key === "Escape") onClosingNoteCancel(); }}
+                  className="w-full rounded-lg px-3 py-2 text-xs mb-2 outline-none"
+                  style={{
+                    background: "oklch(0.22 0.025 250)",
+                    border: "1px solid oklch(1 0 0 / 12%)",
+                    color: "oklch(0.90 0.005 250)",
+                  }}
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={onClosingNoteConfirm}
+                    className="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+                    style={{ background: "oklch(0.55 0.18 145 / 20%)", color: "oklch(0.55 0.18 145)", border: "1px solid oklch(0.55 0.18 145 / 30%)" }}
+                  >
+                    Done
+                  </button>
+                  <button
+                    onClick={onClosingNoteCancel}
+                    className="px-3 py-1.5 rounded-lg text-xs transition-colors"
+                    style={{ background: "oklch(0.25 0.025 250)", color: "oklch(0.55 0.01 250)" }}
+                  >
+                    Skip
+                  </button>
+                </div>
+                <p className="text-xs mt-1.5" style={{ color: "oklch(0.40 0.01 250)" }}>
+                  Press Enter to confirm, Escape to cancel.
+                </p>
+              </div>
+            )}
+          </div>
           <ChevronRight className="w-4 h-4" style={{ color: "oklch(0.35 0.01 250)" }} />
         </div>
       </div>
