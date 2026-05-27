@@ -1,0 +1,9 @@
+{
+  "query": "\n-- Merge pair 1: \"CNC\" + \"✓ Follow-up completed on May 27, 2026 by Sachin\"\nUPDATE lead_notes SET text = 'CNC\\n__DONE__:Sachin:May 27, 2026', authorName = 'Sachin' WHERE id = 'tmy7GiLNBgN9wNiNxOVZi';\nDELETE FROM lead_notes WHERE id = '5vFbOZDe-X9uP6t1qYq5e';\n\n-- Merge pair 2: \"TEST\" + \"✓ Follow-up completed on May 27, 2026 by Sachin\"\nUPDATE lead_notes SET text = 'TEST\\n__DONE__:Sachin:May 27, 2026', authorName = 'Sachin' WHERE id = 'jp0yN2ty4scv9dESlNZcU';\nDELETE FROM lead_notes WHERE id = 'd3NEODZGl3E0IKGLpIxvC';\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute \n-- Merge pair 1: \"CNC\" + \"✓ Follow-up completed on May 27, 2026 by Sachin\"\nUPDATE lead_notes SET text = 'CNC\\n__DONE__:Sachin:May 27, 2026', authorName = 'Sachin' WHERE id = 'tmy7GiLNBgN9wNiNxOVZi';\nDELETE FROM lead_notes WHERE id = '5vFbOZDe-X9uP6t1qYq5e';\n\n-- Merge pair 2: \"TEST\" + \"✓ Follow-up completed on May 27, 2026 by Sachin\"\nUPDATE lead_notes SET text = 'TEST\\n__DONE__:Sachin:May 27, 2026', authorName = 'Sachin' WHERE id = 'jp0yN2ty4scv9dESlNZcU';\nDELETE FROM lead_notes WHERE id = 'd3NEODZGl3E0IKGLpIxvC';\n",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 289
+}

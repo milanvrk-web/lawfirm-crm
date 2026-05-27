@@ -246,15 +246,13 @@ export default function FollowUps() {
     const completedOn = new Date().toLocaleDateString("en-US", {
       timeZone: "America/Los_Angeles", month: "short", day: "numeric", year: "numeric"
     });
-    const memberSuffix = activeMember ? ` by ${activeMember.name}` : "";
+    const memberName = activeMember ? activeMember.name : "Team";
 
-    // 1. Save the closing note
-    await addLeadNote(lead.id, note);
+    // Save ONE combined note: comment + __DONE__ tag (same format as LeadDetailPanel)
+    const combinedNote = `${note}\n__DONE__:${memberName}:${completedOn}`;
+    await addLeadNote(lead.id, combinedNote, activeMember?.name ?? undefined);
 
-    // 2. Auto-log the completion entry
-    await addLeadNote(lead.id, `✓ Follow-up completed on ${completedOn}${memberSuffix}`);
-
-    // 3. Set the next follow-up date
+    // Set the next follow-up date
     await setLeadFollowUpDate(lead.id, nextDate);
 
     toast.success(`Follow-up done for ${lead.name} · Next: ${formatDate(nextDate)}`);

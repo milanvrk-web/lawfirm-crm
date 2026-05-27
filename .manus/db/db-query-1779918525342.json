@@ -1,0 +1,117 @@
+{
+  "query": "SELECT id, leadId, text, timestamp, authorName FROM lead_notes ORDER BY leadId, timestamp ASC;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute SELECT id, leadId, text, timestamp, authorName FROM lead_notes ORDER BY leadId, timestamp ASC;",
+  "rows": [
+    {
+      "id": "24IESpbRXVIOyg6Q59egQ",
+      "leadId": "5luMdYbvZwtCMmtH_sdDv",
+      "text": "Consultation is done C will get back to us after she got married and also she has her declaration ready so SYLVA can see what case is about  Case from Venezuela  Please add notes and move lead into follw up",
+      "timestamp": "2026-05-20T21:28:09.440Z",
+      "authorName": "Sachin"
+    },
+    {
+      "id": "8TckY6-o-dQx8PGeqy1a5",
+      "leadId": "9OMv41syMiX25gMg3OlN5",
+      "text": "Called on 12 May. No answer",
+      "timestamp": "2026-05-14T00:50:55.890Z",
+      "authorName": "NULL"
+    },
+    {
+      "id": "FS0PjOYGXdvfnjt0ujdvk",
+      "leadId": "9OMv41syMiX25gMg3OlN5",
+      "text": "Called again on 13 May. Dropped email as well.",
+      "timestamp": "2026-05-14T00:51:04.835Z",
+      "authorName": "NULL"
+    },
+    {
+      "id": "VJ64NDs9PK65HqrYIqzOS",
+      "leadId": "9OMv41syMiX25gMg3OlN5",
+      "text": "No anwer. dropping he lead.",
+      "timestamp": "2026-05-18T23:33:10.614Z",
+      "authorName": "Sachin"
+    },
+    {
+      "id": "tJQOfpkF73e5B7zt-mqwS",
+      "leadId": "Q7DpM5z2LLgzmb-yxXXks",
+      "text": "M: called him, CNC, will follow up again tomorrow",
+      "timestamp": "2026-05-08T19:45:00.608Z",
+      "authorName": "NULL"
+    },
+    {
+      "id": "xc7jRNi5Cf23WMpDODiMM",
+      "leadId": "Q7DpM5z2LLgzmb-yxXXks",
+      "text": "alkhflkdshlfkds",
+      "timestamp": "2026-05-08T19:45:36.739Z",
+      "authorName": "NULL"
+    },
+    {
+      "id": "Ev-by9HRsVnzMBv-M6Fhl",
+      "leadId": "Q7DpM5z2LLgzmb-yxXXks",
+      "text": "nslaksnklajkld",
+      "timestamp": "2026-05-08T19:51:28.625Z",
+      "authorName": "NULL"
+    },
+    {
+      "id": "E6r8Kv2vbEzgxCLZ9y4m2",
+      "leadId": "Q7DpM5z2LLgzmb-yxXXks",
+      "text": "Sachin",
+      "timestamp": "2026-05-08T20:24:17.720Z",
+      "authorName": "NULL"
+    },
+    {
+      "id": "YlLFgT1ioG1jTxvwTrhez",
+      "leadId": "Q7DpM5z2LLgzmb-yxXXks",
+      "text": "hello",
+      "timestamp": "2026-05-08T20:24:47.696Z",
+      "authorName": "Sachin"
+    },
+    {
+      "id": "DiYwlvCwR-i6tgtLr03Wa",
+      "leadId": "RsD9_-8N_ccc2mGAZOXJx",
+      "text": "test comment",
+      "timestamp": "2026-05-27T21:24:11.725Z",
+      "authorName": "Sachin"
+    },
+    {
+      "id": "tmy7GiLNBgN9wNiNxOVZi",
+      "leadId": "RsD9_-8N_ccc2mGAZOXJx",
+      "text": "CNC",
+      "timestamp": "2026-05-27T21:37:55.213Z",
+      "authorName": "NULL"
+    },
+    {
+      "id": "5vFbOZDe-X9uP6t1qYq5e",
+      "leadId": "RsD9_-8N_ccc2mGAZOXJx",
+      "text": "✓ Follow-up completed on May 27, 2026 by Sachin",
+      "timestamp": "2026-05-27T21:37:55.326Z",
+      "authorName": "NULL"
+    },
+    {
+      "id": "jp0yN2ty4scv9dESlNZcU",
+      "leadId": "RsD9_-8N_ccc2mGAZOXJx",
+      "text": "TEST",
+      "timestamp": "2026-05-27T21:45:12.671Z",
+      "authorName": "NULL"
+    },
+    {
+      "id": "d3NEODZGl3E0IKGLpIxvC",
+      "leadId": "RsD9_-8N_ccc2mGAZOXJx",
+      "text": "✓ Follow-up completed on May 27, 2026 by Sachin",
+      "timestamp": "2026-05-27T21:45:12.797Z",
+      "authorName": "NULL"
+    },
+    {
+      "id": "f6TTJ1By7SSwh97KN18XK",
+      "leadId": "xzP8_xXETNknSQlCZKyyj",
+      "text": "Consult fee is awaited from client. Client description of his case: Am currently in pending Asylum and my hearnjng is March 31st , i got married in November last year , and we living together since then in sunnyvale , i came to know she had a kid and also she is cheating on me amd when i ask her about this , she was blackmailing me",
+      "timestamp": "2026-05-14T23:16:49.999Z",
+      "authorName": "Sachin"
+    }
+  ],
+  "messages": [
+    "RhU_x8ho2VoXh2eiS3GIV\txaWqfnS6ZBTRCnChX0mBj\tgave her details Step\tWhat happens 1\tFather files Form I-130 with USCIS. 2\tUSCIS issues receipt notice; this creates the priority date. 3\tUSCIS eventually approves the I-130. 4\tCase goes to the National Visa Center. 5\tThe case waits until the F2B priority date becomes close/current. 6\tNVC collects fees, DS-260, civil documents, police certificate, birth certificate, passport biographic page, and I-864 Affidavit of Support. 7\tDaughter completes medical exam. 8\tInterview is scheduled through the U.S. immigrant visa process in Canada, generally handled through Montreal. The U.S. Embassy in Canada lists the immigrant visa process as petition filing, NVC processing, interview appointment, medical exam, and consular interview. 9\tIf approved, she enters the U.S. as a permanent resident.\t2026-05-26T02:04:12.412Z\tNULL"
+  ],
+  "stdout": "id\tleadId\ttext\ttimestamp\tauthorName\n24IESpbRXVIOyg6Q59egQ\t5luMdYbvZwtCMmtH_sdDv\tConsultation is done C will get back to us after she got married and also she has her declaration ready so SYLVA can see what case is about  Case from Venezuela  Please add notes and move lead into follw up\t2026-05-20T21:28:09.440Z\tSachin\n8TckY6-o-dQx8PGeqy1a5\t9OMv41syMiX25gMg3OlN5\tCalled on 12 May. No answer\t2026-05-14T00:50:55.890Z\tNULL\nFS0PjOYGXdvfnjt0ujdvk\t9OMv41syMiX25gMg3OlN5\tCalled again on 13 May. Dropped email as well.\t2026-05-14T00:51:04.835Z\tNULL\nVJ64NDs9PK65HqrYIqzOS\t9OMv41syMiX25gMg3OlN5\tNo anwer. dropping he lead.\t2026-05-18T23:33:10.614Z\tSachin\ntJQOfpkF73e5B7zt-mqwS\tQ7DpM5z2LLgzmb-yxXXks\tM: called him, CNC, will follow up again tomorrow\t2026-05-08T19:45:00.608Z\tNULL\nxc7jRNi5Cf23WMpDODiMM\tQ7DpM5z2LLgzmb-yxXXks\talkhflkdshlfkds\t2026-05-08T19:45:36.739Z\tNULL\nEv-by9HRsVnzMBv-M6Fhl\tQ7DpM5z2LLgzmb-yxXXks\tnslaksnklajkld\t2026-05-08T19:51:28.625Z\tNULL\nE6r8Kv2vbEzgxCLZ9y4m2\tQ7DpM5z2LLgzmb-yxXXks\tSachin\t2026-05-08T20:24:17.720Z\tNULL\nYlLFgT1ioG1jTxvwTrhez\tQ7DpM5z2LLgzmb-yxXXks\thello\t2026-05-08T20:24:47.696Z\tSachin\nDiYwlvCwR-i6tgtLr03Wa\tRsD9_-8N_ccc2mGAZOXJx\ttest comment\t2026-05-27T21:24:11.725Z\tSachin\ntmy7GiLNBgN9wNiNxOVZi\tRsD9_-8N_ccc2mGAZOXJx\tCNC\t2026-05-27T21:37:55.213Z\tNULL\n5vFbOZDe-X9uP6t1qYq5e\tRsD9_-8N_ccc2mGAZOXJx\t✓ Follow-up completed on May 27, 2026 by Sachin\t2026-05-27T21:37:55.326Z\tNULL\njp0yN2ty4scv9dESlNZcU\tRsD9_-8N_ccc2mGAZOXJx\tTEST\t2026-05-27T21:45:12.671Z\tNULL\nd3NEODZGl3E0IKGLpIxvC\tRsD9_-8N_ccc2mGAZOXJx\t✓ Follow-up completed on May 27, 2026 by Sachin\t2026-05-27T21:45:12.797Z\tNULL\nRhU_x8ho2VoXh2eiS3GIV\txaWqfnS6ZBTRCnChX0mBj\tgave her details Step\tWhat happens 1\tFather files Form I-130 with USCIS. 2\tUSCIS issues receipt notice; this creates the priority date. 3\tUSCIS eventually approves the I-130. 4\tCase goes to the National Visa Center. 5\tThe case waits until the F2B priority date becomes close/current. 6\tNVC collects fees, DS-260, civil documents, police certificate, birth certificate, passport biographic page, and I-864 Affidavit of Support. 7\tDaughter completes medical exam. 8\tInterview is scheduled through the U.S. immigrant visa process in Canada, generally handled through Montreal. The U.S. Embassy in Canada lists the immigrant visa process as petition filing, NVC processing, interview appointment, medical exam, and consular interview. 9\tIf approved, she enters the U.S. as a permanent resident.\t2026-05-26T02:04:12.412Z\tNULL\nf6TTJ1By7SSwh97KN18XK\txzP8_xXETNknSQlCZKyyj\tConsult fee is awaited from client. Client description of his case: Am currently in pending Asylum and my hearnjng is March 31st , i got married in November last year , and we living together since then in sunnyvale , i came to know she had a kid and also she is cheating on me amd when i ask her about this , she was blackmailing me\t2026-05-14T23:16:49.999Z\tSachin\n",
+  "stderr": "",
+  "execution_time_ms": 256
+}
