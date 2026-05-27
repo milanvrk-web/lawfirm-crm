@@ -1,4 +1,4 @@
-import { todayPST, addDaysPST } from "@/lib/timezone";
+import { todayPST, addDaysPST, tomorrowPST } from "@/lib/timezone";
 /* ============================================================
    Law Firm CRM — Follow-Ups Page
    Design: Dark Luxury Legal — Navy + Gold
@@ -56,6 +56,30 @@ export default function FollowUps() {
   const [addTitle, setAddTitle] = useState("Call back");
   const [addDueDate, setAddDueDate] = useState(todayPST());
 
+  // ── Bulk selection ─────────────────────────────────────
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const handleBulkDone = () => {
+    selectedIds.forEach(id => updateFollowUp(id, { status: "Done" }));
+    toast.success(`${selectedIds.size} follow-up${selectedIds.size > 1 ? "s" : ""} marked as done`);
+    setSelectedIds(new Set());
+  };
+
+  const handleBulkSnooze = () => {
+    const tomorrow = tomorrowPST();
+    selectedIds.forEach(id => updateFollowUp(id, { status: "Snoozed", dueDate: tomorrow }));
+    toast.success(`${selectedIds.size} follow-up${selectedIds.size > 1 ? "s" : ""} snoozed to tomorrow`);
+    setSelectedIds(new Set());
+  };
+
   // ── Comment form per follow-up ───────────────────────────
   const [commentText, setCommentText] = useState<Record<string, string>>({});
 
@@ -95,6 +119,21 @@ export default function FollowUps() {
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [followUps, filter, dueToday, overdue, pending, nowMs]);
+
+  const selectableIds = useMemo(() =>
+    filteredFollowUps.filter(f => f.status !== "Done").map(f => f.id),
+    [filteredFollowUps]
+  );
+
+  const allSelected = selectableIds.length > 0 && selectableIds.every(id => selectedIds.has(id));
+
+  const toggleSelectAll = () => {
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(selectableIds));
+    }
+  };
 
   const leadOptions = useMemo(() =>
     leads.filter(l =>
@@ -388,8 +427,59 @@ export default function FollowUps() {
           </button>
         ))}
       </div>
+      {/* ── Bulk Action Bar ────────────────────────────────────────── */}
+      {selectableIds.length > 0 && (
+        <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl border flex-wrap" style={{ background: "oklch(0.20 0.03 250)", borderColor: "oklch(0.72 0.12 75 / 30%)" }}>
+          {/* Select-all checkbox */}
+          <button
+            onClick={toggleSelectAll}
+            className="flex items-center gap-2 text-xs font-medium transition-colors"
+            style={{ color: allSelected ? "oklch(0.72 0.12 75)" : "oklch(0.55 0.01 250)" }}
+          >
+            <div
+              className="w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors"
+              style={{
+                background: allSelected ? "oklch(0.72 0.12 75)" : "transparent",
+                borderColor: allSelected ? "oklch(0.72 0.12 75)" : "oklch(0.45 0.01 250)",
+              }}
+            >
+              {allSelected && <CheckCircle2 className="w-2.5 h-2.5" style={{ color: "oklch(0.13 0.025 250)" }} />}
+            </div>
+            {allSelected ? "Deselect all" : `Select all (${selectableIds.length})`}
+          </button>
 
-      {/* ── Follow-Up List ───────────────────────────────────── */}
+          {selectedIds.size > 0 && (
+            <>
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: "oklch(0.72 0.12 75 / 15%)", color: "oklch(0.72 0.12 75)" }}>
+                {selectedIds.size} selected
+              </span>
+              <button
+                onClick={handleBulkDone}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:opacity-90 active:scale-95"
+                style={{ background: "oklch(0.55 0.18 145)", color: "oklch(0.98 0 0)" }}
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" /> Mark Done
+              </button>
+              <button
+                onClick={handleBulkSnooze}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:opacity-90 active:scale-95"
+                style={{ background: "oklch(0.60 0.15 250 / 20%)", border: "1px solid oklch(0.60 0.15 250 / 40%)", color: "oklch(0.70 0.10 250)" }}
+              >
+                <Clock className="w-3.5 h-3.5" /> Snooze to Tomorrow
+              </button>
+              <button
+                onClick={() => setSelectedIds(new Set())}
+                className="ml-auto text-xs transition-colors hover:opacity-80"
+                style={{ color: "oklch(0.45 0.01 250)" }}
+              >
+                Clear
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ── Follow-Up List ────────────────────────────────────────── */}
       {filteredFollowUps.length === 0 ? (
         <div className="rounded-xl border p-12 text-center" style={{ background: "oklch(0.18 0.025 250)", borderColor: "oklch(1 0 0 / 8%)" }}>
           <CalendarClock className="w-10 h-10 mx-auto mb-3" style={{ color: "oklch(0.35 0.01 250)" }} />
@@ -419,6 +509,24 @@ export default function FollowUps() {
               >
                 {/* ── Task Row ── */}
                 <div className="flex items-start gap-3 p-4">
+                  {/* Bulk checkbox (only for non-Done tasks) */}
+                  {fu.status !== "Done" && (
+                    <button
+                      onClick={e => { e.stopPropagation(); toggleSelect(fu.id); }}
+                      className="mt-0.5 flex-shrink-0 transition-all"
+                      title="Select for bulk action"
+                    >
+                      <div
+                        className="w-4 h-4 rounded border-2 flex items-center justify-center transition-colors"
+                        style={{
+                          background: selectedIds.has(fu.id) ? "oklch(0.72 0.12 75)" : "transparent",
+                          borderColor: selectedIds.has(fu.id) ? "oklch(0.72 0.12 75)" : "oklch(0.40 0.01 250)",
+                        }}
+                      >
+                        {selectedIds.has(fu.id) && <CheckCircle2 className="w-2.5 h-2.5" style={{ color: "oklch(0.13 0.025 250)" }} />}
+                      </div>
+                    </button>
+                  )}
                   {/* Status toggle button */}
                   <button
                     onClick={() => handleStatusCycle(fu)}
