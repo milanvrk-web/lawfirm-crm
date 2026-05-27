@@ -40,7 +40,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import {
   FileText, X, Phone, Edit2, CheckCircle, CheckCircle2, Circle,
-  Check, ChevronDown, CreditCard, MessageSquare, Trash2, Plus, Calendar, CheckCheck,
+  Check, ChevronDown, CreditCard, MessageSquare, Trash2, Plus, Calendar, CheckCheck, Pencil,
 } from "lucide-react";
 
 // ── CompleteFollowUpModal ──────────────────────────────────
@@ -251,7 +251,23 @@ export default function LeadDetailPanel({
   const [showFollowUpDatePicker, setShowFollowUpDatePicker] = useState(false);
   const [followUpDateInput, setFollowUpDateInput] = useState("");
   const [showCompleteModal, setShowCompleteModal] = useState(false);
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [editingNoteText, setEditingNoteText] = useState("");
   const followUpDatePickerRef = useRef<HTMLDivElement>(null);
+
+  const deleteNoteMut = trpc.leads.deleteNote.useMutation({ onSuccess: () => refetchNotes() });
+  const updateNoteMut = trpc.leads.updateNote.useMutation({ onSuccess: () => { refetchNotes(); setEditingNoteId(null); } });
+
+  const handleDeleteNote = (noteId: string) => {
+    if (!confirm("Delete this activity note?")) return;
+    deleteNoteMut.mutate({ id: noteId, leadId: lead?.id ?? "" });
+  };
+
+  const handleSaveEditNote = (noteId: string) => {
+    const text = editingNoteText.trim();
+    if (!text) return;
+    updateNoteMut.mutate({ id: noteId, leadId: lead?.id ?? "", text });
+  };
 
   // Close follow-up date picker on outside click
   useEffect(() => {
@@ -373,12 +389,12 @@ export default function LeadDetailPanel({
     const completedOn = new Date().toLocaleDateString("en-US", {
       timeZone: "America/Los_Angeles", month: "short", day: "numeric", year: "numeric",
     });
-    const memberSuffix = activeMember ? ` by ${activeMember.name}` : "";
-    // 1. Save the closing note
-    await addLeadNote(lead.id, note, activeMember?.name ?? undefined);
-    // 2. Auto-log the completion entry
-    await addLeadNote(lead.id, `✓ Follow-up completed on ${completedOn}${memberSuffix}`, activeMember?.name ?? undefined);
-    // 3. Set the next follow-up date
+    const memberName = activeMember?.name ?? "Staff";
+    // Save one combined entry: note text + completion tag on the same line
+    // Format: "<note text>\n__DONE__:<member>:<date>"
+    const combinedNote = `${note}\n__DONE__:${memberName}:${completedOn}`;
+    await addLeadNote(lead.id, combinedNote, activeMember?.name ?? undefined);
+    // Set the next follow-up date
     await setLeadFollowUpDate(lead.id, nextDate);
     refetchNotes();
     toast.success(`Follow-up done · Next: ${formatDate(nextDate)}`);
@@ -859,31 +875,116 @@ export default function LeadDetailPanel({
               </div>
             ) : (
               <div className="space-y-1.5">
-                {leadNotes.map(note => (
-                  <div
-                    key={note.id}
-                    className="px-3 py-2 rounded-lg text-xs"
-                    style={{
-                      background: "oklch(0.18 0.025 250)",
-                      borderLeft: "2px solid oklch(0.55 0.18 250 / 40%)",
-                    }}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <span style={{ color: "oklch(0.82 0.005 250)", lineHeight: "1.5" }}>{note.text}</span>
-                    </div>
-                    <div className="flex items-center gap-2 mt-1">
-                      {note.authorName && (
-                        <span
-                          className="px-1.5 py-0 rounded-full text-[10px] font-medium"
-                          style={{ background: "oklch(0.55 0.18 250 / 15%)", color: "oklch(0.65 0.12 250)" }}
-                        >
-                          {note.authorName}
-                        </span>
+                {leadNotes.map(note => {
+                  // Detect completion entries: "<comment>\n__DONE__:<member>:<date>"
+                  const doneMatch = note.text.match(/^([\s\S]+?)\n__DONE__:([^:]+):(.+)$/);
+                  const isDone = !!doneMatch;
+                  const commentText = isDone ? doneMatch![1] : note.text;
+                  const doneMember = isDone ? doneMatch![2] : null;
+                  const doneDate = isDone ? doneMatch![3] : null;
+                  const isEditing = editingNoteId === note.id;
+
+                  return (
+                    <div
+                      key={note.id}
+                      className="px-3 py-2.5 rounded-lg text-xs group"
+                      style={{
+                        background: isDone ? "oklch(0.55 0.18 145 / 6%)" : "oklch(0.18 0.025 250)",
+                        borderLeft: `2px solid ${isDone ? "oklch(0.55 0.18 145 / 50%)" : "oklch(0.55 0.18 250 / 40%)"}`,
+                      }}
+                    >
+                      {isEditing ? (
+                        /* ── Edit mode ── */
+                        <div className="space-y-1.5">
+                          <textarea
+                            value={editingNoteText}
+                            onChange={e => setEditingNoteText(e.target.value)}
+                            rows={3}
+                            autoFocus
+                            className="w-full px-2 py-1.5 rounded text-xs outline-none resize-none"
+                            style={{
+                              background: "oklch(0.22 0.025 250)",
+                              border: "1px solid oklch(1 0 0 / 18%)",
+                              color: "oklch(0.88 0.005 250)",
+                            }}
+                          />
+                          <div className="flex gap-1.5">
+                            <button
+                              onClick={() => handleSaveEditNote(note.id)}
+                              disabled={!editingNoteText.trim()}
+                              className="px-2.5 py-1 rounded text-[10px] font-semibold transition-all disabled:opacity-40"
+                              style={{ background: "oklch(0.55 0.18 250 / 20%)", color: "oklch(0.70 0.12 250)", border: "1px solid oklch(0.55 0.18 250 / 30%)" }}
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={() => setEditingNoteId(null)}
+                              className="px-2.5 py-1 rounded text-[10px] transition-all"
+                              style={{ background: "oklch(0.22 0.025 250)", color: "oklch(0.50 0.01 250)" }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        /* ── View mode ── */
+                        <>
+                          <div className="flex items-start justify-between gap-2">
+                            <span style={{ color: "oklch(0.85 0.005 250)", lineHeight: "1.55", whiteSpace: "pre-wrap" }}>
+                              {commentText}
+                            </span>
+                            {/* Edit / Delete buttons — visible on hover */}
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-0.5">
+                              {!isDone && (
+                                <button
+                                  onClick={() => { setEditingNoteId(note.id); setEditingNoteText(note.text); }}
+                                  className="p-1 rounded hover:bg-white/10 transition-colors"
+                                  title="Edit note"
+                                  style={{ color: "oklch(0.55 0.01 250)" }}
+                                >
+                                  <Pencil className="w-3 h-3" />
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleDeleteNote(note.id)}
+                                className="p-1 rounded hover:bg-red-500/15 transition-colors"
+                                title="Delete note"
+                                style={{ color: "oklch(0.55 0.01 250)" }}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Completion badge — shown inline below the comment */}
+                          {isDone && (
+                            <div className="flex items-center gap-1.5 mt-1.5">
+                              <span
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold"
+                                style={{ background: "oklch(0.55 0.18 145 / 15%)", color: "oklch(0.65 0.18 145)", border: "1px solid oklch(0.55 0.18 145 / 30%)" }}
+                              >
+                                <CheckCheck className="w-2.5 h-2.5" />
+                                Follow-up done · {doneMember} · {doneDate}
+                              </span>
+                            </div>
+                          )}
+
+                          <div className="flex items-center gap-2 mt-1.5">
+                            {note.authorName && (
+                              <span
+                                className="px-1.5 py-0 rounded-full text-[10px] font-medium"
+                                style={{ background: "oklch(0.55 0.18 250 / 15%)", color: "oklch(0.65 0.12 250)" }}
+                              >
+                                {note.authorName}
+                              </span>
+                            )}
+                            <span style={{ color: "oklch(0.38 0.01 250)" }}>{formatTimestamp(note.timestamp)}</span>
+                          </div>
+                        </>
                       )}
-                      <span style={{ color: "oklch(0.38 0.01 250)" }}>{formatTimestamp(note.timestamp)}</span>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

@@ -153,6 +153,13 @@ export const appRouter = router({
         return { ok: true };
       }),
 
+    updateNote: publicProcedure
+      .input(z.object({ id: z.string(), leadId: z.string(), text: z.string() }))
+      .mutation(async ({ input }) => {
+        await db.updateLeadNote(input.id, input.text);
+        return { ok: true };
+      }),
+
     // Set or clear the follow-up date on a lead
     setFollowUpDate: publicProcedure
       .input(z.object({ id: z.string(), followUpDate: z.string().nullable() }))

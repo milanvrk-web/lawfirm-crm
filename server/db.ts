@@ -177,6 +177,12 @@ export async function deleteLeadNote(id: string) {
   await db.delete(leadNotes).where(eq(leadNotes.id, id));
 }
 
+export async function updateLeadNote(id: string, text: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(leadNotes).set({ text }).where(eq(leadNotes.id, id));
+}
+
 // ─── Payments ───────────────────────────────────────────────────────────────────────────
 
 export async function getAllPayments() {
