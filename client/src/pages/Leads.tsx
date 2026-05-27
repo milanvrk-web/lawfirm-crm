@@ -20,7 +20,7 @@ import { toast } from "sonner";
 import {
   Plus, Phone,
   Edit2, Trash2, CheckCircle, Search, Filter, Bell, Clock,
-  MessageSquare, CheckCheck, AlarmClock, AlertCircle, X,
+  MessageSquare, CheckCheck, AlertCircle, X,
   CalendarClock, FileText, Circle, CheckCircle2,
   ChevronLeft, ChevronRight, Settings2, GripVertical
 } from "lucide-react";
@@ -669,7 +669,6 @@ export default function Leads() {
                       onDelete={() => { deleteLead(lead.id); toast.success("Lead deleted"); }}
                       onConvert={() => setConvertLead(lead)}
                       onMarkDone={handleMarkDone}
-                      onSnooze={handleSnooze}
                       onReschedule={handleReschedule}
                       onSetFollowUpDate={(date) => setLeadFollowUpDate(lead.id, date)}
                     />
@@ -944,7 +943,7 @@ export default function Leads() {
 type ChecklistTemplate = { id: string; stageId: string; label: string; description: string | null; order: number; createdAt: Date; };
 
 function LeadCard({
-  lead, stageTemplates = [], stageColor: cardStageColor, onOpenDetail, onEdit, onDelete, onConvert, onMarkDone, onSnooze, onReschedule, onSetFollowUpDate,
+  lead, stageTemplates = [], stageColor: cardStageColor, onOpenDetail, onEdit, onDelete, onConvert, onMarkDone, onReschedule, onSetFollowUpDate,
 }: {
   lead: Lead;
   stageTemplates?: ChecklistTemplate[];
@@ -954,7 +953,6 @@ function LeadCard({
   onDelete: () => void;
   onConvert: () => void;
   onMarkDone: (fu: FollowUp) => void;
-  onSnooze: (fu: FollowUp) => void;
   onReschedule: (fu: FollowUp, newDate: string) => void;
   onSetFollowUpDate: (date: string | null) => void;
 }) {
@@ -1129,65 +1127,7 @@ function LeadCard({
         </div>
       )}
 
-      {/* ── Next Follow-Up Strip ── */}
-      {nextFU && (
-        <div
-          className="mt-2 px-2 py-1.5 rounded flex items-center justify-between gap-2"
-          style={{
-            background: isOverdue ? "oklch(0.60 0.22 25 / 10%)" : "oklch(0.22 0.025 250)",
-            border: `1px solid ${isOverdue ? "oklch(0.60 0.22 25 / 30%)" : "oklch(1 0 0 / 8%)"}`,
-          }}
-        >
-          <div className="flex items-center gap-1.5 min-w-0 flex-1">
-            {isOverdue
-              ? <AlertCircle className="w-3 h-3 flex-shrink-0" style={{ color: "oklch(0.65 0.22 25)" }} />
-              : <Clock className="w-3 h-3 flex-shrink-0" style={{ color: dueInfo!.color }} />
-            }
-            <span className="text-xs truncate" style={{ color: "oklch(0.80 0.005 250)" }}>{nextFU.title}</span>
-            {editingDueDate ? (
-              <input
-                type="date"
-                defaultValue={nextFU.dueDate}
-                autoFocus
-                className="text-xs px-1 py-0.5 rounded outline-none flex-shrink-0"
-                style={{ background: "oklch(0.26 0.03 250)", border: "1px solid oklch(0.72 0.12 75 / 60%)", color: "oklch(0.90 0.005 250)", colorScheme: "dark", maxWidth: "120px" }}
-                onChange={e => { if (e.target.value) { onReschedule(nextFU, e.target.value); setEditingDueDate(false); } }}
-                onBlur={() => setEditingDueDate(false)}
-                onKeyDown={e => { if (e.key === "Escape") setEditingDueDate(false); }}
-              />
-            ) : (
-              <button
-                className="text-xs flex-shrink-0 font-medium flex items-center gap-0.5 px-1 py-0.5 rounded hover:bg-white/10 group transition-colors"
-                style={{ color: dueInfo!.color }}
-                onClick={e => { e.stopPropagation(); setEditingDueDate(true); }}
-                title="Click to change due date"
-              >
-                {dueInfo!.label}
-                <span className="opacity-0 group-hover:opacity-60 transition-opacity" style={{ fontSize: "9px" }}>✎</span>
-              </button>
-            )}
-          </div>
-          {/* One-tap Done / Snooze */}
-          <div className="flex items-center gap-1 flex-shrink-0">
-            <button
-              onClick={e => { e.stopPropagation(); onMarkDone(nextFU); }}
-              className="flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded transition-colors hover:opacity-90"
-              style={{ background: "oklch(0.55 0.18 145 / 20%)", color: "oklch(0.55 0.18 145)", border: "1px solid oklch(0.55 0.18 145 / 30%)" }}
-              title="Mark done"
-            >
-              <CheckCheck className="w-3 h-3" />
-            </button>
-            <button
-              onClick={e => { e.stopPropagation(); onSnooze(nextFU); }}
-              className="flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded transition-colors hover:opacity-90"
-              style={{ background: "oklch(0.55 0.18 250 / 20%)", color: "oklch(0.65 0.12 250)", border: "1px solid oklch(0.55 0.18 250 / 30%)" }}
-              title="Snooze to tomorrow"
-            >
-              <AlarmClock className="w-3 h-3" />
-            </button>
-          </div>
-        </div>
-      )}
+
 
       {/* ── Follow-Up Date (popup date picker) ── */}
       <div className="mt-2 flex items-center gap-2" onClick={e => e.stopPropagation()}>
