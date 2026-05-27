@@ -92,8 +92,21 @@ export default function LeadDetailPanel({
   const [editingLeadNotes, setEditingLeadNotes] = useState(false);
   const [leadNotesText, setLeadNotesText] = useState("");
   const [activityComment, setActivityComment] = useState("");
-  const [editingFollowUpDate, setEditingFollowUpDate] = useState(false);
+  const [showFollowUpDatePicker, setShowFollowUpDatePicker] = useState(false);
   const [followUpDateInput, setFollowUpDateInput] = useState("");
+  const followUpDatePickerRef = useRef<HTMLDivElement>(null);
+
+  // Close follow-up date picker on outside click
+  useEffect(() => {
+    if (!showFollowUpDatePicker) return;
+    const handler = (e: MouseEvent) => {
+      if (followUpDatePickerRef.current && !followUpDatePickerRef.current.contains(e.target as Node)) {
+        setShowFollowUpDatePicker(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showFollowUpDatePicker]);
   const [installmentsExpanded, setInstallmentsExpanded] = useState(false);
   const [onboardingExpanded, setOnboardingExpanded] = useState(true);
   const [showInlineConvert, setShowInlineConvert] = useState(false);
@@ -193,7 +206,7 @@ export default function LeadDetailPanel({
 
   const handleSetFollowUpDate = async (date: string | null) => {
     await setLeadFollowUpDate(lead.id, date);
-    setEditingFollowUpDate(false);
+    setShowFollowUpDatePicker(false);
     if (date) toast.success(`Follow-up set for ${formatDate(date)}`);
     else toast.success("Follow-up date cleared");
   };
@@ -515,41 +528,9 @@ export default function LeadDetailPanel({
                 <Calendar className="w-3.5 h-3.5" style={{ color: "oklch(0.72 0.12 75)" }} />
                 <span className="text-xs font-semibold" style={{ color: "oklch(0.72 0.12 75)" }}>Follow-Up Date</span>
               </div>
-              {editingFollowUpDate ? (
-                <div className="flex items-center gap-2">
-                  <input
-                    type="date"
-                    value={followUpDateInput}
-                    onChange={e => setFollowUpDateInput(e.target.value)}
-                    autoFocus
-                    className="px-2 py-1 rounded text-xs outline-none"
-                    style={{
-                      background: "oklch(0.22 0.025 250)",
-                      border: "1px solid oklch(0.72 0.12 75 / 40%)",
-                      color: "oklch(0.90 0.005 250)",
-                    }}
-                  />
-                  <button
-                    onClick={() => handleSetFollowUpDate(followUpDateInput || null)}
-                    className="px-2 py-1 rounded text-xs font-semibold hover:opacity-90"
-                    style={{ background: "oklch(0.72 0.12 75)", color: "oklch(0.13 0.025 250)" }}
-                  >Set</button>
-                  {lead.followUpDate && (
-                    <button
-                      onClick={() => handleSetFollowUpDate(null)}
-                      className="px-2 py-1 rounded text-xs hover:opacity-80"
-                      style={{ color: "oklch(0.60 0.22 25)", border: "1px solid oklch(0.60 0.22 25 / 30%)" }}
-                    >Clear</button>
-                  )}
-                  <button
-                    onClick={() => setEditingFollowUpDate(false)}
-                    className="text-xs hover:opacity-70"
-                    style={{ color: "oklch(0.45 0.01 250)" }}
-                  >✕</button>
-                </div>
-              ) : (
+              <div ref={followUpDatePickerRef} className="relative flex items-center gap-2">
                 <button
-                  onClick={() => { setFollowUpDateInput(lead.followUpDate ?? ""); setEditingFollowUpDate(true); }}
+                  onClick={() => { setFollowUpDateInput(lead.followUpDate ?? ""); setShowFollowUpDatePicker(p => !p); }}
                   className="text-xs px-2.5 py-1 rounded hover:opacity-80 transition-opacity"
                   style={{
                     color: lead.followUpDate ? "oklch(0.90 0.005 250)" : "oklch(0.45 0.01 250)",
@@ -561,7 +542,90 @@ export default function LeadDetailPanel({
                 >
                   {lead.followUpDate ? formatDate(lead.followUpDate) : "+ Set date"}
                 </button>
-              )}
+                {lead.followUpDate && (
+                  <button
+                    onClick={() => handleSetFollowUpDate(null)}
+                    className="text-xs hover:opacity-70"
+                    style={{ color: "oklch(0.50 0.01 250)" }}
+                    title="Clear follow-up date"
+                  >✕</button>
+                )}
+
+                {showFollowUpDatePicker && (
+                  <div
+                    className="absolute right-0 top-full mt-1 z-50 rounded-xl shadow-2xl p-3 min-w-[220px]"
+                    style={{
+                      background: "oklch(0.18 0.025 250)",
+                      border: "1px solid oklch(1 0 0 / 14%)",
+                    }}
+                  >
+                    <p className="text-xs font-semibold mb-2" style={{ color: "oklch(0.72 0.12 75)" }}>
+                      Set follow-up date
+                    </p>
+                    <input
+                      type="date"
+                      value={followUpDateInput}
+                      onChange={e => setFollowUpDateInput(e.target.value)}
+                      className="w-full rounded-lg px-3 py-2 text-sm mb-2"
+                      style={{
+                        background: "oklch(0.22 0.025 250)",
+                        border: "1px solid oklch(1 0 0 / 12%)",
+                        color: "oklch(0.90 0.005 250)",
+                        colorScheme: "dark",
+                      }}
+                      autoFocus
+                    />
+                    <div className="grid grid-cols-3 gap-1 mb-2">
+                      {[
+                        { label: "Tomorrow", days: 1 },
+                        { label: "3 Days",   days: 3 },
+                        { label: "1 Week",   days: 7 },
+                        { label: "2 Weeks",  days: 14 },
+                        { label: "1 Month",  days: 30 },
+                        { label: "2 Months", days: 60 },
+                      ].map(({ label, days }) => {
+                        const d = new Date();
+                        d.setDate(d.getDate() + days);
+                        const val = d.toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
+                        return (
+                          <button
+                            key={label}
+                            onClick={() => setFollowUpDateInput(val)}
+                            className="text-[10px] px-1.5 py-1 rounded transition-colors hover:opacity-90"
+                            style={{
+                              background: followUpDateInput === val ? "oklch(0.72 0.12 75 / 20%)" : "oklch(0.25 0.025 250)",
+                              color: followUpDateInput === val ? "oklch(0.72 0.12 75)" : "oklch(0.60 0.01 250)",
+                              border: `1px solid ${followUpDateInput === val ? "oklch(0.72 0.12 75 / 40%)" : "oklch(1 0 0 / 8%)"}`,
+                            }}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          if (!followUpDateInput) return;
+                          handleSetFollowUpDate(followUpDateInput);
+                        }}
+                        disabled={!followUpDateInput}
+                        className="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-40"
+                        style={{ background: "oklch(0.72 0.12 75)", color: "oklch(0.13 0.025 250)" }}
+                      >
+                        Confirm
+                      </button>
+                      <button
+                        onClick={() => setShowFollowUpDatePicker(false)}
+                        className="px-3 py-1.5 rounded-lg text-xs transition-colors"
+                        style={{ background: "oklch(0.25 0.025 250)", color: "oklch(0.55 0.01 250)" }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Comment input */}
