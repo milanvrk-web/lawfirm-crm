@@ -325,3 +325,10 @@
 - [x] Inline expand on Follow-Ups page: full comment thread + add comment + push due date forward (via panel)
 - [x] Lead Detail Panel activity section: replace follow-up task list with the single comment thread + set follow-up date
 - [x] Auto-create thread when a lead is created (no manual task creation needed) — thread is implicit via lead_notes
+
+## Complete Follow-Up Form (Mandatory)
+- [x] Replace simple closing note prompt with a "Complete Follow-Up" modal requiring both: (1) closing note and (2) next follow-up date
+- [x] Both fields are mandatory — cannot submit without filling both
+- [x] On submit: save closing note to activity log, set new followUpDate on lead, auto-log "Follow-up completed on [date] by [name]" entry
+- [x] Quick-pick date buttons (Tomorrow, 3 Days, 1 Week, 2 Weeks, 1 Month) in the modal
+- [x] Apply to Follow-Ups page mark-done button

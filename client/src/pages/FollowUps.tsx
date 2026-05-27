@@ -1,12 +1,10 @@
 /* ============================================================
-   Law Firm CRM — Follow-Ups Page  (v2 — simple, outcome-based)
+   Law Firm CRM — Follow-Ups Page  (v3 — mandatory complete flow)
    Design: Dark Luxury Legal — Navy + Gold
 
    Model: Every lead has ONE follow-up date + a running activity
-   thread (lead notes). This page shows all leads that have a
-   follow-up date set, sorted by date (overdue first, then today,
-   then upcoming). Staff click a lead to open the detail panel,
-   log a note, and set the next follow-up date. No separate task records.
+   thread (lead notes). Marking a follow-up done requires BOTH
+   a closing note AND the next follow-up date — mandatory, no skip.
    ============================================================ */
 
 import { useState, useMemo, useRef, useEffect } from "react";
@@ -14,9 +12,10 @@ import { useCRM } from "@/contexts/CRMContext";
 import { trpc } from "@/lib/trpc";
 import { formatDate, type Lead } from "@/lib/store";
 import { todayPST } from "@/lib/timezone";
+import { useActiveMember } from "@/contexts/ActiveMemberContext";
 import {
   Bell, AlertCircle, CheckCircle2, Calendar,
-  Phone, MessageSquare, ChevronRight, X,
+  Phone, MessageSquare, ChevronRight, X, CheckCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import LeadDetailPanel from "@/components/LeadDetailPanel";
@@ -40,14 +39,178 @@ const stageColor: Record<string, string> = {
   "Lost":         "oklch(0.60 0.22 25)",
 };
 
+// ── Complete Follow-Up Modal ───────────────────────────────
+
+function CompleteFollowUpModal({
+  lead,
+  onConfirm,
+  onCancel,
+}: {
+  lead: Lead;
+  onConfirm: (note: string, nextDate: string) => void;
+  onCancel: () => void;
+}) {
+  const [note, setNote] = useState("");
+  const [nextDate, setNextDate] = useState("");
+  const today = todayPST();
+
+  const canSubmit = note.trim().length > 0 && nextDate.length > 0;
+
+  const getQuickDate = (days: number) => {
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    return d.toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
+  };
+
+  const QUICK_PICKS = [
+    { label: "Tomorrow", days: 1 },
+    { label: "3 Days",   days: 3 },
+    { label: "1 Week",   days: 7 },
+    { label: "2 Weeks",  days: 14 },
+    { label: "1 Month",  days: 30 },
+    { label: "2 Months", days: 60 },
+  ];
+
+  return (
+    /* Backdrop */
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "oklch(0 0 0 / 70%)" }}
+      onClick={onCancel}
+    >
+      <div
+        className="w-full max-w-md rounded-2xl shadow-2xl p-5 space-y-4"
+        style={{ background: "oklch(0.18 0.025 250)", border: "1px solid oklch(1 0 0 / 14%)" }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <CheckCheck className="w-4 h-4" style={{ color: "oklch(0.55 0.18 145)" }} />
+              <h2 className="text-sm font-bold" style={{ color: "oklch(0.93 0.005 250)", fontFamily: "'Playfair Display', serif" }}>
+                Complete Follow-Up
+              </h2>
+            </div>
+            <p className="text-xs mt-0.5" style={{ color: "oklch(0.55 0.01 250)" }}>
+              {lead.name} · {lead.caseType}
+            </p>
+          </div>
+          <button onClick={onCancel} className="p-1 rounded hover:bg-white/8 transition-colors" style={{ color: "oklch(0.45 0.01 250)" }}>
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Field 1: Closing note (mandatory) */}
+        <div>
+          <label className="text-xs font-semibold block mb-1.5" style={{ color: "oklch(0.72 0.12 75)" }}>
+            What happened? <span style={{ color: "oklch(0.70 0.22 25)" }}>*</span>
+          </label>
+          <textarea
+            autoFocus
+            rows={3}
+            placeholder='e.g. "Spoke with client — sending retainer agreement", "No answer, left voicemail", "Client retained today"'
+            value={note}
+            onChange={e => setNote(e.target.value)}
+            className="w-full rounded-lg px-3 py-2 text-xs resize-none outline-none"
+            style={{
+              background: "oklch(0.22 0.025 250)",
+              border: `1px solid ${note.trim() ? "oklch(0.55 0.18 145 / 40%)" : "oklch(1 0 0 / 12%)"}`,
+              color: "oklch(0.90 0.005 250)",
+            }}
+          />
+          {!note.trim() && (
+            <p className="text-[10px] mt-1" style={{ color: "oklch(0.50 0.01 250)" }}>Required — describe what happened in this follow-up</p>
+          )}
+        </div>
+
+        {/* Field 2: Next follow-up date (mandatory) */}
+        <div>
+          <label className="text-xs font-semibold block mb-1.5" style={{ color: "oklch(0.72 0.12 75)" }}>
+            Next follow-up date <span style={{ color: "oklch(0.70 0.22 25)" }}>*</span>
+          </label>
+          {/* Quick-pick chips */}
+          <div className="grid grid-cols-3 gap-1.5 mb-2">
+            {QUICK_PICKS.map(({ label, days }) => {
+              const val = getQuickDate(days);
+              const isSelected = nextDate === val;
+              return (
+                <button
+                  key={label}
+                  onClick={() => setNextDate(val)}
+                  className="text-[11px] px-2 py-1.5 rounded-lg font-medium transition-all"
+                  style={{
+                    background: isSelected ? "oklch(0.72 0.12 75 / 20%)" : "oklch(0.25 0.025 250)",
+                    color: isSelected ? "oklch(0.72 0.12 75)" : "oklch(0.60 0.01 250)",
+                    border: `1px solid ${isSelected ? "oklch(0.72 0.12 75 / 50%)" : "oklch(1 0 0 / 8%)"}`,
+                  }}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+          {/* Custom date input */}
+          <input
+            type="date"
+            value={nextDate}
+            min={today}
+            onChange={e => setNextDate(e.target.value)}
+            className="w-full rounded-lg px-3 py-2 text-xs outline-none"
+            style={{
+              background: "oklch(0.22 0.025 250)",
+              border: `1px solid ${nextDate ? "oklch(0.55 0.18 145 / 40%)" : "oklch(1 0 0 / 12%)"}`,
+              color: "oklch(0.90 0.005 250)",
+              colorScheme: "dark",
+            }}
+          />
+          {!nextDate && (
+            <p className="text-[10px] mt-1" style={{ color: "oklch(0.50 0.01 250)" }}>Required — set when to follow up next</p>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2 pt-1">
+          <button
+            onClick={() => canSubmit && onConfirm(note.trim(), nextDate)}
+            disabled={!canSubmit}
+            className="flex-1 py-2 rounded-xl text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{
+              background: canSubmit ? "oklch(0.55 0.18 145)" : "oklch(0.30 0.025 250)",
+              color: canSubmit ? "oklch(0.13 0.025 250)" : "oklch(0.45 0.01 250)",
+            }}
+          >
+            Complete & Set Next Date
+          </button>
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 rounded-xl text-sm transition-colors"
+            style={{ background: "oklch(0.25 0.025 250)", color: "oklch(0.55 0.01 250)" }}
+          >
+            Cancel
+          </button>
+        </div>
+
+        {!canSubmit && (
+          <p className="text-[10px] text-center" style={{ color: "oklch(0.45 0.01 250)" }}>
+            Both fields are required to complete this follow-up
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Component ──────────────────────────────────────────────
 
 export default function FollowUps() {
   const { leads, setLeadFollowUpDate, addLeadNote } = useCRM();
+  const { activeMember } = useActiveMember();
   const today = todayPST();
 
   const [panelLeadId, setPanelLeadId] = useState<string | null>(null);
   const [filter, setFilter] = useState<"All" | "Overdue" | "Today" | "Upcoming">("All");
+  const [completingLead, setCompletingLead] = useState<Lead | null>(null);
 
   // Leads with a follow-up date set
   const leadsWithFollowUp = useMemo(() =>
@@ -67,27 +230,34 @@ export default function FollowUps() {
     else if (filter === "Today")    list = todayLeads;
     else if (filter === "Upcoming") list = upcomingLeads;
     else list = leadsWithFollowUp;
-    // Sort: overdue first, then today, then upcoming
     return [...list].sort((a, b) => a.followUpDate!.localeCompare(b.followUpDate!));
   }, [filter, leadsWithFollowUp, overdueLeads, todayLeads, upcomingLeads]);
 
-  const [closingNoteLeadId, setClosingNoteLeadId] = useState<string | null>(null);
-  const [closingNoteText, setClosingNoteText] = useState("");
-
   const handleMarkDoneClick = (lead: Lead, e: React.MouseEvent) => {
     e.stopPropagation();
-    setClosingNoteLeadId(lead.id);
-    setClosingNoteText("");
+    setCompletingLead(lead);
   };
 
-  const handleMarkDoneConfirm = async (lead: Lead) => {
-    if (closingNoteText.trim()) {
-      await addLeadNote(lead.id, closingNoteText.trim());
-    }
-    await setLeadFollowUpDate(lead.id, null);
-    setClosingNoteLeadId(null);
-    setClosingNoteText("");
-    toast.success(`Follow-up done for ${lead.name}`);
+  const handleCompleteConfirm = async (note: string, nextDate: string) => {
+    if (!completingLead) return;
+    const lead = completingLead;
+    setCompletingLead(null);
+
+    const completedOn = new Date().toLocaleDateString("en-US", {
+      timeZone: "America/Los_Angeles", month: "short", day: "numeric", year: "numeric"
+    });
+    const memberSuffix = activeMember ? ` by ${activeMember.name}` : "";
+
+    // 1. Save the closing note
+    await addLeadNote(lead.id, note);
+
+    // 2. Auto-log the completion entry
+    await addLeadNote(lead.id, `✓ Follow-up completed on ${completedOn}${memberSuffix}`);
+
+    // 3. Set the next follow-up date
+    await setLeadFollowUpDate(lead.id, nextDate);
+
+    toast.success(`Follow-up done for ${lead.name} · Next: ${formatDate(nextDate)}`);
   };
 
   const handleSetDate = async (lead: Lead, date: string) => {
@@ -167,15 +337,19 @@ export default function FollowUps() {
                 onOpen={() => setPanelLeadId(lead.id)}
                 onMarkDone={handleMarkDoneClick}
                 onSetDate={handleSetDate}
-                closingNoteLeadId={closingNoteLeadId}
-                closingNoteText={closingNoteText}
-                onClosingNoteChange={setClosingNoteText}
-                onClosingNoteConfirm={() => handleMarkDoneConfirm(lead)}
-                onClosingNoteCancel={() => setClosingNoteLeadId(null)}
               />
             );
           })}
         </div>
+      )}
+
+      {/* ── Complete Follow-Up Modal ─────────────────────────── */}
+      {completingLead && (
+        <CompleteFollowUpModal
+          lead={completingLead}
+          onConfirm={handleCompleteConfirm}
+          onCancel={() => setCompletingLead(null)}
+        />
       )}
 
       {/* ── Detail Panel ────────────────────────────────────── */}
@@ -198,11 +372,6 @@ function LeadFollowUpRow({
   onOpen,
   onMarkDone,
   onSetDate,
-  closingNoteLeadId,
-  closingNoteText,
-  onClosingNoteChange,
-  onClosingNoteConfirm,
-  onClosingNoteCancel,
 }: {
   lead: Lead;
   badge: { label: string; color: string; bg: string };
@@ -210,11 +379,6 @@ function LeadFollowUpRow({
   onOpen: () => void;
   onMarkDone: (lead: Lead, e: React.MouseEvent) => void;
   onSetDate: (lead: Lead, date: string) => void;
-  closingNoteLeadId: string | null;
-  closingNoteText: string;
-  onClosingNoteChange: (text: string) => void;
-  onClosingNoteConfirm: () => void;
-  onClosingNoteCancel: () => void;
 }) {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [dateInput, setDateInput] = useState(lead.followUpDate ?? "");
@@ -270,20 +434,15 @@ function LeadFollowUpRow({
         {/* Left: name + meta */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span
-              className="text-sm font-semibold"
-              style={{ color: "oklch(0.93 0.005 250)" }}
-            >
+            <span className="text-sm font-semibold" style={{ color: "oklch(0.93 0.005 250)" }}>
               {lead.name}
             </span>
-            {/* Stage badge */}
             <span
               className="text-[10px] px-1.5 py-0 rounded font-semibold"
               style={{ background: `${stageColor.replace(")", " / 15%)")}`, color: stageColor }}
             >
               {lead.stage}
             </span>
-            {/* Due badge */}
             <span
               className="text-[10px] px-1.5 py-0 rounded font-bold"
               style={{ background: badge.bg, color: badge.color }}
@@ -307,10 +466,7 @@ function LeadFollowUpRow({
           {latestNote ? (
             <div className="mt-1.5 flex items-start gap-1.5">
               <MessageSquare className="w-3 h-3 mt-0.5 shrink-0" style={{ color: "oklch(0.40 0.01 250)" }} />
-              <span
-                className="text-xs leading-relaxed line-clamp-2"
-                style={{ color: "oklch(0.60 0.005 250)" }}
-              >
+              <span className="text-xs leading-relaxed line-clamp-2" style={{ color: "oklch(0.60 0.005 250)" }}>
                 {latestNote.text}
                 <span className="ml-1.5" style={{ color: "oklch(0.38 0.01 250)" }}>
                   — {formatTimestamp(latestNote.timestamp)}
@@ -339,14 +495,10 @@ function LeadFollowUpRow({
               <Calendar className="w-3.5 h-3.5" />
             </button>
 
-            {/* Date picker popup */}
             {showDatePicker && (
               <div
                 className="absolute right-0 top-full mt-1 z-50 rounded-xl shadow-2xl p-3 min-w-[220px]"
-                style={{
-                  background: "oklch(0.18 0.025 250)",
-                  border: "1px solid oklch(1 0 0 / 14%)",
-                }}
+                style={{ background: "oklch(0.18 0.025 250)", border: "1px solid oklch(1 0 0 / 14%)" }}
                 onClick={e => e.stopPropagation()}
               >
                 <p className="text-xs font-semibold mb-2" style={{ color: "oklch(0.72 0.12 75)" }}>
@@ -365,7 +517,6 @@ function LeadFollowUpRow({
                   }}
                   autoFocus
                 />
-                {/* Quick-pick buttons */}
                 <div className="grid grid-cols-3 gap-1 mb-2">
                   {[
                     { label: "Tomorrow", days: 1 },
@@ -415,69 +566,16 @@ function LeadFollowUpRow({
             )}
           </div>
 
-          {/* Mark done — with closing note prompt */}
-          <div className="relative">
-            <button
-              onClick={e => onMarkDone(lead, e)}
-              title="Mark done"
-              className="p-1.5 rounded hover:bg-white/8 transition-colors"
-              style={{ color: "oklch(0.55 0.18 145)" }}
-            >
-              <CheckCircle2 className="w-3.5 h-3.5" />
-            </button>
-            {closingNoteLeadId === lead.id && (
-              <div
-                className="absolute right-0 bottom-full mb-2 z-50 rounded-xl shadow-2xl p-3 w-72"
-                style={{
-                  background: "oklch(0.18 0.025 250)",
-                  border: "1px solid oklch(1 0 0 / 14%)",
-                }}
-                onClick={e => e.stopPropagation()}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs font-semibold" style={{ color: "oklch(0.55 0.18 145)" }}>
-                    Add a closing note (optional)
-                  </p>
-                  <button onClick={onClosingNoteCancel} style={{ color: "oklch(0.45 0.01 250)" }}>
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-                <input
-                  type="text"
-                  autoFocus
-                  placeholder='e.g. "Retained", "No answer — closed", "Sent docs"'
-                  value={closingNoteText}
-                  onChange={e => onClosingNoteChange(e.target.value)}
-                  onKeyDown={e => { if (e.key === "Enter") onClosingNoteConfirm(); if (e.key === "Escape") onClosingNoteCancel(); }}
-                  className="w-full rounded-lg px-3 py-2 text-xs mb-2 outline-none"
-                  style={{
-                    background: "oklch(0.22 0.025 250)",
-                    border: "1px solid oklch(1 0 0 / 12%)",
-                    color: "oklch(0.90 0.005 250)",
-                  }}
-                />
-                <div className="flex gap-2">
-                  <button
-                    onClick={onClosingNoteConfirm}
-                    className="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-colors"
-                    style={{ background: "oklch(0.55 0.18 145 / 20%)", color: "oklch(0.55 0.18 145)", border: "1px solid oklch(0.55 0.18 145 / 30%)" }}
-                  >
-                    Done
-                  </button>
-                  <button
-                    onClick={onClosingNoteCancel}
-                    className="px-3 py-1.5 rounded-lg text-xs transition-colors"
-                    style={{ background: "oklch(0.25 0.025 250)", color: "oklch(0.55 0.01 250)" }}
-                  >
-                    Skip
-                  </button>
-                </div>
-                <p className="text-xs mt-1.5" style={{ color: "oklch(0.40 0.01 250)" }}>
-                  Press Enter to confirm, Escape to cancel.
-                </p>
-              </div>
-            )}
-          </div>
+          {/* Mark done — opens Complete Follow-Up modal */}
+          <button
+            onClick={e => onMarkDone(lead, e)}
+            title="Complete follow-up"
+            className="p-1.5 rounded hover:bg-white/8 transition-colors"
+            style={{ color: "oklch(0.55 0.18 145)" }}
+          >
+            <CheckCircle2 className="w-3.5 h-3.5" />
+          </button>
+
           <ChevronRight className="w-4 h-4" style={{ color: "oklch(0.35 0.01 250)" }} />
         </div>
       </div>
