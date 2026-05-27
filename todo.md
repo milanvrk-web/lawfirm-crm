@@ -314,3 +314,14 @@
 - [x] Remove the separate Follow-Up task management from the panel (Add Follow-Up button, task list) — keep only activity/comments log
 - [x] Activity/comments section below the combined info+notes section
 - [x] Keep collapsible Payment Plans and Onboarding Checklist at the bottom
+
+## Follow-Up System Redesign — One Thread Per Lead
+
+- [x] Add `followUpDate` field to leads table (nullable date string) for the next follow-up due date
+- [x] Add `leadNotes` table for the running comment thread (leadId, text, authorName, timestamp) — already existed as lead_notes
+- [x] Remove multi-task follow-up model from the UI — replace with single thread per lead
+- [x] Follow-Ups page: show leads with a followUpDate set, sorted by date (overdue first, then today, then upcoming)
+- [x] Each lead row on Follow-Ups page: client name, phone, case type, stage, due date, latest comment preview
+- [x] Inline expand on Follow-Ups page: full comment thread + add comment + push due date forward (via panel)
+- [x] Lead Detail Panel activity section: replace follow-up task list with the single comment thread + set follow-up date
+- [x] Auto-create thread when a lead is created (no manual task creation needed) — thread is implicit via lead_notes

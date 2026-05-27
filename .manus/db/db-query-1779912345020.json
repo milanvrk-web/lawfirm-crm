@@ -1,0 +1,9 @@
+{
+  "query": "ALTER TABLE `leads` ADD COLUMN `followUpDate` varchar(10) DEFAULT NULL;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute ALTER TABLE `leads` ADD COLUMN `followUpDate` varchar(10) DEFAULT NULL;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 475
+}

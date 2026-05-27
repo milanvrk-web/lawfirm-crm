@@ -152,6 +152,29 @@ export const appRouter = router({
         await db.deleteLeadNote(input.id);
         return { ok: true };
       }),
+
+    // Set or clear the follow-up date on a lead
+    setFollowUpDate: publicProcedure
+      .input(z.object({ id: z.string(), followUpDate: z.string().nullable() }))
+      .mutation(async ({ input }) => {
+        await db.updateLead(input.id, { followUpDate: input.followUpDate } as any);
+        return { ok: true };
+      }),
+
+    // Get all leads that have a follow-up date set
+    withFollowUpDates: publicProcedure.query(async () => {
+      const rows = await db.getAllLeads();
+      return rows
+        .filter(r => (r as any).followUpDate)
+        .map(r => ({
+          ...r,
+          retainerBooked: Number(r.retainerBooked),
+          downpayment: Number(r.downpayment),
+          quotedAmount: Number(r.quotedAmount),
+          consultationFee: Number((r as any).consultationFee ?? 0),
+          followUpDate: (r as any).followUpDate as string,
+        }));
+    }),
   }),
 
   // ─── Payments ─────────────────────────────────────────────

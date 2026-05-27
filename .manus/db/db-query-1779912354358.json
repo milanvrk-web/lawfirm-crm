@@ -1,0 +1,35 @@
+{
+  "query": "SELECT * FROM __drizzle_migrations ORDER BY created_at DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute SELECT * FROM __drizzle_migrations ORDER BY created_at DESC LIMIT 5;",
+  "rows": [
+    {
+      "id": "2000003",
+      "hash": "0005_migration_placeholder_complex_human_cannonball",
+      "created_at": "1778270616000"
+    },
+    {
+      "id": "2000001",
+      "hash": "0003_migration_placeholder_lostReason",
+      "created_at": "1778270616000"
+    },
+    {
+      "id": "2000002",
+      "hash": "0004_migration_placeholder_natural_speed_demon",
+      "created_at": "1778270616000"
+    },
+    {
+      "id": "2000004",
+      "hash": "0006_migration_placeholder_regular_stryfe",
+      "created_at": "1778270616000"
+    },
+    {
+      "id": "3",
+      "hash": "0002_cynical_machine_man",
+      "created_at": "1777925958461"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\thash\tcreated_at\n2000003\t0005_migration_placeholder_complex_human_cannonball\t1778270616000\n2000001\t0003_migration_placeholder_lostReason\t1778270616000\n2000002\t0004_migration_placeholder_natural_speed_demon\t1778270616000\n2000004\t0006_migration_placeholder_regular_stryfe\t1778270616000\n3\t0002_cynical_machine_man\t1777925958461\n",
+  "stderr": "",
+  "execution_time_ms": 260
+}

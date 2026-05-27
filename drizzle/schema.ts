@@ -53,6 +53,8 @@ export const leads = mysqlTable("leads", {
   convertedDate: varchar("convertedDate", { length: 10 }),
   lostReason: varchar("lostReason", { length: 255 }),
   consultationFee: decimal("consultationFee", { precision: 10, scale: 2 }).default("0"),
+  /** Next follow-up due date (YYYY-MM-DD). Null = no follow-up scheduled. */
+  followUpDate: varchar("followUpDate", { length: 10 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

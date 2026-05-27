@@ -46,6 +46,8 @@ interface CRMContextValue {
   addFollowUpComment: (followUpId: string, initial: string, text: string) => Promise<void>;
   // Lead Notes (stored separately, fetched per-lead by LeadDetailPanel)
   addLeadNote: (leadId: string, text: string, authorName?: string) => Promise<void>;
+  // Follow-up date on lead
+  setLeadFollowUpDate: (leadId: string, followUpDate: string | null) => Promise<void>;
 }
 
 const CRMContext = createContext<CRMContextValue | null>(null);
@@ -60,6 +62,7 @@ type DbLead = {
   retainerBooked: string | number; downpayment: string | number; quotedAmount: string | number;
   referredBy: string; convertedDate?: string | null; lostReason?: string | null;
   consultationFee?: string | number | null;
+  followUpDate?: string | null;
   createdAt?: Date; updatedAt?: Date;
 };
 
@@ -101,6 +104,7 @@ function normalizeLead(r: DbLead): Lead {
     convertedDate: r.convertedDate ?? undefined,
     lostReason: r.lostReason ?? null,
     consultationFee: Number(r.consultationFee ?? 0),
+    followUpDate: r.followUpDate ?? null,
   };
 }
 
@@ -194,6 +198,7 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
   });
 
   const addLeadNoteMut = trpc.leads.addNote.useMutation();
+  const setFollowUpDateMut = trpc.leads.setFollowUpDate.useMutation({ onSuccess: () => utils.leads.list.invalidate() });
 
   // ─── Handlers ──────────────────────────────────────────────
 
@@ -297,6 +302,10 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
     await addLeadNoteMut.mutateAsync({ leadId, text, authorName });
   }, [addLeadNoteMut]);
 
+  const handleSetLeadFollowUpDate = useCallback(async (leadId: string, followUpDate: string | null) => {
+    await setFollowUpDateMut.mutateAsync({ id: leadId, followUpDate });
+  }, [setFollowUpDateMut]);
+
   return (
     <CRMContext.Provider value={{
       leads,
@@ -320,6 +329,7 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
       deleteFollowUp: handleDeleteFollowUp,
       addFollowUpComment: handleAddFollowUpComment,
       addLeadNote: handleAddLeadNote,
+      setLeadFollowUpDate: handleSetLeadFollowUpDate,
     }}>
       {children}
     </CRMContext.Provider>

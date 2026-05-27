@@ -56,6 +56,7 @@ export interface Lead {
   convertedDate?: string;
   lostReason?: string | null;
   consultationFee?: number;  // fee paid for consultation (e.g. $150)
+  followUpDate?: string | null;  // YYYY-MM-DD, next follow-up due date
   leadLog?: LeadNote[];   // inline timestamped notes
 }
 

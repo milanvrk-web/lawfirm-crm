@@ -40,7 +40,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import {
   FileText, X, Phone, Edit2, CheckCircle, CheckCircle2, Circle,
-  Check, ChevronDown, CreditCard, MessageSquare, Trash2, Plus,
+  Check, ChevronDown, CreditCard, MessageSquare, Trash2, Plus, Calendar,
 } from "lucide-react";
 
 // ── Helpers ────────────────────────────────────────────────
@@ -80,8 +80,8 @@ export default function LeadDetailPanel({
   onConvertLead,
 }: LeadDetailPanelProps) {
   const {
-    leads, payments, followUps: allFollowUps,
-    addFollowUpComment, updateLead, addPayment,
+    leads, payments,
+    updateLead, addPayment, addLeadNote, setLeadFollowUpDate,
   } = useCRM();
 
   const utils = trpc.useUtils();
@@ -91,8 +91,9 @@ export default function LeadDetailPanel({
   const [stageDropdownOpen, setStageDropdownOpen] = useState(false);
   const [editingLeadNotes, setEditingLeadNotes] = useState(false);
   const [leadNotesText, setLeadNotesText] = useState("");
-  const [commentText, setCommentText] = useState<Record<string, string>>({});
-  const [paymentsExpanded, setPaymentsExpanded] = useState(false);
+  const [activityComment, setActivityComment] = useState("");
+  const [editingFollowUpDate, setEditingFollowUpDate] = useState(false);
+  const [followUpDateInput, setFollowUpDateInput] = useState("");
   const [installmentsExpanded, setInstallmentsExpanded] = useState(false);
   const [onboardingExpanded, setOnboardingExpanded] = useState(true);
   const [showInlineConvert, setShowInlineConvert] = useState(false);
@@ -162,18 +163,14 @@ export default function LeadDetailPanel({
     [leadId, leads]
   );
 
-  const leadFollowUps = useMemo(
-    () =>
-      lead
-        ? allFollowUps
-            .filter(f => f.leadId === lead.id)
-            .sort((a, b) => {
-              if (a.status === "Done" && b.status !== "Done") return 1;
-              if (b.status === "Done" && a.status !== "Done") return -1;
-              return a.dueDate.localeCompare(b.dueDate);
-            })
-        : [],
-    [lead, allFollowUps]
+  // Lead notes (activity thread) — fetched per lead
+  const { data: rawLeadNotes = [], refetch: refetchNotes } = trpc.leads.getNotes.useQuery(
+    { leadId: leadId! },
+    { enabled: !!leadId }
+  );
+  const leadNotes = useMemo(
+    () => [...rawLeadNotes].sort((a, b) => b.timestamp.localeCompare(a.timestamp)),
+    [rawLeadNotes]
   );
 
   const leadPayments = useMemo(
@@ -185,12 +182,20 @@ export default function LeadDetailPanel({
 
   if (!lead) return null;
 
-  const handleAddComment = (fuId: string) => {
-    const text = (commentText[fuId] || "").trim();
+  const handleAddActivityComment = async () => {
+    const text = activityComment.trim();
     if (!text) return;
-    addFollowUpComment(fuId, "", text);
-    setCommentText(prev => ({ ...prev, [fuId]: "" }));
+    await addLeadNote(lead.id, text, activeMember?.name ?? undefined);
+    setActivityComment("");
+    refetchNotes();
     toast.success("Comment added");
+  };
+
+  const handleSetFollowUpDate = async (date: string | null) => {
+    await setLeadFollowUpDate(lead.id, date);
+    setEditingFollowUpDate(false);
+    if (date) toast.success(`Follow-up set for ${formatDate(date)}`);
+    else toast.success("Follow-up date cleared");
   };
 
   // ── Render ─────────────────────────────────────────────────
@@ -487,41 +492,143 @@ export default function LeadDetailPanel({
           </div>
 
           {/* ══════════════════════════════════════════════════
-              SECTION 2 — ACTIVITY / COMMENTS
-              (follow-up task comments log — no task management)
+              SECTION 2 — FOLLOW-UP DATE + ACTIVITY THREAD
               ══════════════════════════════════════════════════ */}
           <div className="px-5 pt-4 pb-4" style={{ borderBottom: "1px solid oklch(1 0 0 / 8%)" }}>
-            <div className="flex items-center gap-2 mb-3">
-              <MessageSquare className="w-3.5 h-3.5" style={{ color: "oklch(0.55 0.18 250)" }} />
-              <span
-                className="text-xs font-bold uppercase tracking-wider"
-                style={{ color: "oklch(0.55 0.18 250)" }}
-              >
-                Activity &amp; Comments
-              </span>
+
+            {/* Section header */}
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="w-3.5 h-3.5" style={{ color: "oklch(0.55 0.18 250)" }} />
+                <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "oklch(0.55 0.18 250)" }}>
+                  Activity &amp; Follow-Up
+                </span>
+              </div>
             </div>
 
-            {leadFollowUps.length === 0 ? (
+            {/* Follow-Up Date row */}
+            <div
+              className="flex items-center justify-between rounded-lg px-3 py-2.5 mb-3"
+              style={{ background: "oklch(0.18 0.025 250)", border: "1px solid oklch(1 0 0 / 8%)" }}
+            >
+              <div className="flex items-center gap-2">
+                <Calendar className="w-3.5 h-3.5" style={{ color: "oklch(0.72 0.12 75)" }} />
+                <span className="text-xs font-semibold" style={{ color: "oklch(0.72 0.12 75)" }}>Follow-Up Date</span>
+              </div>
+              {editingFollowUpDate ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="date"
+                    value={followUpDateInput}
+                    onChange={e => setFollowUpDateInput(e.target.value)}
+                    autoFocus
+                    className="px-2 py-1 rounded text-xs outline-none"
+                    style={{
+                      background: "oklch(0.22 0.025 250)",
+                      border: "1px solid oklch(0.72 0.12 75 / 40%)",
+                      color: "oklch(0.90 0.005 250)",
+                    }}
+                  />
+                  <button
+                    onClick={() => handleSetFollowUpDate(followUpDateInput || null)}
+                    className="px-2 py-1 rounded text-xs font-semibold hover:opacity-90"
+                    style={{ background: "oklch(0.72 0.12 75)", color: "oklch(0.13 0.025 250)" }}
+                  >Set</button>
+                  {lead.followUpDate && (
+                    <button
+                      onClick={() => handleSetFollowUpDate(null)}
+                      className="px-2 py-1 rounded text-xs hover:opacity-80"
+                      style={{ color: "oklch(0.60 0.22 25)", border: "1px solid oklch(0.60 0.22 25 / 30%)" }}
+                    >Clear</button>
+                  )}
+                  <button
+                    onClick={() => setEditingFollowUpDate(false)}
+                    className="text-xs hover:opacity-70"
+                    style={{ color: "oklch(0.45 0.01 250)" }}
+                  >✕</button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => { setFollowUpDateInput(lead.followUpDate ?? ""); setEditingFollowUpDate(true); }}
+                  className="text-xs px-2.5 py-1 rounded hover:opacity-80 transition-opacity"
+                  style={{
+                    color: lead.followUpDate ? "oklch(0.90 0.005 250)" : "oklch(0.45 0.01 250)",
+                    border: lead.followUpDate
+                      ? "1px solid oklch(0.72 0.12 75 / 40%)"
+                      : "1px dashed oklch(0.35 0.01 250)",
+                    background: lead.followUpDate ? "oklch(0.72 0.12 75 / 10%)" : "transparent",
+                  }}
+                >
+                  {lead.followUpDate ? formatDate(lead.followUpDate) : "+ Set date"}
+                </button>
+              )}
+            </div>
+
+            {/* Comment input */}
+            <div className="flex gap-1.5 mb-3">
+              <input
+                type="text"
+                placeholder="Log a note or update (e.g. Called, no answer — try Friday)"
+                value={activityComment}
+                onChange={e => setActivityComment(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter" && activityComment.trim()) handleAddActivityComment(); }}
+                className="flex-1 px-2.5 py-2 rounded text-xs outline-none"
+                style={{
+                  background: "oklch(0.20 0.025 250)",
+                  border: "1px solid oklch(1 0 0 / 12%)",
+                  color: "oklch(0.85 0.005 250)",
+                }}
+              />
+              {activityComment.trim() && (
+                <button
+                  onClick={handleAddActivityComment}
+                  className="px-2.5 rounded text-xs font-medium hover:opacity-90 transition-all"
+                  style={{
+                    background: "oklch(0.55 0.18 250 / 20%)",
+                    color: "oklch(0.70 0.12 250)",
+                    border: "1px solid oklch(0.55 0.18 250 / 30%)",
+                  }}
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Activity thread */}
+            {leadNotes.length === 0 ? (
               <div
-                className="text-center py-6 rounded-lg"
+                className="text-center py-5 rounded-lg"
                 style={{ background: "oklch(0.17 0.025 250)", border: "1px solid oklch(1 0 0 / 6%)" }}
               >
-                <MessageSquare className="w-6 h-6 mx-auto mb-1.5" style={{ color: "oklch(0.30 0.01 250)" }} />
-                <p className="text-sm" style={{ color: "oklch(0.45 0.01 250)" }}>No follow-up activity yet.</p>
-                <p className="text-xs mt-0.5" style={{ color: "oklch(0.35 0.01 250)" }}>
-                  Add follow-ups from the Follow-Ups page.
-                </p>
+                <MessageSquare className="w-5 h-5 mx-auto mb-1.5" style={{ color: "oklch(0.30 0.01 250)" }} />
+                <p className="text-xs" style={{ color: "oklch(0.40 0.01 250)" }}>No activity yet. Log the first update above.</p>
               </div>
             ) : (
-              <div className="space-y-3">
-                {leadFollowUps.map(fu => (
-                  <ActivityCard
-                    key={fu.id}
-                    fu={fu}
-                    commentText={commentText[fu.id] || ""}
-                    onCommentChange={text => setCommentText(prev => ({ ...prev, [fu.id]: text }))}
-                    onAddComment={() => handleAddComment(fu.id)}
-                  />
+              <div className="space-y-1.5">
+                {leadNotes.map(note => (
+                  <div
+                    key={note.id}
+                    className="px-3 py-2 rounded-lg text-xs"
+                    style={{
+                      background: "oklch(0.18 0.025 250)",
+                      borderLeft: "2px solid oklch(0.55 0.18 250 / 40%)",
+                    }}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <span style={{ color: "oklch(0.82 0.005 250)", lineHeight: "1.5" }}>{note.text}</span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      {note.authorName && (
+                        <span
+                          className="px-1.5 py-0 rounded-full text-[10px] font-medium"
+                          style={{ background: "oklch(0.55 0.18 250 / 15%)", color: "oklch(0.65 0.12 250)" }}
+                        >
+                          {note.authorName}
+                        </span>
+                      )}
+                      <span style={{ color: "oklch(0.38 0.01 250)" }}>{formatTimestamp(note.timestamp)}</span>
+                    </div>
+                  </div>
                 ))}
               </div>
             )}
