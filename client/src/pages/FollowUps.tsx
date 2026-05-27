@@ -15,7 +15,7 @@ import { trpc } from "@/lib/trpc";
 import { formatDate, type Lead } from "@/lib/store";
 import { todayPST } from "@/lib/timezone";
 import {
-  Bell, AlertCircle, Clock, CheckCircle2, Calendar,
+  Bell, AlertCircle, CheckCircle2, Calendar,
   Phone, MessageSquare, ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -107,7 +107,7 @@ export default function FollowUps() {
           { key: "All",      label: "All",      count: leadsWithFollowUp.length, color: "oklch(0.60 0.15 250)", icon: Calendar },
           { key: "Overdue",  label: "Overdue",  count: overdueLeads.length,      color: "oklch(0.70 0.22 25)",  icon: AlertCircle },
           { key: "Today",    label: "Today",    count: todayLeads.length,         color: "oklch(0.72 0.12 75)",  icon: Bell },
-          { key: "Upcoming", label: "Upcoming", count: upcomingLeads.length,      color: "oklch(0.55 0.18 145)", icon: Clock },
+          { key: "Upcoming", label: "Upcoming", count: upcomingLeads.length,      color: "oklch(0.55 0.18 145)", icon: Calendar },
         ].map(({ key, label, count, color, icon: Icon }) => (
           <button
             key={key}
@@ -300,15 +300,15 @@ function LeadFollowUpRow({
         {/* Right: quick actions + chevron */}
         <div className="flex items-center gap-1.5 shrink-0 pt-0.5 relative">
 
-          {/* Reschedule date picker trigger */}
+          {/* Date picker trigger */}
           <div ref={datePickerRef} className="relative">
             <button
               onClick={e => { e.stopPropagation(); setDateInput(lead.followUpDate ?? ""); setShowDatePicker(p => !p); }}
-              title="Reschedule follow-up"
+              title="Set follow-up date"
               className="p-1.5 rounded hover:bg-white/8 transition-colors flex items-center gap-1"
               style={{ color: "oklch(0.65 0.15 200)" }}
             >
-              <Clock className="w-3.5 h-3.5" />
+              <Calendar className="w-3.5 h-3.5" />
             </button>
 
             {/* Date picker popup */}
