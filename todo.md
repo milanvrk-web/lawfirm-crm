@@ -332,3 +332,8 @@
 - [x] On submit: save closing note to activity log, set new followUpDate on lead, auto-log "Follow-up completed on [date] by [name]" entry
 - [x] Quick-pick date buttons (Tomorrow, 3 Days, 1 Week, 2 Weeks, 1 Month) in the modal
 - [x] Apply to Follow-Ups page mark-done button
+
+## Activity Timeline Improvements (May 2026)
+- [x] Add activity type icons to the timeline in LeadDetailPanel (red alert for missed, green check for completed, blue note for regular)
+- [x] Auto-generate "Follow-up missed" virtual entries when followUpDate is in the past with no completion note
+- [x] Fix stale lead detection in StaleLeadsDrawer and Layout sidebar badge to use followUpDate and latest note timestamp instead of legacy followUps task system

@@ -41,6 +41,7 @@ import { Button } from "@/components/ui/button";
 import {
   FileText, X, Phone, Edit2, CheckCircle, CheckCircle2, Circle,
   Check, ChevronDown, CreditCard, MessageSquare, Trash2, Plus, Calendar, CheckCheck, Pencil,
+  AlertCircle, StickyNote, PhoneCall,
 } from "lucide-react";
 
 // ── CompleteFollowUpModal ──────────────────────────────────
@@ -865,128 +866,209 @@ export default function LeadDetailPanel({
             </div>
 
             {/* Activity thread */}
-            {leadNotes.length === 0 ? (
-              <div
-                className="text-center py-5 rounded-lg"
-                style={{ background: "oklch(0.17 0.025 250)", border: "1px solid oklch(1 0 0 / 6%)" }}
-              >
-                <MessageSquare className="w-5 h-5 mx-auto mb-1.5" style={{ color: "oklch(0.30 0.01 250)" }} />
-                <p className="text-xs" style={{ color: "oklch(0.40 0.01 250)" }}>No activity yet. Log the first update above.</p>
-              </div>
-            ) : (
-              <div className="space-y-1.5">
-                {leadNotes.map(note => {
-                  // Detect completion entries: "<comment>\n__DONE__:<member>:<date>"
-                  const doneMatch = note.text.match(/^([\s\S]+?)\n__DONE__:([^:]+):(.+)$/);
-                  const isDone = !!doneMatch;
-                  const commentText = isDone ? doneMatch![1] : note.text;
-                  const doneMember = isDone ? doneMatch![2] : null;
-                  const doneDate = isDone ? doneMatch![3] : null;
-                  const isEditing = editingNoteId === note.id;
+            {(() => {
+              // Build the display list: real notes + synthetic "missed" entries
+              // A missed entry is injected when followUpDate is in the past
+              // and the most-recent note is NOT a __DONE__ completion entry.
+              const today = todayPST();
+              const latestNote = leadNotes[0]; // already sorted newest-first
+              const latestIsDone = latestNote?.text.match(/\n__DONE__:/);
+              const isMissed =
+                lead.followUpDate &&
+                lead.followUpDate < today &&
+                !latestIsDone;
 
-                  return (
-                    <div
-                      key={note.id}
-                      className="px-3 py-2.5 rounded-lg text-xs group"
-                      style={{
-                        background: isDone ? "oklch(0.55 0.18 145 / 6%)" : "oklch(0.18 0.025 250)",
-                        borderLeft: `2px solid ${isDone ? "oklch(0.55 0.18 145 / 50%)" : "oklch(0.55 0.18 250 / 40%)"}`,
-                      }}
-                    >
-                      {isEditing ? (
-                        /* ── Edit mode ── */
-                        <div className="space-y-1.5">
-                          <textarea
-                            value={editingNoteText}
-                            onChange={e => setEditingNoteText(e.target.value)}
-                            rows={3}
-                            autoFocus
-                            className="w-full px-2 py-1.5 rounded text-xs outline-none resize-none"
-                            style={{
-                              background: "oklch(0.22 0.025 250)",
-                              border: "1px solid oklch(1 0 0 / 18%)",
-                              color: "oklch(0.88 0.005 250)",
-                            }}
-                          />
-                          <div className="flex gap-1.5">
-                            <button
-                              onClick={() => handleSaveEditNote(note.id)}
-                              disabled={!editingNoteText.trim()}
-                              className="px-2.5 py-1 rounded text-[10px] font-semibold transition-all disabled:opacity-40"
-                              style={{ background: "oklch(0.55 0.18 250 / 20%)", color: "oklch(0.70 0.12 250)", border: "1px solid oklch(0.55 0.18 250 / 30%)" }}
-                            >
-                              Save
-                            </button>
-                            <button
-                              onClick={() => setEditingNoteId(null)}
-                              className="px-2.5 py-1 rounded text-[10px] transition-all"
-                              style={{ background: "oklch(0.22 0.025 250)", color: "oklch(0.50 0.01 250)" }}
-                            >
-                              Cancel
-                            </button>
+              type DisplayEntry =
+                | { kind: "note"; note: typeof leadNotes[0] }
+                | { kind: "missed"; date: string };
+
+              const entries: DisplayEntry[] = [];
+              // Inject missed entry at the top (newest position)
+              if (isMissed) {
+                entries.push({ kind: "missed", date: lead.followUpDate! });
+              }
+              leadNotes.forEach(n => entries.push({ kind: "note", note: n }));
+
+              if (entries.length === 0) {
+                return (
+                  <div
+                    className="text-center py-5 rounded-lg"
+                    style={{ background: "oklch(0.17 0.025 250)", border: "1px solid oklch(1 0 0 / 6%)" }}
+                  >
+                    <MessageSquare className="w-5 h-5 mx-auto mb-1.5" style={{ color: "oklch(0.30 0.01 250)" }} />
+                    <p className="text-xs" style={{ color: "oklch(0.40 0.01 250)" }}>No activity yet. Log the first update above.</p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="space-y-1.5">
+                  {entries.map((entry, idx) => {
+                    // ── Synthetic missed entry ──
+                    if (entry.kind === "missed") {
+                      return (
+                        <div
+                          key="__missed__"
+                          className="flex items-start gap-2.5 px-3 py-2.5 rounded-lg text-xs"
+                          style={{
+                            background: "oklch(0.70 0.22 25 / 6%)",
+                            borderLeft: "2px solid oklch(0.70 0.22 25 / 60%)",
+                          }}
+                        >
+                          {/* Icon */}
+                          <div
+                            className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center mt-0.5"
+                            style={{ background: "oklch(0.70 0.22 25 / 20%)" }}
+                          >
+                            <AlertCircle className="w-3 h-3" style={{ color: "oklch(0.70 0.22 25)" }} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-semibold" style={{ color: "oklch(0.75 0.18 25)" }}>
+                              Follow-up missed
+                            </div>
+                            <div style={{ color: "oklch(0.55 0.01 250)" }} className="mt-0.5">
+                              Scheduled follow-up for {formatDate(entry.date)} was not completed.
+                            </div>
                           </div>
                         </div>
-                      ) : (
-                        /* ── View mode ── */
-                        <>
-                          <div className="flex items-start justify-between gap-2">
-                            <span style={{ color: "oklch(0.85 0.005 250)", lineHeight: "1.55", whiteSpace: "pre-wrap" }}>
-                              {commentText}
-                            </span>
-                            {/* Edit / Delete buttons — visible on hover */}
-                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-0.5">
-                              {!isDone && (
+                      );
+                    }
+
+                    // ── Real note entry ──
+                    const note = entry.note;
+                    const doneMatch = note.text.match(/^([\s\S]+?)\n__DONE__:([^:]+):(.+)$/);
+                    const isDone = !!doneMatch;
+                    const commentText = isDone ? doneMatch![1] : note.text;
+                    const doneMember = isDone ? doneMatch![2] : null;
+                    const doneDate = isDone ? doneMatch![3] : null;
+                    const isEditing = editingNoteId === note.id;
+
+                    // Determine icon type
+                    const iconEl = isDone ? (
+                      <div
+                        className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center mt-0.5"
+                        style={{ background: "oklch(0.55 0.18 145 / 20%)" }}
+                      >
+                        <CheckCheck className="w-3 h-3" style={{ color: "oklch(0.65 0.18 145)" }} />
+                      </div>
+                    ) : (
+                      <div
+                        className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center mt-0.5"
+                        style={{ background: "oklch(0.55 0.18 250 / 15%)" }}
+                      >
+                        <StickyNote className="w-3 h-3" style={{ color: "oklch(0.65 0.12 250)" }} />
+                      </div>
+                    );
+
+                    return (
+                      <div
+                        key={note.id}
+                        className="flex items-start gap-2.5 px-3 py-2.5 rounded-lg text-xs group"
+                        style={{
+                          background: isDone ? "oklch(0.55 0.18 145 / 6%)" : "oklch(0.18 0.025 250)",
+                          borderLeft: `2px solid ${isDone ? "oklch(0.55 0.18 145 / 50%)" : "oklch(0.55 0.18 250 / 40%)"}`,
+                        }}
+                      >
+                        {/* Activity type icon */}
+                        {!isEditing && iconEl}
+
+                        <div className="flex-1 min-w-0">
+                          {isEditing ? (
+                            /* ── Edit mode ── */
+                            <div className="space-y-1.5">
+                              <textarea
+                                value={editingNoteText}
+                                onChange={e => setEditingNoteText(e.target.value)}
+                                rows={3}
+                                autoFocus
+                                className="w-full px-2 py-1.5 rounded text-xs outline-none resize-none"
+                                style={{
+                                  background: "oklch(0.22 0.025 250)",
+                                  border: "1px solid oklch(1 0 0 / 18%)",
+                                  color: "oklch(0.88 0.005 250)",
+                                }}
+                              />
+                              <div className="flex gap-1.5">
                                 <button
-                                  onClick={() => { setEditingNoteId(note.id); setEditingNoteText(note.text); }}
-                                  className="p-1 rounded hover:bg-white/10 transition-colors"
-                                  title="Edit note"
-                                  style={{ color: "oklch(0.55 0.01 250)" }}
+                                  onClick={() => handleSaveEditNote(note.id)}
+                                  disabled={!editingNoteText.trim()}
+                                  className="px-2.5 py-1 rounded text-[10px] font-semibold transition-all disabled:opacity-40"
+                                  style={{ background: "oklch(0.55 0.18 250 / 20%)", color: "oklch(0.70 0.12 250)", border: "1px solid oklch(0.55 0.18 250 / 30%)" }}
                                 >
-                                  <Pencil className="w-3 h-3" />
+                                  Save
                                 </button>
+                                <button
+                                  onClick={() => setEditingNoteId(null)}
+                                  className="px-2.5 py-1 rounded text-[10px] transition-all"
+                                  style={{ background: "oklch(0.22 0.025 250)", color: "oklch(0.50 0.01 250)" }}
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            /* ── View mode ── */
+                            <>
+                              <div className="flex items-start justify-between gap-2">
+                                <span style={{ color: "oklch(0.85 0.005 250)", lineHeight: "1.55", whiteSpace: "pre-wrap" }}>
+                                  {commentText}
+                                </span>
+                                {/* Edit / Delete buttons — visible on hover */}
+                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-0.5">
+                                  {!isDone && (
+                                    <button
+                                      onClick={() => { setEditingNoteId(note.id); setEditingNoteText(note.text); }}
+                                      className="p-1 rounded hover:bg-white/10 transition-colors"
+                                      title="Edit note"
+                                      style={{ color: "oklch(0.55 0.01 250)" }}
+                                    >
+                                      <Pencil className="w-3 h-3" />
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={() => handleDeleteNote(note.id)}
+                                    className="p-1 rounded hover:bg-red-500/15 transition-colors"
+                                    title="Delete note"
+                                    style={{ color: "oklch(0.55 0.01 250)" }}
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Completion badge */}
+                              {isDone && (
+                                <div className="flex items-center gap-1.5 mt-1.5">
+                                  <span
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold"
+                                    style={{ background: "oklch(0.55 0.18 145 / 15%)", color: "oklch(0.65 0.18 145)", border: "1px solid oklch(0.55 0.18 145 / 30%)" }}
+                                  >
+                                    <CheckCheck className="w-2.5 h-2.5" />
+                                    Follow-up done · {doneMember} · {doneDate}
+                                  </span>
+                                </div>
                               )}
-                              <button
-                                onClick={() => handleDeleteNote(note.id)}
-                                className="p-1 rounded hover:bg-red-500/15 transition-colors"
-                                title="Delete note"
-                                style={{ color: "oklch(0.55 0.01 250)" }}
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </button>
-                            </div>
-                          </div>
 
-                          {/* Completion badge — shown inline below the comment */}
-                          {isDone && (
-                            <div className="flex items-center gap-1.5 mt-1.5">
-                              <span
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold"
-                                style={{ background: "oklch(0.55 0.18 145 / 15%)", color: "oklch(0.65 0.18 145)", border: "1px solid oklch(0.55 0.18 145 / 30%)" }}
-                              >
-                                <CheckCheck className="w-2.5 h-2.5" />
-                                Follow-up done · {doneMember} · {doneDate}
-                              </span>
-                            </div>
+                              <div className="flex items-center gap-2 mt-1.5">
+                                {note.authorName && (
+                                  <span
+                                    className="px-1.5 py-0 rounded-full text-[10px] font-medium"
+                                    style={{ background: "oklch(0.55 0.18 250 / 15%)", color: "oklch(0.65 0.12 250)" }}
+                                  >
+                                    {note.authorName}
+                                  </span>
+                                )}
+                                <span style={{ color: "oklch(0.38 0.01 250)" }}>{formatTimestamp(note.timestamp)}</span>
+                              </div>
+                            </>
                           )}
-
-                          <div className="flex items-center gap-2 mt-1.5">
-                            {note.authorName && (
-                              <span
-                                className="px-1.5 py-0 rounded-full text-[10px] font-medium"
-                                style={{ background: "oklch(0.55 0.18 250 / 15%)", color: "oklch(0.65 0.12 250)" }}
-                              >
-                                {note.authorName}
-                              </span>
-                            )}
-                            <span style={{ color: "oklch(0.38 0.01 250)" }}>{formatTimestamp(note.timestamp)}</span>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
 
           {/* ══════════════════════════════════════════════════

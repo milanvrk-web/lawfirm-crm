@@ -46,10 +46,10 @@ function stageColor(stage: string): string {
 }
 
 export default function StaleLeadsDrawer({ open, onClose }: StaleLeadsDrawerProps) {
-  const { leads, payments, followUps, addFollowUp } = useCRM();
+  const { leads, payments, setLeadFollowUpDate, addLeadNote } = useCRM();
   const { activeMember } = useActiveMember();
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [forms, setForms] = useState<Record<string, { title: string; dueDate: string; note: string }>>({});
+  const [forms, setForms] = useState<Record<string, { note: string; dueDate: string }>>({});
   const [saving, setSaving] = useState<Record<string, boolean>>({});
 
   // Close on Escape
@@ -64,22 +64,22 @@ export default function StaleLeadsDrawer({ open, onClose }: StaleLeadsDrawerProp
     }
   }, [open, handleKeyDown]);
 
-  // Compute stale leads with last activity info
+  // Compute stale leads using followUpDate and latest payment as activity signals
   const staleLeadList: StaleLead[] = (() => {
     const cutoffMs = Date.now() - 14 * 24 * 60 * 60 * 1000;
     return leads
-      .filter(l => l.stage !== "Lost" && l.stage !== "Retained")
+      .filter(l => l.stage !== "Lost" && l.stage !== "Retained" && l.stage !== "Onboarding")
       .map(l => {
         const lastPaymentMs = payments
           .filter(p => p.leadId === l.id)
           .map(p => new Date(p.date + "T12:00:00").getTime())
           .reduce((max, t) => Math.max(max, t), 0);
-        const lastFollowUpMs = followUps
-          .filter(f => f.leadId === l.id)
-          .map(f => new Date(f.dueDate + "T12:00:00").getTime())
-          .reduce((max, t) => Math.max(max, t), 0);
+        // followUpDate is the primary activity signal — if it's set, the lead is being managed
+        const followUpDateMs = l.followUpDate
+          ? new Date(l.followUpDate + "T12:00:00").getTime()
+          : 0;
         const createdMs = new Date(l.date + "T12:00:00").getTime();
-        const lastActivityMs = Math.max(createdMs, lastPaymentMs, lastFollowUpMs);
+        const lastActivityMs = Math.max(createdMs, lastPaymentMs, followUpDateMs);
         return { lead: l, lastActivityMs, daysSinceActivity: Math.floor((Date.now() - lastActivityMs) / (1000 * 60 * 60 * 24)), lastActivityLabel: formatRelativeDate(lastActivityMs) };
       })
       .filter(s => s.lastActivityMs < cutoffMs)
@@ -87,31 +87,29 @@ export default function StaleLeadsDrawer({ open, onClose }: StaleLeadsDrawerProp
   })();
 
   function getForm(leadId: string) {
-    return forms[leadId] ?? { title: "Follow up with client", dueDate: getDefaultDueDate(), note: "" };
+    return forms[leadId] ?? { note: "", dueDate: getDefaultDueDate() };
   }
 
-  function setForm(leadId: string, updates: Partial<{ title: string; dueDate: string; note: string }>) {
+  function setForm(leadId: string, updates: Partial<{ note: string; dueDate: string }>) {
     setForms(prev => ({ ...prev, [leadId]: { ...getForm(leadId), ...updates } }));
   }
 
   async function handleSave(lead: Lead) {
     const form = getForm(lead.id);
-    if (!form.title.trim()) { toast.error("Please enter a task title"); return; }
-    if (!form.dueDate) { toast.error("Please select a due date"); return; }
+    if (!form.dueDate) { toast.error("Please select a follow-up date"); return; }
     setSaving(prev => ({ ...prev, [lead.id]: true }));
     try {
-      await addFollowUp({
-        leadId: lead.id,
-        title: form.title.trim(),
-        dueDate: form.dueDate,
-        status: "Pending",
-        assignedTo: activeMember?.name ?? null,
-      });
-      toast.success(`Follow-up assigned for ${lead.name}`);
+      // Log a note if provided
+      if (form.note.trim()) {
+        await addLeadNote(lead.id, form.note.trim(), activeMember?.name ?? undefined);
+      }
+      // Set the follow-up date on the lead
+      await setLeadFollowUpDate(lead.id, form.dueDate);
+      toast.success(`Follow-up scheduled for ${lead.name}`);
       setExpandedId(null);
       setForms(prev => { const n = { ...prev }; delete n[lead.id]; return n; });
     } catch {
-      toast.error("Failed to save follow-up");
+      toast.error("Failed to schedule follow-up");
     } finally {
       setSaving(prev => ({ ...prev, [lead.id]: false }));
     }
@@ -255,24 +253,7 @@ export default function StaleLeadsDrawer({ open, onClose }: StaleLeadsDrawerProp
                     style={{ borderTop: "1px solid oklch(1 0 0 / 8%)" }}
                   >
                     <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "oklch(0.45 0.01 250)" }}>
-                      Assign Follow-Up Task
-                    </div>
-
-                    <div>
-                      <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>
-                        Task Title *
-                      </Label>
-                      <Input
-                        value={form.title}
-                        onChange={e => setForm(lead.id, { title: e.target.value })}
-                        placeholder="e.g. Call back, Send documents, Check in"
-                        style={{
-                          background: "oklch(0.22 0.025 250)",
-                          borderColor: "oklch(1 0 0 / 12%)",
-                          color: "oklch(0.93 0.005 250)",
-                          fontSize: "0.8125rem",
-                        }}
-                      />
+                      Schedule Follow-Up
                     </div>
 
                     <div>
@@ -323,7 +304,7 @@ export default function StaleLeadsDrawer({ open, onClose }: StaleLeadsDrawerProp
                         }}
                       >
                         <Plus className="w-3.5 h-3.5" />
-                        {isSaving ? "Saving…" : "Assign Task"}
+                        {isSaving ? "Saving…" : "Schedule Follow-Up"}
                       </Button>
                       <Button
                         size="sm"
@@ -348,7 +329,7 @@ export default function StaleLeadsDrawer({ open, onClose }: StaleLeadsDrawerProp
             className="px-5 py-3 flex-shrink-0 text-xs"
             style={{ borderTop: "1px solid oklch(1 0 0 / 8%)", color: "oklch(0.40 0.01 250)" }}
           >
-            Sorted by most stale first · Leads with any payment or follow-up in the last 14 days are excluded
+            Sorted by most stale first · Leads with a follow-up date or payment in the last 14 days are excluded
           </div>
         )}
       </div>

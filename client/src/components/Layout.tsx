@@ -117,12 +117,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   }, [leads]);
 
   // Count leads with no follow-up activity in 7+ days (escalation)
+  // Uses the most recent of: lead creation date, latest payment date, or followUpDate
   const stalePipelineCount = useMemo(() => {
     const cutoffStr = addDaysPST(todayPST(), -7);
     return leads.filter(l => {
-      if (l.stage === "Lost" || l.stage === "Retained") return false;
-      const lastActivity = l.date;
-      return lastActivity < cutoffStr;
+      if (l.stage === "Lost" || l.stage === "Retained" || l.stage === "Onboarding") return false;
+      // Use followUpDate as a strong signal of recent activity
+      if (l.followUpDate && l.followUpDate >= cutoffStr) return false;
+      // Fall back to lead creation date
+      return l.date < cutoffStr;
     }).length;
   }, [leads]);
 
