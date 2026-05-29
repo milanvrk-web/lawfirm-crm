@@ -280,7 +280,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   className="w-full px-3 py-2 text-xs text-left border-t hover:opacity-80 transition-opacity"
                   style={{ color: "oklch(0.55 0.22 25)", borderColor: "oklch(1 0 0 / 8%)" }}
                 >
-                  Sign out
+                  Switch Account
                 </button>
               )}
             </div>

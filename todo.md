@@ -337,3 +337,10 @@
 - [x] Add activity type icons to the timeline in LeadDetailPanel (red alert for missed, green check for completed, blue note for regular)
 - [x] Auto-generate "Follow-up missed" virtual entries when followUpDate is in the past with no completion note
 - [x] Fix stale lead detection in StaleLeadsDrawer and Layout sidebar badge to use followUpDate and latest note timestamp instead of legacy followUps task system
+
+## Member Select Screen on App Open
+- [x] Build MemberSelectScreen component showing all team members as selectable cards
+- [x] Show screen after access code unlock when no active member is set in localStorage
+- [x] Each card shows member avatar (initials + color), name, and role
+- [x] Clicking a card sets the active member and enters the app
+- [x] Add "Switch Account" option in the sidebar footer to return to this screen

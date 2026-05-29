@@ -11,9 +11,10 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { CRMProvider } from "./contexts/CRMContext";
-import { ActiveMemberProvider } from "./contexts/ActiveMemberContext";
+import { ActiveMemberProvider, useActiveMember } from "./contexts/ActiveMemberContext";
 import Layout from "./components/Layout";
 import LockScreen from "./components/LockScreen";
+import MemberSelectScreen from "./components/MemberSelectScreen";
 import Dashboard from "./pages/Dashboard";
 import Leads from "./pages/Leads";
 import Payments from "./pages/Payments";
@@ -44,6 +45,23 @@ function Router() {
         <Route component={NotFound} />
       </Switch>
     </Layout>
+  );
+}
+
+// Inner gate that runs inside ActiveMemberProvider so it can read activeMember
+function MemberGate({ children }: { children: React.ReactNode }) {
+  const { activeMember } = useActiveMember();
+  const [memberSelected, setMemberSelected] = useState(() => activeMember !== null);
+
+  // If activeMember was already in localStorage, skip the screen
+  if (memberSelected && activeMember) {
+    return <>{children}</>;
+  }
+
+  return (
+    <MemberSelectScreen
+      onSelect={() => setMemberSelected(true)}
+    />
   );
 }
 
@@ -83,7 +101,9 @@ function AppGate() {
       <CRMProvider>
         <TooltipProvider>
           <Toaster richColors position="top-right" />
-          <Router />
+          <MemberGate>
+            <Router />
+          </MemberGate>
         </TooltipProvider>
       </CRMProvider>
     </ActiveMemberProvider>
