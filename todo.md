@@ -346,8 +346,14 @@
 - [x] Add "Switch Account" option in the sidebar footer to return to this screen
 
 ## Mandatory Note on Follow-Up Date Changes (Accountability)
-- [ ] Follow-Ups page: replace silent date picker with a Reschedule modal requiring a reason note before saving the new date
-- [ ] Lead Detail Panel: require a reason note when changing the follow-up date via the date picker (not on first-time set)
-- [ ] Kanban card date picker: require a reason note when changing an existing follow-up date
-- [ ] StaleLeadsDrawer: make the note field mandatory (not optional) when scheduling a follow-up date
-- [ ] Auto-log a system activity entry "Rescheduled to [date] by [member]: [reason]" in the lead's thread on every date change
+- [x] Follow-Ups page: replace silent date picker with a Reschedule modal requiring a reason note before saving the new date
+- [x] Lead Detail Panel: require a reason note when changing the follow-up date via the date picker (not on first-time set)
+- [x] Kanban card date picker: require a reason note when changing an existing follow-up date
+- [x] StaleLeadsDrawer: make the note field mandatory (not optional) when scheduling a follow-up date
+- [x] Auto-log a system activity entry "Rescheduled to [date] by [member]: [reason]" in the lead's thread on every date change
+
+## Reschedule Warning Badge on Kanban Cards
+- [x] Add DB helper getRescheduleCountsForAllLeads — SQL COUNT of notes containing __RESCHEDULE__ grouped by leadId
+- [x] Add tRPC procedure leads.getRescheduleCounts returning a map of leadId → count
+- [x] In LeadCard, fetch reschedule count and show an amber warning badge when count > 2
+- [x] Badge shows count and tooltip "Rescheduled N times — review this lead"

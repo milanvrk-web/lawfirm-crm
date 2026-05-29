@@ -1,4 +1,4 @@
-import { eq, desc, asc, lt, lte, gte, and } from "drizzle-orm";
+import { eq, desc, asc, lt, lte, gte, and, sql, like } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   users,
@@ -181,6 +181,25 @@ export async function updateLeadNote(id: string, text: string) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.update(leadNotes).set({ text }).where(eq(leadNotes.id, id));
+}
+
+export async function getRescheduleCountsForAllLeads(): Promise<Record<string, number>> {
+  const db = await getDb();
+  if (!db) return {};
+  // Count notes containing __RESCHEDULE__ tag per lead
+  const rows = await db
+    .select({
+      leadId: leadNotes.leadId,
+      count: sql<number>`COUNT(*)`.as("count"),
+    })
+    .from(leadNotes)
+    .where(like(leadNotes.text, "%__RESCHEDULE__%"))
+    .groupBy(leadNotes.leadId);
+  const result: Record<string, number> = {};
+  for (const row of rows) {
+    result[row.leadId] = Number(row.count);
+  }
+  return result;
 }
 
 // ─── Payments ───────────────────────────────────────────────────────────────────────────

@@ -168,6 +168,11 @@ export const appRouter = router({
         return { ok: true };
       }),
 
+    // Count reschedules per lead (for warning badge on Kanban cards)
+    getRescheduleCounts: publicProcedure.query(async () => {
+      return db.getRescheduleCountsForAllLeads();
+    }),
+
     // Get all leads that have a follow-up date set
     withFollowUpDates: publicProcedure.query(async () => {
       const rows = await db.getAllLeads();

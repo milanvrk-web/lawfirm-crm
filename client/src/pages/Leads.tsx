@@ -116,6 +116,11 @@ export default function Leads() {
   const { data: dbStages = [] } = trpc.pipeline.getStages.useQuery();
   const { data: allChecklistTemplates = [] } = trpc.pipeline.getAllChecklistTemplates.useQuery();
 
+  // ── Reschedule counts for warning badges ─────────────────
+  const { data: rescheduleCounts = {} } = trpc.leads.getRescheduleCounts.useQuery(undefined, {
+    refetchInterval: 60_000, // refresh every minute
+  });
+
   // Build a color map from DB stages (fallback to static map for stages not yet in DB)
   const dynamicStageColor = useMemo(() => {
     const map: Record<string, string> = { ...stageColor };
@@ -688,6 +693,7 @@ export default function Leads() {
                       lead={lead}
                       stageTemplates={stageTemplates}
                       stageColor={color}
+                      rescheduleCount={rescheduleCounts[lead.id] ?? 0}
                       onOpenDetail={() => openDetail(lead)}
                       onEdit={() => openEdit(lead)}
                       onDelete={() => { deleteLead(lead.id); toast.success("Lead deleted"); }}
@@ -967,11 +973,12 @@ export default function Leads() {
 type ChecklistTemplate = { id: string; stageId: string; label: string; description: string | null; order: number; createdAt: Date; };
 
 function LeadCard({
-  lead, stageTemplates = [], stageColor: cardStageColor, onOpenDetail, onEdit, onDelete, onConvert, onMarkDone, onReschedule, onSetFollowUpDate,
+  lead, stageTemplates = [], stageColor: cardStageColor, rescheduleCount = 0, onOpenDetail, onEdit, onDelete, onConvert, onMarkDone, onReschedule, onSetFollowUpDate,
 }: {
   lead: Lead;
   stageTemplates?: ChecklistTemplate[];
   stageColor?: string;
+  rescheduleCount?: number;
   onOpenDetail: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -1063,9 +1070,9 @@ function LeadCard({
       className="rounded-lg border p-3 transition-all cursor-pointer hover:border-white/20 hover:bg-[oklch(0.21_0.025_250)]"
       style={{
         background: "oklch(0.19 0.025 250)",
-        borderColor: isOverdue ? "oklch(0.60 0.22 25 / 60%)" : "oklch(1 0 0 / 8%)",
+        borderColor: isOverdue ? "oklch(0.60 0.22 25 / 60%)" : rescheduleCount > 2 ? "oklch(0.75 0.18 75 / 40%)" : "oklch(1 0 0 / 8%)",
         borderLeftWidth: "3px",
-        borderLeftColor: isOverdue ? "oklch(0.65 0.22 25)" : "oklch(0.72 0.12 75 / 40%)",
+        borderLeftColor: isOverdue ? "oklch(0.65 0.22 25)" : rescheduleCount > 2 ? "oklch(0.75 0.18 75)" : "oklch(0.72 0.12 75 / 40%)",
       }}
     >
       {/* Card header */}
@@ -1103,6 +1110,22 @@ function LeadCard({
           </div>
         </div>
 
+        {/* Reschedule warning badge — shown when rescheduled more than twice */}
+        {rescheduleCount > 2 && (
+          <div
+            className="flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-full w-fit"
+            style={{
+              background: "oklch(0.75 0.18 75 / 15%)",
+              border: "1px solid oklch(0.75 0.18 75 / 40%)",
+            }}
+            title={`Rescheduled ${rescheduleCount} times — review this lead`}
+          >
+            <AlertCircle className="w-3 h-3 flex-shrink-0" style={{ color: "oklch(0.75 0.18 75)" }} />
+            <span className="text-[10px] font-semibold" style={{ color: "oklch(0.75 0.18 75)" }}>
+              Rescheduled {rescheduleCount}×
+            </span>
+          </div>
+        )}
       </div>
 
       {/* ── Checklist Progress Bar (visible on all cards with stage templates) ── */}
