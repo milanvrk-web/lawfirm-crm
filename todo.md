@@ -344,3 +344,10 @@
 - [x] Each card shows member avatar (initials + color), name, and role
 - [x] Clicking a card sets the active member and enters the app
 - [x] Add "Switch Account" option in the sidebar footer to return to this screen
+
+## Mandatory Note on Follow-Up Date Changes (Accountability)
+- [ ] Follow-Ups page: replace silent date picker with a Reschedule modal requiring a reason note before saving the new date
+- [ ] Lead Detail Panel: require a reason note when changing the follow-up date via the date picker (not on first-time set)
+- [ ] Kanban card date picker: require a reason note when changing an existing follow-up date
+- [ ] StaleLeadsDrawer: make the note field mandatory (not optional) when scheduling a follow-up date
+- [ ] Auto-log a system activity entry "Rescheduled to [date] by [member]: [reason]" in the lead's thread on every date change

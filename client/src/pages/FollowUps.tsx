@@ -201,6 +201,164 @@ function CompleteFollowUpModal({
   );
 }
 
+// ── Reschedule Modal (mandatory reason note) ─────────────
+
+function RescheduleModal({
+  lead,
+  onConfirm,
+  onCancel,
+}: {
+  lead: Lead;
+  onConfirm: (note: string, newDate: string) => void;
+  onCancel: () => void;
+}) {
+  const [note, setNote] = useState("");
+  const [newDate, setNewDate] = useState("");
+  const today = todayPST();
+  const canSubmit = note.trim().length > 0 && newDate.length > 0;
+
+  const getQuickDate = (days: number) => {
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    return d.toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
+  };
+
+  const QUICK_PICKS = [
+    { label: "Tomorrow", days: 1 },
+    { label: "3 Days",   days: 3 },
+    { label: "1 Week",   days: 7 },
+    { label: "2 Weeks",  days: 14 },
+    { label: "1 Month",  days: 30 },
+    { label: "2 Months", days: 60 },
+  ];
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "oklch(0 0 0 / 70%)" }}
+      onClick={onCancel}
+    >
+      <div
+        className="w-full max-w-md rounded-2xl shadow-2xl p-5 space-y-4"
+        style={{ background: "oklch(0.18 0.025 250)", border: "1px solid oklch(1 0 0 / 14%)" }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4" style={{ color: "oklch(0.65 0.15 200)" }} />
+              <h2 className="text-sm font-bold" style={{ color: "oklch(0.93 0.005 250)", fontFamily: "'Playfair Display', serif" }}>
+                Reschedule Follow-Up
+              </h2>
+            </div>
+            <p className="text-xs mt-0.5" style={{ color: "oklch(0.55 0.01 250)" }}>
+              {lead.name} · {lead.caseType}
+            </p>
+          </div>
+          <button onClick={onCancel} className="p-1 rounded hover:bg-white/8 transition-colors" style={{ color: "oklch(0.45 0.01 250)" }}>
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Field 1: Reason note (mandatory) */}
+        <div>
+          <label className="text-xs font-semibold block mb-1.5" style={{ color: "oklch(0.65 0.15 200)" }}>
+            Why are you rescheduling? <span style={{ color: "oklch(0.70 0.22 25)" }}>*</span>
+          </label>
+          <textarea
+            autoFocus
+            rows={3}
+            placeholder='e.g. "Client asked to call back next week", "Waiting on documents", "No answer — trying again"'
+            value={note}
+            onChange={e => setNote(e.target.value)}
+            className="w-full rounded-lg px-3 py-2 text-xs resize-none outline-none"
+            style={{
+              background: "oklch(0.22 0.025 250)",
+              border: `1px solid ${note.trim() ? "oklch(0.65 0.15 200 / 40%)" : "oklch(1 0 0 / 12%)"}`,
+              color: "oklch(0.90 0.005 250)",
+            }}
+          />
+          {!note.trim() && (
+            <p className="text-[10px] mt-1" style={{ color: "oklch(0.50 0.01 250)" }}>Required — a reason must be logged for every reschedule</p>
+          )}
+        </div>
+
+        {/* Field 2: New date (mandatory) */}
+        <div>
+          <label className="text-xs font-semibold block mb-1.5" style={{ color: "oklch(0.65 0.15 200)" }}>
+            New follow-up date <span style={{ color: "oklch(0.70 0.22 25)" }}>*</span>
+          </label>
+          <div className="grid grid-cols-3 gap-1.5 mb-2">
+            {QUICK_PICKS.map(({ label, days }) => {
+              const val = getQuickDate(days);
+              const isSelected = newDate === val;
+              return (
+                <button
+                  key={label}
+                  onClick={() => setNewDate(val)}
+                  className="text-[11px] px-2 py-1.5 rounded-lg font-medium transition-all"
+                  style={{
+                    background: isSelected ? "oklch(0.65 0.15 200 / 20%)" : "oklch(0.25 0.025 250)",
+                    color: isSelected ? "oklch(0.65 0.15 200)" : "oklch(0.60 0.01 250)",
+                    border: `1px solid ${isSelected ? "oklch(0.65 0.15 200 / 50%)" : "oklch(1 0 0 / 8%)"}`,
+                  }}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+          <input
+            type="date"
+            value={newDate}
+            min={today}
+            onChange={e => setNewDate(e.target.value)}
+            className="w-full rounded-lg px-3 py-2 text-xs outline-none"
+            style={{
+              background: "oklch(0.22 0.025 250)",
+              border: `1px solid ${newDate ? "oklch(0.65 0.15 200 / 40%)" : "oklch(1 0 0 / 12%)"}`,
+              color: "oklch(0.90 0.005 250)",
+              colorScheme: "dark",
+            }}
+          />
+          {!newDate && (
+            <p className="text-[10px] mt-1" style={{ color: "oklch(0.50 0.01 250)" }}>Required — set the new follow-up date</p>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2 pt-1">
+          <button
+            onClick={() => canSubmit && onConfirm(note.trim(), newDate)}
+            disabled={!canSubmit}
+            className="flex-1 py-2 rounded-xl text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{
+              background: canSubmit ? "oklch(0.65 0.15 200)" : "oklch(0.30 0.025 250)",
+              color: canSubmit ? "oklch(0.10 0.02 250)" : "oklch(0.45 0.01 250)",
+            }}
+          >
+            Reschedule
+          </button>
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 rounded-xl text-sm transition-colors"
+            style={{ background: "oklch(0.25 0.025 250)", color: "oklch(0.55 0.01 250)" }}
+          >
+            Cancel
+          </button>
+        </div>
+
+        {!canSubmit && (
+          <p className="text-[10px] text-center" style={{ color: "oklch(0.45 0.01 250)" }}>
+            Both a reason and a new date are required to reschedule
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Component ──────────────────────────────────────────────
 
 export default function FollowUps() {
@@ -211,6 +369,7 @@ export default function FollowUps() {
   const [panelLeadId, setPanelLeadId] = useState<string | null>(null);
   const [filter, setFilter] = useState<"All" | "Overdue" | "Today" | "Upcoming">("All");
   const [completingLead, setCompletingLead] = useState<Lead | null>(null);
+  const [reschedulingLead, setReschedulingLead] = useState<Lead | null>(null);
 
   // Leads with a follow-up date set
   const leadsWithFollowUp = useMemo(() =>
@@ -258,9 +417,37 @@ export default function FollowUps() {
     toast.success(`Follow-up done for ${lead.name} · Next: ${formatDate(nextDate)}`);
   };
 
-  const handleSetDate = async (lead: Lead, date: string) => {
-    await setLeadFollowUpDate(lead.id, date);
-    toast.success(`Follow-up set to ${formatDate(date)}`);
+  // For leads with NO existing date, set directly (first-time set, no note required)
+  // For leads that ALREADY have a date, open the reschedule modal to force a reason note
+  const handleSetDate = (lead: Lead, _date: string) => {
+    if (lead.followUpDate) {
+      // Already has a date — require a reason note before changing it
+      setReschedulingLead(lead);
+    } else {
+      // No date yet — allow direct set without note
+      setLeadFollowUpDate(lead.id, _date);
+      toast.success(`Follow-up set to ${formatDate(_date)}`);
+    }
+  };
+
+  const handleRescheduleConfirm = async (note: string, newDate: string) => {
+    if (!reschedulingLead) return;
+    const lead = reschedulingLead;
+    setReschedulingLead(null);
+
+    const memberName = activeMember?.name ?? "Team";
+    const rescheduledOn = new Date().toLocaleDateString("en-US", {
+      timeZone: "America/Los_Angeles", month: "short", day: "numeric", year: "numeric",
+    });
+
+    // Log a traceable activity entry: reason + reschedule tag
+    const auditNote = `${note}\n__RESCHEDULE__:${memberName}:${rescheduledOn}:${newDate}`;
+    await addLeadNote(lead.id, auditNote, activeMember?.name ?? undefined);
+
+    // Update the follow-up date
+    await setLeadFollowUpDate(lead.id, newDate);
+
+    toast.success(`Rescheduled to ${formatDate(newDate)} — reason logged`);
   };
 
   return (
@@ -347,6 +534,15 @@ export default function FollowUps() {
           lead={completingLead}
           onConfirm={handleCompleteConfirm}
           onCancel={() => setCompletingLead(null)}
+        />
+      )}
+
+      {/* ── Reschedule Modal (mandatory reason note) ─────────── */}
+      {reschedulingLead && (
+        <RescheduleModal
+          lead={reschedulingLead}
+          onConfirm={handleRescheduleConfirm}
+          onCancel={() => setReschedulingLead(null)}
         />
       )}
 
