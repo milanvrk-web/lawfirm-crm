@@ -24,6 +24,7 @@ import {
   Settings2,
   UserCog,
   Search,
+  Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCRM } from "@/contexts/CRMContext";
@@ -289,6 +290,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
         {/* Footer */}
         <div className="px-6 py-3 border-t" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
+          <div className="flex items-center gap-1.5 mb-1.5 px-2 py-1 rounded-md" style={{ background: "oklch(0.72 0.12 75 / 10%)", border: "1px solid oklch(0.72 0.12 75 / 20%)" }}>
+            <Clock className="w-3 h-3 flex-shrink-0" style={{ color: "oklch(0.72 0.12 75)" }} />
+            <span className="text-xs font-medium" style={{ color: "oklch(0.72 0.12 75)" }}>All times in PST</span>
+          </div>
           <div className="text-xs" style={{ color: "oklch(0.40 0.01 250)" }}>
             Graham Immigration Law, PC v2.0
           </div>
@@ -321,6 +326,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             alt="Graham Immigration Law, P.C."
             className="h-8 w-auto object-contain"
           />
+          {/* PST timezone label — mobile */}
+          <div className="flex items-center gap-1 px-2 py-0.5 rounded" style={{ background: "oklch(0.72 0.12 75 / 12%)", border: "1px solid oklch(0.72 0.12 75 / 25%)" }}>
+            <Clock className="w-3 h-3" style={{ color: "oklch(0.72 0.12 75)" }} />
+            <span className="text-[10px] font-medium whitespace-nowrap" style={{ color: "oklch(0.72 0.12 75)" }}>PST</span>
+          </div>
           {/* Mobile search trigger */}
           <button
             onClick={() => setSearchOpen(true)}
