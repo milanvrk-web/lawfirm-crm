@@ -357,3 +357,15 @@
 - [x] Add tRPC procedure leads.getRescheduleCounts returning a map of leadId → count
 - [x] In LeadCard, fetch reschedule count and show an amber warning badge when count > 2
 - [x] Badge shows count and tooltip "Rescheduled N times — review this lead"
+
+## PST Timezone Fix — Dates Showing One Day Behind for Non-PST Users
+
+- [x] Audit all date display code — find every place that converts YYYY-MM-DD to a JS Date object causing local timezone shift
+- [x] Create `formatDatePST(dateStr)` utility in timezone.ts that formats a YYYY-MM-DD string for display without local timezone conversion
+- [x] Fix FollowUps.tsx — all follow-up date display calls
+- [x] Fix LeadDetailPanel.tsx — follow-up date display and overdue check
+- [x] Fix Leads.tsx (Kanban cards) — follow-up date display
+- [x] Fix Payments.tsx — payment date display
+- [x] Fix DailyClose.tsx — date display
+- [x] Fix Dashboard.tsx — any date display in stats or charts
+- [x] Verify all overdue/today comparisons use todayPST() not new Date()

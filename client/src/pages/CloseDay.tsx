@@ -8,7 +8,7 @@ import { useState, useMemo } from "react";
 import { useCRM } from "@/contexts/CRMContext";
 import { useActiveMember } from "@/contexts/ActiveMemberContext";
 import { formatCurrency, formatDate } from "@/lib/store";
-import { todayPST } from "@/lib/timezone";
+import { todayPST, addDaysPST } from "@/lib/timezone";
 import { CalendarCheck, Lock, CheckCircle, ChevronLeft, ChevronRight, User, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -53,17 +53,8 @@ export default function CloseDay() {
     onError: () => toast.error("Failed to delete close record"),
   });
 
-  const prevDay = () => {
-    const d = new Date(selectedDate + "T12:00:00");
-    d.setDate(d.getDate() - 1);
-    setSelectedDate(d.toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" }));
-  };
-
-  const nextDay = () => {
-    const d = new Date(selectedDate + "T12:00:00");
-    d.setDate(d.getDate() + 1);
-    setSelectedDate(d.toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" }));
-  };
+  const prevDay = () => setSelectedDate(addDaysPST(selectedDate, -1));
+  const nextDay = () => setSelectedDate(addDaysPST(selectedDate, 1));
 
   const handleClose = () => {
     closeDay(selectedDate, activeMember?.name);

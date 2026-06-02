@@ -1,4 +1,4 @@
-import { todayPST, tomorrowPST } from "@/lib/timezone";
+import { todayPST, tomorrowPST, addDaysPST } from "@/lib/timezone";
 /* ============================================================
    LeadDetailPanel — shared slide-over component
    Design: Dark luxury navy/gold — Playfair Display headings
@@ -59,11 +59,7 @@ function CompleteFollowUpModal({
   const today = todayPST();
   const canSubmit = note.trim().length > 0 && nextDate.length > 0;
 
-  const getQuickDate = (days: number) => {
-    const d = new Date();
-    d.setDate(d.getDate() + days);
-    return d.toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
-  };
+  const getQuickDate = (days: number) => addDaysPST(todayPST(), days);
 
   const QUICK_PICKS = [
     { label: "Tomorrow", days: 1 },
@@ -217,11 +213,7 @@ function RescheduleModal({
   const today = todayPST();
   const canSubmit = note.trim().length > 0 && newDate.length > 0;
 
-  const getQuickDate = (days: number) => {
-    const d = new Date();
-    d.setDate(d.getDate() + days);
-    return d.toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
-  };
+  const getQuickDate = (days: number) => addDaysPST(todayPST(), days);
 
   const QUICK_PICKS = [
     { label: "Tomorrow", days: 1 },
@@ -969,9 +961,7 @@ export default function LeadDetailPanel({
                         { label: "1 Month",  days: 30 },
                         { label: "2 Months", days: 60 },
                       ].map(({ label, days }) => {
-                        const d = new Date();
-                        d.setDate(d.getDate() + days);
-                        const val = d.toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
+                        const val = addDaysPST(todayPST(), days);
                         return (
                           <button
                             key={label}

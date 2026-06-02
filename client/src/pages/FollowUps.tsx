@@ -11,7 +11,7 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import { useCRM } from "@/contexts/CRMContext";
 import { trpc } from "@/lib/trpc";
 import { formatDate, type Lead } from "@/lib/store";
-import { todayPST } from "@/lib/timezone";
+import { todayPST, addDaysPST } from "@/lib/timezone";
 import { useActiveMember } from "@/contexts/ActiveMemberContext";
 import {
   Bell, AlertCircle, CheckCircle2, Calendar,
@@ -56,11 +56,7 @@ function CompleteFollowUpModal({
 
   const canSubmit = note.trim().length > 0 && nextDate.length > 0;
 
-  const getQuickDate = (days: number) => {
-    const d = new Date();
-    d.setDate(d.getDate() + days);
-    return d.toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
-  };
+  const getQuickDate = (days: number) => addDaysPST(todayPST(), days);
 
   const QUICK_PICKS = [
     { label: "Tomorrow", days: 1 },
@@ -217,11 +213,7 @@ function RescheduleModal({
   const today = todayPST();
   const canSubmit = note.trim().length > 0 && newDate.length > 0;
 
-  const getQuickDate = (days: number) => {
-    const d = new Date();
-    d.setDate(d.getDate() + days);
-    return d.toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
-  };
+  const getQuickDate = (days: number) => addDaysPST(todayPST(), days);
 
   const QUICK_PICKS = [
     { label: "Tomorrow", days: 1 },
@@ -720,9 +712,7 @@ function LeadFollowUpRow({
                     { label: "1 Month",  days: 30 },
                     { label: "2 Months", days: 60 },
                   ].map(({ label, days }) => {
-                    const d = new Date();
-                    d.setDate(d.getDate() + days);
-                    const val = d.toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
+                    const val = addDaysPST(todayPST(), days);
                     return (
                       <button
                         key={label}
