@@ -1,4 +1,4 @@
-import { todayPST, tomorrowPST, addDaysPST } from "@/lib/timezone";
+import { todayPST, tomorrowPST, addDaysPST, nowDateTimePST } from "@/lib/timezone";
 import { PSTDatePicker } from "@/components/PSTDatePicker";
 /* ============================================================
    LeadDetailPanel — shared slide-over component
@@ -522,9 +522,7 @@ export default function LeadDetailPanel({
   const handleRescheduleConfirm = async (note: string, newDate: string) => {
     setShowRescheduleModal(false);
     const memberName = activeMember?.name ?? "Staff";
-    const rescheduledOn = new Date().toLocaleDateString("en-US", {
-      timeZone: "America/Los_Angeles", month: "short", day: "numeric", year: "numeric",
-    });
+    const rescheduledOn = nowDateTimePST();
     const auditNote = `${note}\n__RESCHEDULE__:${memberName}:${rescheduledOn}:${newDate}`;
     await addLeadNote(lead.id, auditNote, activeMember?.name ?? undefined);
     await setLeadFollowUpDate(lead.id, newDate);
@@ -534,12 +532,10 @@ export default function LeadDetailPanel({
 
   const handleCompleteFollowUp = async (note: string, nextDate: string) => {
     setShowCompleteModal(false);
-    const completedOn = new Date().toLocaleDateString("en-US", {
-      timeZone: "America/Los_Angeles", month: "short", day: "numeric", year: "numeric",
-    });
+    const completedOn = nowDateTimePST();
     const memberName = activeMember?.name ?? "Staff";
     // Save one combined entry: note text + completion tag on the same line
-    // Format: "<note text>\n__DONE__:<member>:<date>"
+    // Format: "<note text>\n__DONE__:<member>:<date+time>"
     const combinedNote = `${note}\n__DONE__:${memberName}:${completedOn}`;
     await addLeadNote(lead.id, combinedNote, activeMember?.name ?? undefined);
     // Set the next follow-up date
@@ -1045,7 +1041,11 @@ export default function LeadDetailPanel({
                     // ── Real note entry ──
                     const note = entry.note;
                     const doneMatch = note.text.match(/^([\s\S]+?)\n__DONE__:([^:]+):(.+)$/);
-                    const rescheduleMatch = note.text.match(/^([\s\S]+?)\n__RESCHEDULE__:([^:]+):([^:]+):(.+)$/);
+                    // __RESCHEDULE__ format: "<note>\n__RESCHEDULE__:<member>:<datetime>:<YYYY-MM-DD>"
+                    // The datetime may contain colons (e.g. "Jun 2, 2026 at 2:34 PM"), so we match
+                    // the last colon-separated token as the new date (YYYY-MM-DD) and everything
+                    // before it (after the member field) as the datetime string.
+                    const rescheduleMatch = note.text.match(/^([\s\S]+?)\n__RESCHEDULE__:([^:]+):(.+):(\d{4}-\d{2}-\d{2})$/);
                     const isDone = !!doneMatch;
                     const isReschedule = !isDone && !!rescheduleMatch;
                     const commentText = isDone ? doneMatch![1] : isReschedule ? rescheduleMatch![1] : note.text;
@@ -1177,7 +1177,7 @@ export default function LeadDetailPanel({
                                     style={{ background: "oklch(0.65 0.15 200 / 15%)", color: "oklch(0.65 0.15 200)", border: "1px solid oklch(0.65 0.15 200 / 30%)" }}
                                   >
                                     <Calendar className="w-2.5 h-2.5" />
-                                    Rescheduled to {rescheduleNewDate ? formatDate(rescheduleNewDate) : ""} · {rescheduleMember} · {rescheduleOn}
+                                    Rescheduled to {rescheduleNewDate ? formatDate(rescheduleNewDate) : ""} · {rescheduleMember} · {rescheduleOn ?? ""}
                                   </span>
                                 </div>
                               )}

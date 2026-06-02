@@ -1,4 +1,4 @@
-import { todayPST, tomorrowPST, addDaysPST } from "@/lib/timezone";
+import { todayPST, tomorrowPST, addDaysPST, nowDateTimePST } from "@/lib/timezone";
 import { PSTDatePicker } from "@/components/PSTDatePicker";
 /* ============================================================
    Law Firm CRM — Leads Page
@@ -1364,9 +1364,7 @@ function LeadCard({
           onConfirm={async (note: string, newDate: string) => {
             setShowKanbanReschedule(false);
             const memberName = activeMember?.name ?? "Team";
-            const rescheduledOn = new Date().toLocaleDateString("en-US", {
-              timeZone: "America/Los_Angeles", month: "short", day: "numeric", year: "numeric",
-            });
+            const rescheduledOn = nowDateTimePST();
             const auditNote = `${note}\n__RESCHEDULE__:${memberName}:${rescheduledOn}:${newDate}`;
             await addLeadNote(lead.id, auditNote, activeMember?.name ?? undefined);
             await setLeadFollowUpDate(lead.id, newDate);

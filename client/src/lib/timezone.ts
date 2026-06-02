@@ -43,6 +43,14 @@ export function tomorrowPST(): string {
   return addDaysPST(todayPST(), 1);
 }
 
+/** Returns current PST date+time as a human-readable string for audit log entries, e.g. "Jun 2, 2026 at 2:34 PM" */
+export function nowDateTimePST(): string {
+  const now = new Date();
+  const date = now.toLocaleDateString("en-US", { timeZone: TZ, month: "short", day: "numeric", year: "numeric" });
+  const time = now.toLocaleTimeString("en-US", { timeZone: TZ, hour: "numeric", minute: "2-digit", hour12: true });
+  return `${date} at ${time}`;
+}
+
 /** Returns current time as a PST-aware ISO string. */
 export function nowPST(): string {
   return new Date().toLocaleString("en-CA", {

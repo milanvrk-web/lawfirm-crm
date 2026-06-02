@@ -11,7 +11,7 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import { useCRM } from "@/contexts/CRMContext";
 import { trpc } from "@/lib/trpc";
 import { formatDate, type Lead } from "@/lib/store";
-import { todayPST, addDaysPST } from "@/lib/timezone";
+import { todayPST, addDaysPST, nowDateTimePST } from "@/lib/timezone";
 import { useActiveMember } from "@/contexts/ActiveMemberContext";
 import {
   Bell, AlertCircle, CheckCircle2, Calendar,
@@ -382,9 +382,7 @@ export default function FollowUps() {
     const lead = completingLead;
     setCompletingLead(null);
 
-    const completedOn = new Date().toLocaleDateString("en-US", {
-      timeZone: "America/Los_Angeles", month: "short", day: "numeric", year: "numeric"
-    });
+    const completedOn = nowDateTimePST();
     const memberName = activeMember ? activeMember.name : "Team";
 
     // Save ONE combined note: comment + __DONE__ tag (same format as LeadDetailPanel)
@@ -416,9 +414,7 @@ export default function FollowUps() {
     setReschedulingLead(null);
 
     const memberName = activeMember?.name ?? "Team";
-    const rescheduledOn = new Date().toLocaleDateString("en-US", {
-      timeZone: "America/Los_Angeles", month: "short", day: "numeric", year: "numeric",
-    });
+    const rescheduledOn = nowDateTimePST();
 
     // Log a traceable activity entry: reason + reschedule tag
     const auditNote = `${note}\n__RESCHEDULE__:${memberName}:${rescheduledOn}:${newDate}`;
