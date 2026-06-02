@@ -8,7 +8,7 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { useCRM } from "@/contexts/CRMContext";
 import { trpc } from "@/lib/trpc";
-import { todayPST } from "@/lib/timezone";
+import { todayPST, formatDate as fmtDate } from "@/lib/timezone";
 import { PSTDatePicker } from "@/components/PSTDatePicker";
 import {
   formatCurrency,
@@ -740,7 +740,7 @@ export default function Dashboard() {
                   <span style={{ color: "oklch(0.55 0.01 250)" }}>·</span>
                   <span>{formatCurrency(item.amount)}</span>
                   <span className="px-1.5 py-0.5 rounded text-xs" style={{ background: item.dueDate === todayStr ? "oklch(0.72 0.12 75 / 20%)" : "oklch(0.22 0.025 250)", color: item.dueDate === todayStr ? "oklch(0.80 0.12 75)" : "oklch(0.55 0.01 250)" }}>
-                    {item.dueDate === todayStr ? "TODAY" : item.dueDate}
+                    {item.dueDate === todayStr ? "TODAY" : fmtDate(item.dueDate)}
                   </span>
                 </div>
               ))}
@@ -778,7 +778,7 @@ export default function Dashboard() {
                   >{item.leadName}</button>
                   <span style={{ color: "oklch(0.55 0.01 250)" }}>·</span>
                   <span>{formatCurrency(item.amount)}</span>
-                  <span style={{ color: "oklch(0.55 0.01 250)" }}>due {item.dueDate}</span>
+                  <span style={{ color: "oklch(0.55 0.01 250)" }}>due {fmtDate(item.dueDate)}</span>
                 </div>
               ))}
               {overdueInstallments.length > 4 && (
@@ -1539,7 +1539,7 @@ export default function Dashboard() {
                           {p.caseNumber && <span className="text-xs" style={{ color: "oklch(0.50 0.01 250)" }}>#{p.caseNumber}</span>}
                         </div>
                         <div className="text-xs mt-1" style={{ color: "oklch(0.55 0.01 250)" }}>
-                          {p.receivedFor} · {p.date}
+                          {p.receivedFor} · {fmtDate(p.date)}
                         </div>
                         {p.notes && <div className="text-xs mt-1 italic" style={{ color: "oklch(0.50 0.01 250)" }}>{p.notes}</div>}
                       </div>
@@ -1582,7 +1582,7 @@ export default function Dashboard() {
                             )}
                             <div className="text-xs mt-1" style={{ color: "oklch(0.50 0.01 250)" }}>
                               {l.source && `Source: ${l.source} · `}
-                              {l.convertedDate ? `Converted: ${l.convertedDate}` : `Added: ${l.date}`}
+                              {l.convertedDate ? `Converted: ${fmtDate(l.convertedDate)}` : `Added: ${fmtDate(l.date)}`}
                             </div>
                             {l.notes && (
                               <div className="text-xs mt-1.5 p-2 rounded" style={{ background: "oklch(0.22 0.025 250)", color: "oklch(0.60 0.01 250)" }}>

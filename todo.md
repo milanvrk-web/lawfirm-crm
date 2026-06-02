@@ -382,3 +382,9 @@
 ## PST Time in Activity Log Entries
 - [x] Add exact PST time to __RESCHEDULE__ and __DONE__ audit entries in LeadDetailPanel, FollowUps, and Leads
 - [x] Update activity thread renderer to display the time alongside the date in reschedule and done badges
+
+## Full PST Timezone Enforcement Audit
+- [x] Audit every date display, comparison, and input across all pages for local-timezone leakage
+- [x] Fix any remaining bare new Date(dateStr) calls without T12:00:00 anchor or PST timeZone option
+- [x] Add PST clock display to sidebar so all users can see the current PST time/date at a glance
+- [x] Update timezone stress tests to cover all fixed locations

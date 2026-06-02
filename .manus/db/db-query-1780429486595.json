@@ -1,0 +1,70 @@
+{
+  "query": "SELECT id, name, followUpDate, date FROM leads WHERE followUpDate IS NOT NULL ORDER BY followUpDate LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute SELECT id, name, followUpDate, date FROM leads WHERE followUpDate IS NOT NULL ORDER BY followUpDate LIMIT 10;",
+  "rows": [
+    {
+      "id": "8eXxdH9S-tZKSjM0v3Kml",
+      "name": "Sarah Sahota ",
+      "followUpDate": "2026-06-02",
+      "date": "2026-06-01"
+    },
+    {
+      "id": "r6Fhbms_Mwn5mwxmlS_KE",
+      "name": "Sujeet Singh  (Mother Green card)",
+      "followUpDate": "2026-06-03",
+      "date": "2026-05-27"
+    },
+    {
+      "id": "xaWqfnS6ZBTRCnChX0mBj",
+      "name": "Balwant singh",
+      "followUpDate": "2026-06-03",
+      "date": "2026-05-25"
+    },
+    {
+      "id": "lead-rajender-kumar-01",
+      "name": "Rajender Kumar",
+      "followUpDate": "2026-06-03",
+      "date": "2026-05-05"
+    },
+    {
+      "id": "Z4BVicKvWcJjh1fe3J0Yp",
+      "name": "Vitek Vitek (Guardian)",
+      "followUpDate": "2026-06-03",
+      "date": "2026-06-01"
+    },
+    {
+      "id": "lead-mehak-mittal-01",
+      "name": "Mehak Mittal (Vasu)",
+      "followUpDate": "2026-06-03",
+      "date": "2026-05-04"
+    },
+    {
+      "id": "qMG_lNSUr93-AFLf2PscW",
+      "name": "Satnam Singh Batth & Gurpreet Kaur Panesar",
+      "followUpDate": "2026-06-03",
+      "date": "2026-04-13"
+    },
+    {
+      "id": "enxUgT1dCBp-yOmZADiK3",
+      "name": "Akashdeep Singh",
+      "followUpDate": "2026-06-03",
+      "date": "2026-05-18"
+    },
+    {
+      "id": "97APXSl9qwIELiMNuhSOb",
+      "name": "Navneet",
+      "followUpDate": "2026-06-03",
+      "date": "2026-06-01"
+    },
+    {
+      "id": "Hrca7F8T4cwLHNv9iQPfF",
+      "name": "Rajender Kumar",
+      "followUpDate": "2026-06-04",
+      "date": "2026-05-05"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tfollowUpDate\tdate\n8eXxdH9S-tZKSjM0v3Kml\tSarah Sahota \t2026-06-02\t2026-06-01\nr6Fhbms_Mwn5mwxmlS_KE\tSujeet Singh  (Mother Green card)\t2026-06-03\t2026-05-27\nxaWqfnS6ZBTRCnChX0mBj\tBalwant singh\t2026-06-03\t2026-05-25\nlead-rajender-kumar-01\tRajender Kumar\t2026-06-03\t2026-05-05\nZ4BVicKvWcJjh1fe3J0Yp\tVitek Vitek (Guardian)\t2026-06-03\t2026-06-01\nlead-mehak-mittal-01\tMehak Mittal (Vasu)\t2026-06-03\t2026-05-04\nqMG_lNSUr93-AFLf2PscW\tSatnam Singh Batth & Gurpreet Kaur Panesar\t2026-06-03\t2026-04-13\nenxUgT1dCBp-yOmZADiK3\tAkashdeep Singh\t2026-06-03\t2026-05-18\n97APXSl9qwIELiMNuhSOb\tNavneet\t2026-06-03\t2026-06-01\nHrca7F8T4cwLHNv9iQPfF\tRajender Kumar\t2026-06-04\t2026-05-05\n",
+  "stderr": "",
+  "execution_time_ms": 296
+}

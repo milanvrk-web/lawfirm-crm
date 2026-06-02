@@ -1,4 +1,4 @@
-import { todayPST, addDaysPST } from "@/lib/timezone";
+import { todayPST, addDaysPST, formatDate as fmtDate, nowDateTimePST } from "@/lib/timezone";
 /* ============================================================
    Graham Immigration Law, PC — Layout Component
    Design: Dark Luxury Legal — Fixed left sidebar, gold accents
@@ -289,18 +289,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3 border-t" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
-          <div className="flex items-center gap-1.5 mb-1.5 px-2 py-1 rounded-md" style={{ background: "oklch(0.72 0.12 75 / 10%)", border: "1px solid oklch(0.72 0.12 75 / 20%)" }}>
-            <Clock className="w-3 h-3 flex-shrink-0" style={{ color: "oklch(0.72 0.12 75)" }} />
-            <span className="text-xs font-medium" style={{ color: "oklch(0.72 0.12 75)" }}>All times in PST</span>
-          </div>
-          <div className="text-xs" style={{ color: "oklch(0.40 0.01 250)" }}>
-            Graham Immigration Law, PC v2.0
-          </div>
-          <div className="text-xs mt-0.5" style={{ color: "oklch(0.35 0.01 250)" }}>
-            Data synced to cloud database
-          </div>
-        </div>
+        <PSTClock />
       </aside>
 
       {/* Mobile overlay */}
@@ -403,7 +392,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium truncate">{payment.clientName}</div>
                     <div className="text-xs truncate" style={{ color: "oklch(0.55 0.01 250)" }}>
-                      {payment.date} · {payment.receivedFor}
+                      {fmtDate(payment.date)} · {payment.receivedFor}
                     </div>
                   </div>
                   <span className="text-xs flex-shrink-0 font-semibold" style={{ color: "oklch(0.65 0.18 145)" }}>
@@ -436,4 +425,35 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </CommandDialog>
     </div>
   );
+}
+
+// ── PST Clock — shows live PST date + time so every team member sees the same reference ──
+function PSTClock() {
+  const [pstNow, setPstNow] = useState(() => getPSTDisplay());
+  useEffect(() => {
+    const tick = () => setPstNow(getPSTDisplay());
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <div className="px-4 py-3 border-t" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
+      <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg mb-2" style={{ background: "oklch(0.72 0.12 75 / 10%)", border: "1px solid oklch(0.72 0.12 75 / 20%)" }}>
+        <Clock className="w-3 h-3 flex-shrink-0" style={{ color: "oklch(0.72 0.12 75)" }} />
+        <div className="flex-1 min-w-0">
+          <div className="text-xs font-semibold" style={{ color: "oklch(0.80 0.12 75)" }}>{pstNow.time} PST</div>
+          <div className="text-xs" style={{ color: "oklch(0.60 0.08 75)" }}>{pstNow.date}</div>
+        </div>
+      </div>
+      <div className="text-xs" style={{ color: "oklch(0.40 0.01 250)" }}>Graham Immigration Law, PC v2.0</div>
+      <div className="text-xs mt-0.5" style={{ color: "oklch(0.35 0.01 250)" }}>Data synced to cloud database</div>
+    </div>
+  );
+}
+
+function getPSTDisplay() {
+  const now = new Date();
+  const date = now.toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", weekday: "short", month: "short", day: "numeric" });
+  const time = now.toLocaleTimeString("en-US", { timeZone: "America/Los_Angeles", hour: "numeric", minute: "2-digit", second: "2-digit", hour12: true });
+  return { date, time };
 }
