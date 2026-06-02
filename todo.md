@@ -369,3 +369,12 @@
 - [x] Fix DailyClose.tsx — date display
 - [x] Fix Dashboard.tsx — any date display in stats or charts
 - [x] Verify all overdue/today comparisons use todayPST() not new Date()
+
+## PST Date Picker Fix — Replace Native date Input (India Team Timezone Bug)
+- [ ] Build PSTDatePicker reusable component — pure YYYY-MM-DD string, no Date object, custom calendar grid
+- [ ] Replace all native <input type="date"> in FollowUps.tsx
+- [ ] Replace all native <input type="date"> in LeadDetailPanel.tsx
+- [ ] Replace all native <input type="date"> in Leads.tsx (Kanban card + KanbanRescheduleModal)
+- [ ] Replace all native <input type="date"> in Payments.tsx
+- [ ] Replace all native <input type="date"> in Dashboard.tsx
+- [ ] Replace all native <input type="date"> in CloseDay.tsx

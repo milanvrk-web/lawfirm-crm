@@ -1,4 +1,5 @@
 import { todayPST } from "@/lib/timezone";
+import { PSTDatePicker } from "@/components/PSTDatePicker";
 /* ============================================================
    Law Firm CRM — Payments Page
    Features: Log payment (New/Existing toggle), live client search,
@@ -366,8 +367,7 @@ export default function Payments() {
               </div>
               <div>
                 <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Date</Label>
-                <Input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
-                  style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
+                <PSTDatePicker value={form.date} onChange={v => setForm(f => ({ ...f, date: v }))} inline />
               </div>
             </div>
 

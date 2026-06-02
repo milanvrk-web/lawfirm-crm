@@ -1,4 +1,5 @@
 import { todayPST, tomorrowPST, addDaysPST } from "@/lib/timezone";
+import { PSTDatePicker } from "@/components/PSTDatePicker";
 /* ============================================================
    Law Firm CRM — Leads Page
    Design: Dark luxury navy/gold — Playfair Display headings
@@ -806,8 +807,7 @@ export default function Leads() {
             </div>
             <div>
               <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Lead Date</Label>
-              <Input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
-                style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
+              <PSTDatePicker value={form.date} onChange={v => setForm(f => ({ ...f, date: v }))} inline />
             </div>
             <div>
               <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Stage</Label>
@@ -1184,46 +1184,8 @@ function LeadCard({
               <p className="text-xs font-semibold mb-2" style={{ color: "oklch(0.72 0.12 75)" }}>
                 Set follow-up date
               </p>
-              <input
-                type="date"
-                value={fuDateInput}
-                onChange={e => setFUDateInput(e.target.value)}
-                className="w-full rounded-lg px-3 py-2 text-sm mb-2"
-                style={{
-                  background: "oklch(0.22 0.025 250)",
-                  border: "1px solid oklch(1 0 0 / 12%)",
-                  color: "oklch(0.90 0.005 250)",
-                  colorScheme: "dark",
-                }}
-                autoFocus
-              />
-              {/* Quick-pick buttons */}
-              <div className="grid grid-cols-3 gap-1 mb-2">
-                {[
-                  { label: "Tomorrow", days: 1 },
-                  { label: "3 Days",   days: 3 },
-                  { label: "1 Week",   days: 7 },
-                  { label: "2 Weeks",  days: 14 },
-                  { label: "1 Month",  days: 30 },
-                  { label: "2 Months", days: 60 },
-                ].map(({ label, days }) => {
-                  const val = addDaysPST(todayPST(), days);
-                  return (
-                    <button
-                      key={label}
-                      onClick={() => setFUDateInput(val)}
-                      className="text-[10px] px-1.5 py-1 rounded transition-colors hover:opacity-90"
-                      style={{
-                        background: fuDateInput === val ? "oklch(0.72 0.12 75 / 20%)" : "oklch(0.25 0.025 250)",
-                        color: fuDateInput === val ? "oklch(0.72 0.12 75)" : "oklch(0.60 0.01 250)",
-                        border: `1px solid ${fuDateInput === val ? "oklch(0.72 0.12 75 / 40%)" : "oklch(1 0 0 / 8%)"}`,
-                      }}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
+              {/* PST-safe calendar — no native date input */}
+              <PSTDatePicker value={fuDateInput} onChange={setFUDateInput} inline />
               <div className="flex gap-2">
                 <button
                   onClick={e => {
@@ -1520,18 +1482,7 @@ function KanbanRescheduleModal({
               );
             })}
           </div>
-          <input
-            type="date"
-            value={newDate}
-            onChange={e => setNewDate(e.target.value)}
-            className="w-full rounded-lg px-3 py-2 text-xs outline-none"
-            style={{
-              background: "oklch(0.22 0.025 250)",
-              border: `1px solid ${newDate ? "oklch(0.65 0.15 200 / 40%)" : "oklch(1 0 0 / 12%)"}`,
-              color: "oklch(0.90 0.005 250)",
-              colorScheme: "dark",
-            }}
-          />
+          <PSTDatePicker value={newDate} onChange={setNewDate} inline />
         </div>
 
         <div className="flex gap-2 pt-1">

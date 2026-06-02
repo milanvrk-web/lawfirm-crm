@@ -1,4 +1,5 @@
 import { todayPST, tomorrowPST, addDaysPST } from "@/lib/timezone";
+import { PSTDatePicker } from "@/components/PSTDatePicker";
 /* ============================================================
    LeadDetailPanel — shared slide-over component
    Design: Dark luxury navy/gold — Playfair Display headings
@@ -147,19 +148,7 @@ function CompleteFollowUpModal({
               );
             })}
           </div>
-          <input
-            type="date"
-            value={nextDate}
-            min={today}
-            onChange={e => setNextDate(e.target.value)}
-            className="w-full rounded-lg px-3 py-2 text-xs outline-none"
-            style={{
-              background: "oklch(0.22 0.025 250)",
-              border: `1px solid ${nextDate ? "oklch(0.55 0.18 145 / 40%)" : "oklch(1 0 0 / 12%)"}`,
-              color: "oklch(0.90 0.005 250)",
-              colorScheme: "dark",
-            }}
-          />
+          <PSTDatePicker value={nextDate} onChange={setNextDate} minDate={today} inline />
           {!nextDate && (
             <p className="text-[10px] mt-1" style={{ color: "oklch(0.50 0.01 250)" }}>Required — set when to follow up next</p>
           )}
@@ -298,19 +287,7 @@ function RescheduleModal({
               );
             })}
           </div>
-          <input
-            type="date"
-            value={newDate}
-            min={today}
-            onChange={e => setNewDate(e.target.value)}
-            className="w-full rounded-lg px-3 py-2 text-xs outline-none"
-            style={{
-              background: "oklch(0.22 0.025 250)",
-              border: `1px solid ${newDate ? "oklch(0.65 0.15 200 / 40%)" : "oklch(1 0 0 / 12%)"}`,
-              color: "oklch(0.90 0.005 250)",
-              colorScheme: "dark",
-            }}
-          />
+          <PSTDatePicker value={newDate} onChange={setNewDate} minDate={today} inline />
         </div>
 
         <div className="flex gap-2 pt-1">
@@ -939,45 +916,8 @@ export default function LeadDetailPanel({
                     <p className="text-xs font-semibold mb-2" style={{ color: "oklch(0.72 0.12 75)" }}>
                       Set follow-up date
                     </p>
-                    <input
-                      type="date"
-                      value={followUpDateInput}
-                      onChange={e => setFollowUpDateInput(e.target.value)}
-                      className="w-full rounded-lg px-3 py-2 text-sm mb-2"
-                      style={{
-                        background: "oklch(0.22 0.025 250)",
-                        border: "1px solid oklch(1 0 0 / 12%)",
-                        color: "oklch(0.90 0.005 250)",
-                        colorScheme: "dark",
-                      }}
-                      autoFocus
-                    />
-                    <div className="grid grid-cols-3 gap-1 mb-2">
-                      {[
-                        { label: "Tomorrow", days: 1 },
-                        { label: "3 Days",   days: 3 },
-                        { label: "1 Week",   days: 7 },
-                        { label: "2 Weeks",  days: 14 },
-                        { label: "1 Month",  days: 30 },
-                        { label: "2 Months", days: 60 },
-                      ].map(({ label, days }) => {
-                        const val = addDaysPST(todayPST(), days);
-                        return (
-                          <button
-                            key={label}
-                            onClick={() => setFollowUpDateInput(val)}
-                            className="text-[10px] px-1.5 py-1 rounded transition-colors hover:opacity-90"
-                            style={{
-                              background: followUpDateInput === val ? "oklch(0.72 0.12 75 / 20%)" : "oklch(0.25 0.025 250)",
-                              color: followUpDateInput === val ? "oklch(0.72 0.12 75)" : "oklch(0.60 0.01 250)",
-                              border: `1px solid ${followUpDateInput === val ? "oklch(0.72 0.12 75 / 40%)" : "oklch(1 0 0 / 8%)"}`,
-                            }}
-                          >
-                            {label}
-                          </button>
-                        );
-                      })}
-                    </div>
+                    {/* PST-safe calendar — no native date input */}
+                    <PSTDatePicker value={followUpDateInput} onChange={setFollowUpDateInput} inline />
                     <div className="flex gap-2">
                       <button
                         onClick={() => {
@@ -1622,11 +1562,7 @@ function InstallmentsTab({ leadId }: { leadId: string }) {
           </div>
           <div>
             <label className="text-xs mb-1 block" style={{ color: "oklch(0.55 0.01 250)" }}>First Payment Date</label>
-            <input
-              type="date" value={formStart} onChange={e => setFormStart(e.target.value)}
-              className="w-full px-3 py-2 rounded text-sm outline-none"
-              style={{ background: "oklch(0.22 0.025 250)", border: "1px solid oklch(0.72 0.12 75 / 30%)", color: "oklch(0.90 0.005 250)", colorScheme: "dark" }}
-            />
+            <PSTDatePicker value={formStart} onChange={setFormStart} inline />
           </div>
           <div>
             <label className="text-xs mb-1 block" style={{ color: "oklch(0.55 0.01 250)" }}>Notes (optional)</label>
@@ -1736,20 +1672,15 @@ function InstallmentsTab({ leadId }: { leadId: string }) {
                     <span className="text-xs font-mono flex-shrink-0 w-5 text-center" style={{ color: "oklch(0.45 0.01 250)" }}>#{item.installmentNumber}</span>
                     <div className="flex-1 min-w-0">
                       {isEditingDate ? (
-                        <input
-                          type="date"
-                          defaultValue={item.dueDate}
-                          autoFocus
-                          className="px-2 py-0.5 rounded text-xs outline-none"
-                          style={{ background: "oklch(0.22 0.025 250)", border: "1px solid oklch(0.72 0.12 75 / 50%)", color: "oklch(0.90 0.005 250)", colorScheme: "dark" }}
-                          onChange={e => {
-                            if (e.target.value) {
-                              updateDueDate.mutate({ id: item.id, dueDate: e.target.value });
+                        <PSTDatePicker
+                          value={item.dueDate || ""}
+                          onChange={v => {
+                            if (v) {
+                              updateDueDate.mutate({ id: item.id, dueDate: v });
                               setEditingDueDateItemId(null);
                             }
                           }}
-                          onBlur={() => setEditingDueDateItemId(null)}
-                          onKeyDown={e => { if (e.key === "Escape") setEditingDueDateItemId(null); }}
+                          inline
                         />
                       ) : (
                         <button

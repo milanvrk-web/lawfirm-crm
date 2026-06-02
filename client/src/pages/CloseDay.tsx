@@ -9,6 +9,7 @@ import { useCRM } from "@/contexts/CRMContext";
 import { useActiveMember } from "@/contexts/ActiveMemberContext";
 import { formatCurrency, formatDate } from "@/lib/store";
 import { todayPST, addDaysPST } from "@/lib/timezone";
+import { PSTDatePicker } from "@/components/PSTDatePicker";
 import { CalendarCheck, Lock, CheckCircle, ChevronLeft, ChevronRight, User, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -88,15 +89,9 @@ export default function CloseDay() {
         </button>
         <div className="flex-1 text-center">
           <div className="text-lg font-semibold" style={{ color: "oklch(0.93 0.005 250)" }}>{displayDate}</div>
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={e => {
-              if (e.target.value) setSelectedDate(e.target.value);
-            }}
-            className="mt-1 text-xs px-2 py-1 rounded border"
-            style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.65 0.01 250)", colorScheme: "dark" }}
-          />
+          <div className="mt-1 flex justify-center">
+            <PSTDatePicker value={selectedDate} onChange={v => { if (v) setSelectedDate(v); }} />
+          </div>
         </div>
         <button onClick={nextDay} className="p-2 rounded-lg hover:bg-white/5 transition-colors" style={{ color: "oklch(0.55 0.01 250)" }}>
           <ChevronRight className="w-5 h-5" />

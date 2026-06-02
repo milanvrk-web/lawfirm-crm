@@ -18,6 +18,7 @@ import {
   Phone, MessageSquare, ChevronRight, X, CheckCheck,
 } from "lucide-react";
 import { toast } from "sonner";
+import { PSTDatePicker } from "@/components/PSTDatePicker";
 import LeadDetailPanel from "@/components/LeadDetailPanel";
 
 // ── Helpers ────────────────────────────────────────────────
@@ -146,19 +147,12 @@ function CompleteFollowUpModal({
               );
             })}
           </div>
-          {/* Custom date input */}
-          <input
-            type="date"
+          {/* Custom date picker — PST-safe, no native input */}
+          <PSTDatePicker
             value={nextDate}
-            min={today}
-            onChange={e => setNextDate(e.target.value)}
-            className="w-full rounded-lg px-3 py-2 text-xs outline-none"
-            style={{
-              background: "oklch(0.22 0.025 250)",
-              border: `1px solid ${nextDate ? "oklch(0.55 0.18 145 / 40%)" : "oklch(1 0 0 / 12%)"}`,
-              color: "oklch(0.90 0.005 250)",
-              colorScheme: "dark",
-            }}
+            onChange={setNextDate}
+            minDate={today}
+            inline
           />
           {!nextDate && (
             <p className="text-[10px] mt-1" style={{ color: "oklch(0.50 0.01 250)" }}>Required — set when to follow up next</p>
@@ -301,18 +295,12 @@ function RescheduleModal({
               );
             })}
           </div>
-          <input
-            type="date"
+          {/* PST-safe date picker */}
+          <PSTDatePicker
             value={newDate}
-            min={today}
-            onChange={e => setNewDate(e.target.value)}
-            className="w-full rounded-lg px-3 py-2 text-xs outline-none"
-            style={{
-              background: "oklch(0.22 0.025 250)",
-              border: `1px solid ${newDate ? "oklch(0.65 0.15 200 / 40%)" : "oklch(1 0 0 / 12%)"}`,
-              color: "oklch(0.90 0.005 250)",
-              colorScheme: "dark",
-            }}
+            onChange={setNewDate}
+            minDate={today}
+            inline
           />
           {!newDate && (
             <p className="text-[10px] mt-1" style={{ color: "oklch(0.50 0.01 250)" }}>Required — set the new follow-up date</p>
@@ -690,45 +678,12 @@ function LeadFollowUpRow({
                 <p className="text-xs font-semibold mb-2" style={{ color: "oklch(0.72 0.12 75)" }}>
                   Set next follow-up date
                 </p>
-                <input
-                  type="date"
+                {/* PST-safe inline calendar — no native date input, no timezone shift */}
+                <PSTDatePicker
                   value={dateInput}
-                  onChange={e => setDateInput(e.target.value)}
-                  className="w-full rounded-lg px-3 py-2 text-sm mb-2"
-                  style={{
-                    background: "oklch(0.22 0.025 250)",
-                    border: "1px solid oklch(1 0 0 / 12%)",
-                    color: "oklch(0.90 0.005 250)",
-                    colorScheme: "dark",
-                  }}
-                  autoFocus
+                  onChange={setDateInput}
+                  inline
                 />
-                <div className="grid grid-cols-3 gap-1 mb-2">
-                  {[
-                    { label: "Tomorrow", days: 1 },
-                    { label: "3 Days",   days: 3 },
-                    { label: "1 Week",   days: 7 },
-                    { label: "2 Weeks",  days: 14 },
-                    { label: "1 Month",  days: 30 },
-                    { label: "2 Months", days: 60 },
-                  ].map(({ label, days }) => {
-                    const val = addDaysPST(todayPST(), days);
-                    return (
-                      <button
-                        key={label}
-                        onClick={() => setDateInput(val)}
-                        className="text-[10px] px-1.5 py-1 rounded transition-colors hover:opacity-90"
-                        style={{
-                          background: dateInput === val ? "oklch(0.72 0.12 75 / 20%)" : "oklch(0.25 0.025 250)",
-                          color: dateInput === val ? "oklch(0.72 0.12 75)" : "oklch(0.60 0.01 250)",
-                          border: `1px solid ${dateInput === val ? "oklch(0.72 0.12 75 / 40%)" : "oklch(1 0 0 / 8%)"}`,
-                        }}
-                      >
-                        {label}
-                      </button>
-                    );
-                  })}
-                </div>
                 <div className="flex gap-2">
                   <button
                     onClick={handleDateConfirm}

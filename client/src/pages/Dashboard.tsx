@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { useCRM } from "@/contexts/CRMContext";
 import { trpc } from "@/lib/trpc";
 import { todayPST } from "@/lib/timezone";
+import { PSTDatePicker } from "@/components/PSTDatePicker";
 import {
   formatCurrency,
   getMonthLeads,
@@ -1690,8 +1691,7 @@ export default function Dashboard() {
             </div>
             <div>
               <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Date</Label>
-              <Input type="date" value={leadForm.date} onChange={e => setLeadForm(f => ({ ...f, date: e.target.value }))}
-                style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
+              <PSTDatePicker value={leadForm.date} onChange={v => setLeadForm(f => ({ ...f, date: v }))} inline />
             </div>
             <div className="col-span-2">
               <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Notes</Label>
@@ -1782,8 +1782,7 @@ export default function Dashboard() {
             </div>
             <div>
               <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Date</Label>
-              <Input type="date" value={paymentForm.date} onChange={e => setPaymentForm(f => ({ ...f, date: e.target.value }))}
-                style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
+              <PSTDatePicker value={paymentForm.date} onChange={v => setPaymentForm(f => ({ ...f, date: v }))} inline />
             </div>
           </div>
           <div>

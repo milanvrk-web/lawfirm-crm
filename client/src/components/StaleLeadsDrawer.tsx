@@ -8,6 +8,7 @@ import { useCRM } from "@/contexts/CRMContext";
 import { useActiveMember } from "@/contexts/ActiveMemberContext";
 import type { Lead } from "@/lib/store";
 import { todayPST, tomorrowPST } from "@/lib/timezone";
+import { PSTDatePicker } from "@/components/PSTDatePicker";
 
 interface StaleLead {
   lead: Lead;
@@ -260,17 +261,11 @@ export default function StaleLeadsDrawer({ open, onClose }: StaleLeadsDrawerProp
                       <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>
                         Due Date *
                       </Label>
-                      <Input
-                        type="date"
+                      <PSTDatePicker
                         value={form.dueDate}
-                        min={getTodayStr()}
-                        onChange={e => setForm(lead.id, { dueDate: e.target.value })}
-                        style={{
-                          background: "oklch(0.22 0.025 250)",
-                          borderColor: "oklch(1 0 0 / 12%)",
-                          color: "oklch(0.93 0.005 250)",
-                          fontSize: "0.8125rem",
-                        }}
+                        onChange={v => setForm(lead.id, { dueDate: v })}
+                        minDate={getTodayStr()}
+                        inline
                       />
                     </div>
 
