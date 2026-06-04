@@ -223,6 +223,7 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
       quotedAmount: lead.quotedAmount,
       referredBy: lead.referredBy,
       convertedDate: lead.convertedDate ?? null,
+      lostReason: lead.lostReason ?? null,
       consultationFee: lead.consultationFee ?? 0,
     });
   }, [createLeadMut]);

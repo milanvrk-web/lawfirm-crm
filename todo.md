@@ -388,3 +388,12 @@
 - [x] Fix any remaining bare new Date(dateStr) calls without T12:00:00 anchor or PST timeZone option
 - [x] Add PST clock display to sidebar so all users can see the current PST time/date at a glance
 - [x] Update timezone stress tests to cover all fixed locations
+
+## Contact Info Vanishing Bug Investigation
+- [x] Audit drizzle schema for all contact fields (phone, email, address, etc.)
+- [x] Audit tRPC leads.add and leads.update procedures for missing field mappings
+- [x] Audit Add Lead form and Edit Lead form for missing field bindings
+- [x] Audit CRM context optimistic update for field preservation
+- [x] Fix CRMContext handleAddLead — add missing lostReason field
+- [x] Add inline phone/email editing to LeadDetailPanel Info tab (Edit / + Add buttons)
+- [x] Fix all identified bugs causing contact info to be dropped or overwritten

@@ -403,6 +403,15 @@ export default function LeadDetailPanel({
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [showFollowUpDatePicker]);
+  // Inline contact info editing (phone / email)
+  const [editingContactField, setEditingContactField] = useState<"phone" | "email" | null>(null);
+  const [contactEditValue, setContactEditValue] = useState("");
+  const handleSaveContactField = async (field: "phone" | "email") => {
+    if (!lead) return;
+    await updateLead(lead.id, { [field]: contactEditValue.trim() });
+    setEditingContactField(null);
+    toast.success(`${field === "phone" ? "Phone" : "Email"} updated`);
+  };
   const [installmentsExpanded, setInstallmentsExpanded] = useState(false);
   const [onboardingExpanded, setOnboardingExpanded] = useState(true);
   const [showInlineConvert, setShowInlineConvert] = useState(false);
@@ -731,7 +740,6 @@ export default function LeadDetailPanel({
                 { label: "Source",      value: lead.source || "—" },
                 { label: "Referred By", value: lead.referredBy || "—" },
                 { label: "Quoted",      value: lead.quotedAmount > 0 ? formatCurrency(lead.quotedAmount) : "—" },
-                { label: "Email",       value: lead.email || "—" },
                 ...(lead.caseNumber ? [{ label: "Case #", value: lead.caseNumber }] : []),
                 ...(lead.retainerBooked > 0 ? [{ label: "Retainer", value: formatCurrency(lead.retainerBooked) }] : []),
               ].map(({ label, value }) => (
@@ -754,6 +762,72 @@ export default function LeadDetailPanel({
                   </div>
                 </div>
               ))}
+              {/* Phone — inline editable */}
+              <div className="rounded-lg p-2.5" style={{ background: "oklch(0.18 0.025 250)" }}>
+                <div className="flex items-center justify-between mb-0.5">
+                  <div className="text-[10px] uppercase tracking-wider" style={{ color: "oklch(0.40 0.01 250)" }}>Phone</div>
+                  <button
+                    onClick={() => { setEditingContactField("phone"); setContactEditValue(lead.phone || ""); }}
+                    className="text-[10px] px-1 py-0.5 rounded hover:opacity-80 transition-opacity"
+                    style={{ color: "oklch(0.72 0.12 75)", border: "1px solid oklch(0.72 0.12 75 / 30%)" }}
+                  >
+                    {lead.phone ? "Edit" : "+ Add"}
+                  </button>
+                </div>
+                {editingContactField === "phone" ? (
+                  <div className="flex gap-1 mt-1">
+                    <input
+                      autoFocus
+                      type="tel"
+                      value={contactEditValue}
+                      onChange={e => setContactEditValue(e.target.value)}
+                      onKeyDown={e => { if (e.key === "Enter") handleSaveContactField("phone"); if (e.key === "Escape") setEditingContactField(null); }}
+                      placeholder="+1 (xxx) xxx-xxxx"
+                      className="flex-1 text-xs px-2 py-1 rounded outline-none"
+                      style={{ background: "oklch(0.22 0.025 250)", border: "1px solid oklch(0.72 0.12 75 / 40%)", color: "oklch(0.90 0.005 250)" }}
+                    />
+                    <button onClick={() => handleSaveContactField("phone")} className="px-2 py-1 rounded text-xs font-semibold" style={{ background: "oklch(0.72 0.12 75)", color: "oklch(0.13 0.025 250)" }}>Save</button>
+                    <button onClick={() => setEditingContactField(null)} className="px-2 py-1 rounded text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>✕</button>
+                  </div>
+                ) : (
+                  <div className="text-sm font-medium truncate" style={{ color: lead.phone ? "oklch(0.82 0.005 250)" : "oklch(0.40 0.01 250)" }}>
+                    {lead.phone || "—"}
+                  </div>
+                )}
+              </div>
+              {/* Email — inline editable */}
+              <div className="rounded-lg p-2.5" style={{ background: "oklch(0.18 0.025 250)" }}>
+                <div className="flex items-center justify-between mb-0.5">
+                  <div className="text-[10px] uppercase tracking-wider" style={{ color: "oklch(0.40 0.01 250)" }}>Email</div>
+                  <button
+                    onClick={() => { setEditingContactField("email"); setContactEditValue(lead.email || ""); }}
+                    className="text-[10px] px-1 py-0.5 rounded hover:opacity-80 transition-opacity"
+                    style={{ color: "oklch(0.72 0.12 75)", border: "1px solid oklch(0.72 0.12 75 / 30%)" }}
+                  >
+                    {lead.email ? "Edit" : "+ Add"}
+                  </button>
+                </div>
+                {editingContactField === "email" ? (
+                  <div className="flex gap-1 mt-1">
+                    <input
+                      autoFocus
+                      type="email"
+                      value={contactEditValue}
+                      onChange={e => setContactEditValue(e.target.value)}
+                      onKeyDown={e => { if (e.key === "Enter") handleSaveContactField("email"); if (e.key === "Escape") setEditingContactField(null); }}
+                      placeholder="email@example.com"
+                      className="flex-1 text-xs px-2 py-1 rounded outline-none"
+                      style={{ background: "oklch(0.22 0.025 250)", border: "1px solid oklch(0.72 0.12 75 / 40%)", color: "oklch(0.90 0.005 250)" }}
+                    />
+                    <button onClick={() => handleSaveContactField("email")} className="px-2 py-1 rounded text-xs font-semibold" style={{ background: "oklch(0.72 0.12 75)", color: "oklch(0.13 0.025 250)" }}>Save</button>
+                    <button onClick={() => setEditingContactField(null)} className="px-2 py-1 rounded text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>✕</button>
+                  </div>
+                ) : (
+                  <div className="text-sm font-medium truncate" style={{ color: lead.email ? "oklch(0.82 0.005 250)" : "oklch(0.40 0.01 250)" }}>
+                    {lead.email || "—"}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Case Notes */}
