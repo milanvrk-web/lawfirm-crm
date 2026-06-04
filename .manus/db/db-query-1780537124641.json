@@ -1,0 +1,74 @@
+{
+  "query": "\nSELECT ln.leadId, l.name, ln.text, ln.authorName, ln.timestamp\nFROM lead_notes ln\nJOIN leads l ON l.id = ln.leadId\nWHERE l.id IN (\n  '8eXxdH9S-tZKSjM0v3Kml',\n  'GaibNN5qq0p1x9cwlgG9f',\n  'MW959ff-YUx7IMK3bGHBm',\n  'Z4BVicKvWcJjh1fe3J0Yp',\n  'h6VWli-cup9mEdSsxKCZS',\n  'r6Fhbms_Mwn5mwxmlS_KE',\n  'xaWqfnS6ZBTRCnChX0mBj',\n  'YYMxuSI3XIJjIxApl1MRd',\n  'JO_4iK9Yav79qervrcBqO'\n)\nORDER BY l.name, ln.timestamp ASC;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute \nSELECT ln.leadId, l.name, ln.text, ln.authorName, ln.timestamp\nFROM lead_notes ln\nJOIN leads l ON l.id = ln.leadId\nWHERE l.id IN (\n  '8eXxdH9S-tZKSjM0v3Kml',\n  'GaibNN5qq0p1x9cwlgG9f',\n  'MW959ff-YUx7IMK3bGHBm',\n  'Z4BVicKvWcJjh1fe3J0Yp',\n  'h6VWli-cup9mEdSsxKCZS',\n  'r6Fhbms_Mwn5mwxmlS_KE',\n  'xaWqfnS6ZBTRCnChX0mBj',\n  'YYMxuSI3XIJjIxApl1MRd',\n  'JO_4iK9Yav79qervrcBqO'\n)\nORDER BY l.name, ln.timestamp ASC;\n",
+  "rows": [
+    {
+      "leadId": "xaWqfnS6ZBTRCnChX0mBj",
+      "name": "Balwant singh",
+      "text": "K: Client picked up the call but didn't say anything. called again, didn't answer, dropped a message, will follow up again on 06/05/2026",
+      "authorName": "Milan Singh",
+      "timestamp": "2026-06-03T18:24:14.250Z"
+    },
+    {
+      "leadId": "h6VWli-cup9mEdSsxKCZS",
+      "name": "No given name Vishal kumar",
+      "text": "K: Called client, he'll get his work started from next week, will follow up on 06/08/2026",
+      "authorName": "Milan Singh",
+      "timestamp": "2026-06-01T16:59:14.037Z"
+    },
+    {
+      "leadId": "8eXxdH9S-tZKSjM0v3Kml",
+      "name": "Sarah Sahota ",
+      "text": "K: CNC, dropped a messge, will follow up again tomorrow",
+      "authorName": "Milan Singh",
+      "timestamp": "2026-06-03T18:00:22.952Z"
+    },
+    {
+      "leadId": "GaibNN5qq0p1x9cwlgG9f",
+      "name": "Sharanpreet Singh 996",
+      "text": "Client is our previous client and currently has a pending asylum case with our office. Client reports that on the night of May 31, 2026, he was attacked by four unknown individuals at a friend's house. He sustained a head injury requiring three stitches and was treated at San Joaquin General Hospital. Medical records document assault-related injuries, including a head laceration, closed head injury, and loss of consciousness (LOC). Photographs of the injuries are available.  Client filed a police report (Report No. 26-02562). Detectives are actively investigating the incident and have reportedly collected statements from other victims/witnesses. Client also received a Marsy's Card from the San Joaquin County District Attorney's Office.  Police report is expected next week. Once received, client will schedule an attorney consultation ($150) for further evaluation of potential U-Visa eligibility and law enforcement certification prospects while considering the impact on his pending asylum case.",
+      "authorName": "Sachin",
+      "timestamp": "2026-06-02T17:33:24.306Z"
+    },
+    {
+      "leadId": "r6Fhbms_Mwn5mwxmlS_KE",
+      "name": "Sujeet Singh  (Mother Green card)",
+      "text": "K: CNC. Dropped text if he got a chance to speak to his family about green card. awaiting response. next follow up 5th june.",
+      "authorName": "Milan Singh",
+      "timestamp": "2026-06-03T18:26:24.738Z"
+    },
+    {
+      "leadId": "Z4BVicKvWcJjh1fe3J0Yp",
+      "name": "Vitek Vitek (Guardian)",
+      "text": "K: CNC, dropped a message a message, will follow up again on 06/05/2026",
+      "authorName": "Milan Singh",
+      "timestamp": "2026-06-03T16:26:12.510Z"
+    }
+  ],
+  "messages": [
+    "xaWqfnS6ZBTRCnChX0mBj\tBalwant singh\tgave her details Step\tWhat happens 1\tFather files Form I-130 with USCIS. 2\tUSCIS issues receipt notice; this creates the priority date. 3\tUSCIS eventually approves the I-130. 4\tCase goes to the National Visa Center. 5\tThe case waits until the F2B priority date becomes close/current. 6\tNVC collects fees, DS-260, civil documents, police certificate, birth certificate, passport biographic page, and I-864 Affidavit of Support. 7\tDaughter completes medical exam. 8\tInterview is scheduled through the U.S. immigrant visa process in Canada, generally handled through Montreal. The U.S. Embassy in Canada lists the immigrant visa process as petition filing, NVC processing, interview appointment, medical exam, and consular interview. 9\tIf approved, she enters the U.S. as a permanent resident.\tNULL\t2026-05-26T02:04:12.412Z",
+    "xaWqfnS6ZBTRCnChX0mBj\tBalwant singh\tDropped text to client if they want to proceed. Client was repeatedly asking about more case scenarios. suggested we can do a consultation with attorney for $150. client said they would let us know. Next follow up Monday",
+    "__DONE__:Staff:May 28, 2026\tNULL\t2026-05-28T17:45:58.461Z",
+    "xaWqfnS6ZBTRCnChX0mBj\tBalwant singh\tK: CNC, dropped a message for follow up, will follow up again on 06/03/2026",
+    "__DONE__:Milan Singh:Jun 1, 2026\tMilan Singh\t2026-06-01T17:09:21.638Z",
+    "xaWqfnS6ZBTRCnChX0mBj\tBalwant singh\tK: Client picked up the call but didn't say anything. called again, didn't answer, dropped a message, will follow up again on 06/05/2026",
+    "__DONE__:Milan Singh:Jun 3, 2026 at 2:21 PM\tMilan Singh\t2026-06-03T21:21:36.501Z",
+    "MW959ff-YUx7IMK3bGHBm\tJaskaran \tK: CNC, dropped a message, will follow up again on 06/04/2026",
+    "__DONE__:Milan Singh:Jun 2, 2026\tMilan Singh\t2026-06-02T16:35:32.461Z",
+    "8eXxdH9S-tZKSjM0v3Kml\tSarah Sahota \tK: CNC, dropped a messge, will follow up again tomorrow",
+    "__DONE__:Milan Singh:Jun 3, 2026 at 2:23 PM\tMilan Singh\t2026-06-03T21:23:18.068Z",
+    "r6Fhbms_Mwn5mwxmlS_KE\tSujeet Singh  (Mother Green card)\tCNC. Dropped text if he got a chance to speak to his family about green card. awaiting response. next follow up 1 june",
+    "__DONE__:Sachin:May 29, 2026\tSachin\t2026-05-29T17:46:56.136Z",
+    "r6Fhbms_Mwn5mwxmlS_KE\tSujeet Singh  (Mother Green card)\tCNC. Dropped text if he got a chance to speak to his family about green card. awaiting response. next follow up 3rd june.",
+    "__DONE__:Milan Singh:Jun 1, 2026\tMilan Singh\t2026-06-01T16:45:49.192Z",
+    "r6Fhbms_Mwn5mwxmlS_KE\tSujeet Singh  (Mother Green card)\tK: CNC. Dropped text if he got a chance to speak to his family about green card. awaiting response. next follow up 5th june.",
+    "__DONE__:Milan Singh:Jun 3, 2026 at 2:21 PM\tMilan Singh\t2026-06-03T21:21:25.190Z",
+    "Z4BVicKvWcJjh1fe3J0Yp\tVitek Vitek (Guardian)\tK: Client was busy with some work, he'll call us back by the end of the day, will follow up again tomorrow if no call received",
+    "__DONE__:Milan Singh:Jun 2, 2026\tMilan Singh\t2026-06-02T16:38:18.549Z",
+    "Z4BVicKvWcJjh1fe3J0Yp\tVitek Vitek (Guardian)\tK: CNC, dropped a message a message, will follow up again on 06/05/2026",
+    "__DONE__:Milan Singh:Jun 3, 2026 at 2:20 PM\tMilan Singh\t2026-06-03T21:20:47.873Z"
+  ],
+  "stdout": "leadId\tname\ttext\tauthorName\ttimestamp\nxaWqfnS6ZBTRCnChX0mBj\tBalwant singh\tgave her details Step\tWhat happens 1\tFather files Form I-130 with USCIS. 2\tUSCIS issues receipt notice; this creates the priority date. 3\tUSCIS eventually approves the I-130. 4\tCase goes to the National Visa Center. 5\tThe case waits until the F2B priority date becomes close/current. 6\tNVC collects fees, DS-260, civil documents, police certificate, birth certificate, passport biographic page, and I-864 Affidavit of Support. 7\tDaughter completes medical exam. 8\tInterview is scheduled through the U.S. immigrant visa process in Canada, generally handled through Montreal. The U.S. Embassy in Canada lists the immigrant visa process as petition filing, NVC processing, interview appointment, medical exam, and consular interview. 9\tIf approved, she enters the U.S. as a permanent resident.\tNULL\t2026-05-26T02:04:12.412Z\nxaWqfnS6ZBTRCnChX0mBj\tBalwant singh\tDropped text to client if they want to proceed. Client was repeatedly asking about more case scenarios. suggested we can do a consultation with attorney for $150. client said they would let us know. Next follow up Monday\n__DONE__:Staff:May 28, 2026\tNULL\t2026-05-28T17:45:58.461Z\nxaWqfnS6ZBTRCnChX0mBj\tBalwant singh\tK: CNC, dropped a message for follow up, will follow up again on 06/03/2026\n__DONE__:Milan Singh:Jun 1, 2026\tMilan Singh\t2026-06-01T17:09:21.638Z\nxaWqfnS6ZBTRCnChX0mBj\tBalwant singh\tK: Client picked up the call but didn't say anything. called again, didn't answer, dropped a message, will follow up again on 06/05/2026\tMilan Singh\t2026-06-03T18:24:14.250Z\nxaWqfnS6ZBTRCnChX0mBj\tBalwant singh\tK: Client picked up the call but didn't say anything. called again, didn't answer, dropped a message, will follow up again on 06/05/2026\n__DONE__:Milan Singh:Jun 3, 2026 at 2:21 PM\tMilan Singh\t2026-06-03T21:21:36.501Z\nMW959ff-YUx7IMK3bGHBm\tJaskaran \tK: CNC, dropped a message, will follow up again on 06/04/2026\n__DONE__:Milan Singh:Jun 2, 2026\tMilan Singh\t2026-06-02T16:35:32.461Z\nh6VWli-cup9mEdSsxKCZS\tNo given name Vishal kumar\tK: Called client, he'll get his work started from next week, will follow up on 06/08/2026\tMilan Singh\t2026-06-01T16:59:14.037Z\n8eXxdH9S-tZKSjM0v3Kml\tSarah Sahota \tK: CNC, dropped a messge, will follow up again tomorrow\tMilan Singh\t2026-06-03T18:00:22.952Z\n8eXxdH9S-tZKSjM0v3Kml\tSarah Sahota \tK: CNC, dropped a messge, will follow up again tomorrow\n__DONE__:Milan Singh:Jun 3, 2026 at 2:23 PM\tMilan Singh\t2026-06-03T21:23:18.068Z\nGaibNN5qq0p1x9cwlgG9f\tSharanpreet Singh 996\tClient is our previous client and currently has a pending asylum case with our office. Client reports that on the night of May 31, 2026, he was attacked by four unknown individuals at a friend's house. He sustained a head injury requiring three stitches and was treated at San Joaquin General Hospital. Medical records document assault-related injuries, including a head laceration, closed head injury, and loss of consciousness (LOC). Photographs of the injuries are available.  Client filed a police report (Report No. 26-02562). Detectives are actively investigating the incident and have reportedly collected statements from other victims/witnesses. Client also received a Marsy's Card from the San Joaquin County District Attorney's Office.  Police report is expected next week. Once received, client will schedule an attorney consultation ($150) for further evaluation of potential U-Visa eligibility and law enforcement certification prospects while considering the impact on his pending asylum case.\tSachin\t2026-06-02T17:33:24.306Z\nr6Fhbms_Mwn5mwxmlS_KE\tSujeet Singh  (Mother Green card)\tCNC. Dropped text if he got a chance to speak to his family about green card. awaiting response. next follow up 1 june\n__DONE__:Sachin:May 29, 2026\tSachin\t2026-05-29T17:46:56.136Z\nr6Fhbms_Mwn5mwxmlS_KE\tSujeet Singh  (Mother Green card)\tCNC. Dropped text if he got a chance to speak to his family about green card. awaiting response. next follow up 3rd june.\n__DONE__:Milan Singh:Jun 1, 2026\tMilan Singh\t2026-06-01T16:45:49.192Z\nr6Fhbms_Mwn5mwxmlS_KE\tSujeet Singh  (Mother Green card)\tK: CNC. Dropped text if he got a chance to speak to his family about green card. awaiting response. next follow up 5th june.\tMilan Singh\t2026-06-03T18:26:24.738Z\nr6Fhbms_Mwn5mwxmlS_KE\tSujeet Singh  (Mother Green card)\tK: CNC. Dropped text if he got a chance to speak to his family about green card. awaiting response. next follow up 5th june.\n__DONE__:Milan Singh:Jun 3, 2026 at 2:21 PM\tMilan Singh\t2026-06-03T21:21:25.190Z\nZ4BVicKvWcJjh1fe3J0Yp\tVitek Vitek (Guardian)\tK: Client was busy with some work, he'll call us back by the end of the day, will follow up again tomorrow if no call received\n__DONE__:Milan Singh:Jun 2, 2026\tMilan Singh\t2026-06-02T16:38:18.549Z\nZ4BVicKvWcJjh1fe3J0Yp\tVitek Vitek (Guardian)\tK: CNC, dropped a message a message, will follow up again on 06/05/2026\tMilan Singh\t2026-06-03T16:26:12.510Z\nZ4BVicKvWcJjh1fe3J0Yp\tVitek Vitek (Guardian)\tK: CNC, dropped a message a message, will follow up again on 06/05/2026\n__DONE__:Milan Singh:Jun 3, 2026 at 2:20 PM\tMilan Singh\t2026-06-03T21:20:47.873Z\n",
+  "stderr": "",
+  "execution_time_ms": 280
+}

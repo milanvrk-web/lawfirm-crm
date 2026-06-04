@@ -1,0 +1,8 @@
+{
+  "query": "\nSELECT id, name, phone, email, stage, follow_up_date, created_at\nFROM leads\nWHERE name LIKE '%Sarah%Sahota%'\n   OR name LIKE '%Sharanpreet%Singh%'\n   OR name LIKE '%Jaskaran%'\n   OR name LIKE '%Vitek%'\n   OR name LIKE '%Vishal%kumar%'\n   OR name LIKE '%Sujeet%Singh%'\n   OR name LIKE '%Balwant%singh%'\n   OR name LIKE '%Tarunjot%Singh%'\n   OR name LIKE '%Henry%Wang%'\nORDER BY created_at DESC;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute \nSELECT id, name, phone, email, stage, follow_up_date, created_at\nFROM leads\nWHERE name LIKE '%Sarah%Sahota%'\n   OR name LIKE '%Sharanpreet%Singh%'\n   OR name LIKE '%Jaskaran%'\n   OR name LIKE '%Vitek%'\n   OR name LIKE '%Vishal%kumar%'\n   OR name LIKE '%Sujeet%Singh%'\n   OR name LIKE '%Balwant%singh%'\n   OR name LIKE '%Tarunjot%Singh%'\n   OR name LIKE '%Henry%Wang%'\nORDER BY created_at DESC;\n",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 2: Unknown column 'follow_up_date' in 'field list'"
+  ]
+}

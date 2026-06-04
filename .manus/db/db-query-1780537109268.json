@@ -1,0 +1,17 @@
+{
+  "query": "\nSELECT \n  COUNT(*) as total_leads,\n  SUM(CASE WHEN phone = '' AND email = '' THEN 1 ELSE 0 END) as both_empty,\n  SUM(CASE WHEN phone = '' THEN 1 ELSE 0 END) as phone_empty,\n  SUM(CASE WHEN email = '' THEN 1 ELSE 0 END) as email_empty,\n  SUM(CASE WHEN phone != '' OR email != '' THEN 1 ELSE 0 END) as has_some_contact\nFROM leads;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute \nSELECT \n  COUNT(*) as total_leads,\n  SUM(CASE WHEN phone = '' AND email = '' THEN 1 ELSE 0 END) as both_empty,\n  SUM(CASE WHEN phone = '' THEN 1 ELSE 0 END) as phone_empty,\n  SUM(CASE WHEN email = '' THEN 1 ELSE 0 END) as email_empty,\n  SUM(CASE WHEN phone != '' OR email != '' THEN 1 ELSE 0 END) as has_some_contact\nFROM leads;\n",
+  "rows": [
+    {
+      "total_leads": "39",
+      "both_empty": "15",
+      "phone_empty": "15",
+      "email_empty": "35",
+      "has_some_contact": "24"
+    }
+  ],
+  "messages": [],
+  "stdout": "total_leads\tboth_empty\tphone_empty\temail_empty\thas_some_contact\n39\t15\t15\t35\t24\n",
+  "stderr": "",
+  "execution_time_ms": 266
+}

@@ -1,0 +1,8 @@
+{
+  "query": "\nSELECT ln.lead_id, l.name, ln.text, ln.author_name, ln.timestamp\nFROM lead_notes ln\nJOIN leads l ON l.id = ln.lead_id\nWHERE l.id IN (\n  '8eXxdH9S-tZKSjM0v3Kml',\n  'GaibNN5qq0p1x9cwlgG9f',\n  'MW959ff-YUx7IMK3bGHBm',\n  'Z4BVicKvWcJjh1fe3J0Yp',\n  'h6VWli-cup9mEdSsxKCZS',\n  'r6Fhbms_Mwn5mwxmlS_KE',\n  'xaWqfnS6ZBTRCnChX0mBj',\n  'YYMxuSI3XIJjIxApl1MRd',\n  'JO_4iK9Yav79qervrcBqO'\n)\nORDER BY ln.lead_id, ln.timestamp ASC;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute \nSELECT ln.lead_id, l.name, ln.text, ln.author_name, ln.timestamp\nFROM lead_notes ln\nJOIN leads l ON l.id = ln.lead_id\nWHERE l.id IN (\n  '8eXxdH9S-tZKSjM0v3Kml',\n  'GaibNN5qq0p1x9cwlgG9f',\n  'MW959ff-YUx7IMK3bGHBm',\n  'Z4BVicKvWcJjh1fe3J0Yp',\n  'h6VWli-cup9mEdSsxKCZS',\n  'r6Fhbms_Mwn5mwxmlS_KE',\n  'xaWqfnS6ZBTRCnChX0mBj',\n  'YYMxuSI3XIJjIxApl1MRd',\n  'JO_4iK9Yav79qervrcBqO'\n)\nORDER BY ln.lead_id, ln.timestamp ASC;\n",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 2: Unknown column 'ln.lead_id' in 'on clause'"
+  ]
+}

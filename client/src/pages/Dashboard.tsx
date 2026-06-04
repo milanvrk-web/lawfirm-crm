@@ -331,26 +331,25 @@ export default function Dashboard() {
   const dueTodayFollowUps = useMemo(() => followUps.filter(f => f.status === "Pending" && f.dueDate === todayStr), [followUps, todayStr]);
   // todayPayments kept for stale-lead checks; individual breakdowns computed in Day Navigator
 
-  // Stale leads: active (non-lost, non-retained) leads with no payment or follow-up activity in 14+ days
-  // Activity = latest payment date OR latest follow-up date OR lead creation date
+  // Stale leads: active (non-lost, non-retained, non-onboarding) leads with no payment or follow-up activity in 14+ days
+  // Uses lead.followUpDate (single follow-up system) — must match StaleLeadsDrawer logic exactly
   const staleLeads = useMemo(() => {
     const cutoffMs = Date.now() - 14 * 24 * 60 * 60 * 1000;
     return leads.filter(l => {
-      if (l.stage === "Lost" || l.stage === "Retained") return false;
-      // Find latest activity: last payment or last follow-up for this lead
-      const lastPaymentDate = payments
+      if (l.stage === "Lost" || l.stage === "Retained" || l.stage === "Onboarding") return false;
+      const lastPaymentMs = payments
         .filter(p => p.leadId === l.id)
         .map(p => new Date(p.date + "T12:00:00").getTime())
         .reduce((max, t) => Math.max(max, t), 0);
-      const lastFollowUpDate = followUps
-        .filter(f => f.leadId === l.id)
-        .map(f => new Date(f.dueDate + "T12:00:00").getTime())
-        .reduce((max, t) => Math.max(max, t), 0);
+      // followUpDate is the primary activity signal (single follow-up system)
+      const followUpDateMs = l.followUpDate
+        ? new Date(l.followUpDate + "T12:00:00").getTime()
+        : 0;
       const createdMs = new Date(l.date + "T12:00:00").getTime();
-      const lastActivity = Math.max(createdMs, lastPaymentDate, lastFollowUpDate);
+      const lastActivity = Math.max(createdMs, lastPaymentMs, followUpDateMs);
       return lastActivity < cutoffMs;
     }).length;
-  }, [leads, payments, followUps]);
+  }, [leads, payments]);
 
 
   // Drill-down data

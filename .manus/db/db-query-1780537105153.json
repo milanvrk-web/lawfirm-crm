@@ -1,0 +1,91 @@
+{
+  "query": "\nSELECT id, name, phone, email, stage, followUpDate, createdAt\nFROM leads\nWHERE name LIKE '%Sarah%Sahota%'\n   OR name LIKE '%Sharanpreet%'\n   OR name LIKE '%Jaskaran%'\n   OR name LIKE '%Vitek%'\n   OR name LIKE '%Vishal%kumar%'\n   OR name LIKE '%Sujeet%'\n   OR name LIKE '%Balwant%'\n   OR name LIKE '%Tarunjot%'\n   OR name LIKE '%Henry%Wang%'\nORDER BY createdAt DESC;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute \nSELECT id, name, phone, email, stage, followUpDate, createdAt\nFROM leads\nWHERE name LIKE '%Sarah%Sahota%'\n   OR name LIKE '%Sharanpreet%'\n   OR name LIKE '%Jaskaran%'\n   OR name LIKE '%Vitek%'\n   OR name LIKE '%Vishal%kumar%'\n   OR name LIKE '%Sujeet%'\n   OR name LIKE '%Balwant%'\n   OR name LIKE '%Tarunjot%'\n   OR name LIKE '%Henry%Wang%'\nORDER BY createdAt DESC;\n",
+  "rows": [
+    {
+      "id": "8eXxdH9S-tZKSjM0v3Kml",
+      "name": "Sarah Sahota ",
+      "phone": "",
+      "email": "",
+      "stage": "Follow-Up",
+      "followUpDate": "2026-06-04",
+      "createdAt": "2026-06-02 17:36:10"
+    },
+    {
+      "id": "GaibNN5qq0p1x9cwlgG9f",
+      "name": "Sharanpreet Singh 996",
+      "phone": "",
+      "email": "",
+      "stage": "Follow-Up",
+      "followUpDate": "2026-06-08",
+      "createdAt": "2026-06-02 17:01:30"
+    },
+    {
+      "id": "MW959ff-YUx7IMK3bGHBm",
+      "name": "Jaskaran ",
+      "phone": "",
+      "email": "",
+      "stage": "Follow-Up",
+      "followUpDate": "2026-06-04",
+      "createdAt": "2026-06-02 01:32:45"
+    },
+    {
+      "id": "Z4BVicKvWcJjh1fe3J0Yp",
+      "name": "Vitek Vitek (Guardian)",
+      "phone": "",
+      "email": "",
+      "stage": "Follow-Up",
+      "followUpDate": "2026-06-05",
+      "createdAt": "2026-06-01 23:01:48"
+    },
+    {
+      "id": "h6VWli-cup9mEdSsxKCZS",
+      "name": "No given name Vishal kumar",
+      "phone": "",
+      "email": "",
+      "stage": "Follow-Up",
+      "followUpDate": "2026-06-08",
+      "createdAt": "2026-05-28 00:25:30"
+    },
+    {
+      "id": "r6Fhbms_Mwn5mwxmlS_KE",
+      "name": "Sujeet Singh  (Mother Green card)",
+      "phone": "",
+      "email": "",
+      "stage": "Follow-Up",
+      "followUpDate": "2026-06-05",
+      "createdAt": "2026-05-27 21:52:11"
+    },
+    {
+      "id": "xaWqfnS6ZBTRCnChX0mBj",
+      "name": "Balwant singh",
+      "phone": "",
+      "email": "",
+      "stage": "Follow-Up",
+      "followUpDate": "2026-06-05",
+      "createdAt": "2026-05-26 02:03:39"
+    },
+    {
+      "id": "YYMxuSI3XIJjIxApl1MRd",
+      "name": "Tarunjot Singh",
+      "phone": "",
+      "email": "",
+      "stage": "Follow-Up",
+      "followUpDate": "2026-06-26",
+      "createdAt": "2026-05-20 00:12:56"
+    },
+    {
+      "id": "JO_4iK9Yav79qervrcBqO",
+      "name": "Henry Wang (Handler)",
+      "phone": "",
+      "email": "",
+      "stage": "Follow-Up",
+      "followUpDate": "2026-06-08",
+      "createdAt": "2026-05-19 20:42:29"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tphone\temail\tstage\tfollowUpDate\tcreatedAt\n8eXxdH9S-tZKSjM0v3Kml\tSarah Sahota \t\t\tFollow-Up\t2026-06-04\t2026-06-02 17:36:10\nGaibNN5qq0p1x9cwlgG9f\tSharanpreet Singh 996\t\t\tFollow-Up\t2026-06-08\t2026-06-02 17:01:30\nMW959ff-YUx7IMK3bGHBm\tJaskaran \t\t\tFollow-Up\t2026-06-04\t2026-06-02 01:32:45\nZ4BVicKvWcJjh1fe3J0Yp\tVitek Vitek (Guardian)\t\t\tFollow-Up\t2026-06-05\t2026-06-01 23:01:48\nh6VWli-cup9mEdSsxKCZS\tNo given name Vishal kumar\t\t\tFollow-Up\t2026-06-08\t2026-05-28 00:25:30\nr6Fhbms_Mwn5mwxmlS_KE\tSujeet Singh  (Mother Green card)\t\t\tFollow-Up\t2026-06-05\t2026-05-27 21:52:11\nxaWqfnS6ZBTRCnChX0mBj\tBalwant singh\t\t\tFollow-Up\t2026-06-05\t2026-05-26 02:03:39\nYYMxuSI3XIJjIxApl1MRd\tTarunjot Singh\t\t\tFollow-Up\t2026-06-26\t2026-05-20 00:12:56\nJO_4iK9Yav79qervrcBqO\tHenry Wang (Handler)\t\t\tFollow-Up\t2026-06-08\t2026-05-19 20:42:29\n",
+  "stderr": "",
+  "execution_time_ms": 266
+}
