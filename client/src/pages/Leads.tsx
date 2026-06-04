@@ -12,6 +12,7 @@ import { PSTDatePicker } from "@/components/PSTDatePicker";
      - Overdue red border highlight
    ============================================================ */
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { useLocation } from "wouter";
 import { useCRM } from "@/contexts/CRMContext";
 import {
   type Lead, type LeadStage, type CaseType, type FollowUp, type FollowUpStatus,
@@ -112,6 +113,18 @@ export default function Leads() {
 
   // ── Lead Detail Slide-Over ─────────────────────────────────
   const [detailLeadId, setDetailLeadId] = useState<string | null>(null);
+  const [location] = useLocation();
+
+  // Auto-open lead panel when navigated to /leads?lead=ID (e.g. from global search)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const leadId = params.get("lead");
+    if (leadId) {
+      setDetailLeadId(leadId);
+      // Clean the URL so refreshing doesn't re-open the panel
+      window.history.replaceState({}, "", "/leads");
+    }
+  }, [location]);
 
   // ── Dynamic pipeline stages from DB ──────────────────────
   const { data: dbStages = [] } = trpc.pipeline.getStages.useQuery();

@@ -397,3 +397,13 @@
 - [x] Fix CRMContext handleAddLead — add missing lostReason field
 - [x] Add inline phone/email editing to LeadDetailPanel Info tab (Edit / + Add buttons)
 - [x] Fix all identified bugs causing contact info to be dropped or overwritten
+
+## Full App Stress Test & Bug Fix
+- [x] Audit all sidebar navigation links and routes in App.tsx
+- [x] Audit all button handlers, modals, and forms for broken wiring
+- [x] Audit all data display for empty states and edge cases
+- [x] Fix global search — lead results now navigate to /leads?lead=ID and auto-open the detail panel
+- [x] Fix AllData page — Edit button now navigates to /leads?lead=ID instead of generic /leads
+- [x] Fix Clients page — added View Lead button (ExternalLink icon) on each client card
+- [x] Fix StaleLeadsDrawer — added View button that closes drawer and opens lead detail panel
+- [x] Fix Leads.tsx — reads ?lead=ID URL param on mount and auto-opens the detail panel

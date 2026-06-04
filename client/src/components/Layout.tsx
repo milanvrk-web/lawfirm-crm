@@ -111,6 +111,18 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     setSearchQuery("");
   }, [navigate]);
 
+  const handleSelectLead = useCallback((leadId: string) => {
+    navigate(`/leads?lead=${leadId}`);
+    setSearchOpen(false);
+    setSearchQuery("");
+  }, [navigate]);
+
+  const handleSelectPayment = useCallback(() => {
+    navigate("/payments");
+    setSearchOpen(false);
+    setSearchQuery("");
+  }, [navigate]);
+
   // ── Follow-up urgency badge (uses followUpDate on leads) ───
   const urgentCount = useMemo(() => {
     const today = todayPST();
@@ -356,7 +368,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 <CommandItem
                   key={lead.id}
                   value={`lead-${lead.id}-${lead.name}`}
-                  onSelect={() => handleSelect("/leads")}
+                  onSelect={() => handleSelectLead(lead.id)}
                   className="flex items-center gap-3 cursor-pointer"
                 >
                   <Users className="w-4 h-4 flex-shrink-0" style={{ color: "oklch(0.72 0.12 75)" }} />
@@ -385,7 +397,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 <CommandItem
                   key={payment.id}
                   value={`payment-${payment.id}-${payment.clientName}`}
-                  onSelect={() => handleSelect("/payments")}
+                  onSelect={() => handleSelectPayment()}
                   className="flex items-center gap-3 cursor-pointer"
                 >
                   <DollarSign className="w-4 h-4 flex-shrink-0" style={{ color: "oklch(0.65 0.18 145)" }} />

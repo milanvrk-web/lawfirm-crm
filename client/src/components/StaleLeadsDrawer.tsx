@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { X, Clock, ChevronDown, ChevronUp, Plus, Check, AlertTriangle } from "lucide-react";
+import { X, Clock, ChevronDown, ChevronUp, Plus, Check, AlertTriangle, ExternalLink } from "lucide-react";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -47,6 +48,7 @@ function stageColor(stage: string): string {
 }
 
 export default function StaleLeadsDrawer({ open, onClose }: StaleLeadsDrawerProps) {
+  const [, navigate] = useLocation();
   const { leads, payments, setLeadFollowUpDate, addLeadNote } = useCRM();
   const { activeMember } = useActiveMember();
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -304,11 +306,13 @@ export default function StaleLeadsDrawer({ open, onClose }: StaleLeadsDrawerProp
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => setExpandedId(null)}
-                        className="text-xs"
+                        onClick={() => { onClose(); navigate(`/leads?lead=${lead.id}`); }}
+                        className="text-xs gap-1"
                         style={{ borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.65 0.01 250)" }}
+                        title="Open full lead detail"
                       >
-                        Cancel
+                        <ExternalLink className="w-3 h-3" />
+                        View
                       </Button>
                     </div>
                   </div>

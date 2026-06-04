@@ -5,14 +5,16 @@
    ============================================================ */
 
 import { useState, useMemo } from "react";
+import { useLocation } from "wouter";
 import { useCRM } from "@/contexts/CRMContext";
 import { formatCurrency, formatDate } from "@/lib/store";
-import { BookOpen, ChevronDown, ChevronUp, Search, Trash2 } from "lucide-react";
+import { BookOpen, ChevronDown, ChevronUp, Search, Trash2, ExternalLink } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
 export default function Clients() {
   const { leads, payments: allPayments, deleteLead } = useCRM();
+  const [, navigate] = useLocation();
   const [search, setSearch] = useState("");
   const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -116,6 +118,14 @@ export default function Clients() {
                     )}
                   </div>
                   <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => navigate(`/leads?lead=${lead.id}`)}
+                      className="p-1 rounded hover:bg-white/5 transition-colors"
+                      style={{ color: "oklch(0.55 0.01 250)" }}
+                      title="Open lead detail"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                    </button>
                     {confirmDeleteId === lead.id ? (
                       <span className="inline-flex items-center gap-1">
                         <span className="text-xs" style={{ color: "oklch(0.75 0.18 25)" }}>Delete?</span>

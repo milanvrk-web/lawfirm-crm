@@ -11,12 +11,13 @@ import { Database, Search, Filter, Edit2, Trash2, ChevronDown, ChevronUp } from 
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Link } from "wouter";
+import { useLocation } from "wouter";
 
 const STAGES: LeadStage[] = ["New Lead", "Consultation", "Follow-Up", "Retained", "Onboarding", "Lost"];
 
 export default function AllData() {
   const { leads, payments, deleteLead, deletePayment } = useCRM();
+  const [, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState<"leads" | "payments">("leads");
 
   // Leads filters
@@ -158,11 +159,14 @@ export default function AllData() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1">
-                          <Link href="/leads">
-                            <button className="p-1.5 rounded hover:bg-white/5" style={{ color: "oklch(0.55 0.01 250)" }} title="Edit in Leads">
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-                          </Link>
+                          <button
+                            className="p-1.5 rounded hover:bg-white/5"
+                            style={{ color: "oklch(0.55 0.01 250)" }}
+                            title="Open lead detail"
+                            onClick={() => navigate(`/leads?lead=${l.id}`)}
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
                           <button onClick={() => { deleteLead(l.id); toast.success("Lead deleted"); }} className="p-1.5 rounded hover:bg-red-500/10" style={{ color: "oklch(0.55 0.01 250)" }}>
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
