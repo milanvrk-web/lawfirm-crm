@@ -12,9 +12,11 @@ import { formatDate } from "@/lib/store";
 import {
   Brain, Zap, Flame, Snowflake, AlertTriangle, RefreshCw,
   ChevronDown, ChevronUp, ExternalLink, Clock, Target,
-  TrendingUp, TrendingDown, Minus,
+  TrendingUp, Sparkles, Users, ListChecks, TriangleAlert,
+  FileText, Calendar,
 } from "lucide-react";
 import { toast } from "sonner";
+import { Streamdown } from "streamdown";
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -257,8 +259,29 @@ export default function Intelligence() {
   const utils = trpc.useUtils();
   const [analyzingIds, setAnalyzingIds] = useState<Set<string>>(new Set());
   const [isAnalyzingAll, setIsAnalyzingAll] = useState(false);
+  const [isGeneratingBriefing, setIsGeneratingBriefing] = useState(false);
+  const [activeTab, setActiveTab] = useState<"briefing" | "pipeline">("briefing");
 
   const { data: analyses = [], isLoading } = trpc.intelligence.getAll.useQuery();
+  const { data: latestBriefing, isLoading: briefingLoading } = trpc.intelligence.getLatestBriefing.useQuery();
+
+  const generateBriefingMut = trpc.intelligence.generateBriefing.useMutation({
+    onSuccess: () => {
+      utils.intelligence.getLatestBriefing.invalidate();
+      toast.success("Daily briefing generated!");
+      setIsGeneratingBriefing(false);
+    },
+    onError: (err) => {
+      toast.error("Briefing failed: " + err.message);
+      setIsGeneratingBriefing(false);
+    },
+  });
+
+  const handleGenerateBriefing = () => {
+    setIsGeneratingBriefing(true);
+    toast.info("Generating today's briefing — this may take 15–30 seconds...");
+    generateBriefingMut.mutate();
+  };
 
   const analyzeLeadMut = trpc.intelligence.analyzeLead.useMutation({
     onSuccess: () => {
@@ -340,10 +363,31 @@ export default function Intelligence() {
     return hoursOld >= 24;
   }).length;
 
+  // Parse briefing JSON fields
+  const topActions: { leadName: string; tier: string; action: string }[] = useMemo(() => {
+    if (!latestBriefing?.topActions) return [];
+    try { return JSON.parse(latestBriefing.topActions); } catch { return []; }
+  }, [latestBriefing]);
+  const escalations: { leadName: string; reason: string }[] = useMemo(() => {
+    if (!latestBriefing?.escalations) return [];
+    try { return JSON.parse(latestBriefing.escalations); } catch { return []; }
+  }, [latestBriefing]);
+  const memberAssignments: { memberName: string; tasks: string[] }[] = useMemo(() => {
+    if (!latestBriefing?.memberAssignments) return [];
+    try { return JSON.parse(latestBriefing.memberAssignments); } catch { return []; }
+  }, [latestBriefing]);
+
+  const tierBadgeColors: Record<string, string> = {
+    Hot: "oklch(0.65 0.22 25)",
+    Warm: "oklch(0.72 0.18 80)",
+    "At-Risk": "oklch(0.65 0.20 300)",
+    Cold: "oklch(0.55 0.12 250)",
+  };
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
+      <div className="flex items-center justify-between mb-5 flex-wrap gap-4">
         <div>
           <div className="flex items-center gap-3 mb-1">
             <div
@@ -357,23 +401,32 @@ export default function Intelligence() {
             </h1>
           </div>
           <p className="text-sm" style={{ color: "oklch(0.55 0.01 250)" }}>
-            AI-powered pipeline health analysis — identifies hot leads, flags at-risk cases, and recommends next actions
+            Pipeline health, daily briefings, and team task assignments — automated every night at midnight PST
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
           {staleCount > 0 && (
             <span className="text-xs px-2 py-1 rounded-full" style={{ background: "oklch(0.22 0.06 80)", color: "oklch(0.80 0.15 80)" }}>
               {staleCount} stale (&gt;24h)
             </span>
           )}
           <button
+            onClick={handleGenerateBriefing}
+            disabled={isGeneratingBriefing}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all disabled:opacity-60"
+            style={{ background: "oklch(0.22 0.06 280)", color: "oklch(0.80 0.15 280)", border: "1px solid oklch(0.40 0.12 280)" }}
+          >
+            {isGeneratingBriefing ? (
+              <><RefreshCw className="w-4 h-4 animate-spin" /> Generating…</>
+            ) : (
+              <><FileText className="w-4 h-4" /> Generate Briefing</>
+            )}
+          </button>
+          <button
             onClick={handleAnalyzeAll}
             disabled={isAnalyzingAll}
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all disabled:opacity-60"
-            style={{
-              background: "oklch(0.55 0.18 280)",
-              color: "oklch(0.98 0.01 250)",
-            }}
+            style={{ background: "oklch(0.55 0.18 280)", color: "oklch(0.98 0.01 250)" }}
           >
             {isAnalyzingAll ? (
               <><RefreshCw className="w-4 h-4 animate-spin" /> Analyzing…</>
@@ -384,146 +437,337 @@ export default function Intelligence() {
         </div>
       </div>
 
-      {/* Summary stats */}
-      {analyses.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-          {tiers.map(tier => {
-            const cfg = TIER_CONFIG[tier];
-            const Icon = cfg.icon;
-            const count = grouped[tier].length;
-            return (
+      {/* Tab navigation */}
+      <div className="flex gap-1 mb-6 p-1 rounded-xl" style={{ background: "oklch(0.14 0.02 250)" }}>
+        {(["briefing", "pipeline"] as const).map(tab => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all"
+            style={{
+              background: activeTab === tab ? "oklch(0.20 0.04 280)" : "transparent",
+              color: activeTab === tab ? "oklch(0.90 0.08 280)" : "oklch(0.50 0.01 250)",
+              border: activeTab === tab ? "1px solid oklch(0.35 0.10 280)" : "1px solid transparent",
+            }}
+          >
+            {tab === "briefing" ? <><Sparkles className="w-4 h-4" /> Daily Briefing</> : <><ListChecks className="w-4 h-4" /> Pipeline Analysis</>}
+          </button>
+        ))}
+      </div>
+
+      {/* ── BRIEFING TAB ─────────────────────────────────────────── */}
+      {activeTab === "briefing" && (
+        <div>
+          {briefingLoading && (
+            <div className="text-center py-16" style={{ color: "oklch(0.55 0.01 250)" }}>
+              <Sparkles className="w-10 h-10 mx-auto mb-3 opacity-40 animate-pulse" />
+              <p>Loading briefing…</p>
+            </div>
+          )}
+
+          {!briefingLoading && !latestBriefing && (
+            <div className="text-center py-20">
               <div
-                key={tier}
-                className="rounded-xl p-3 border flex items-center gap-3"
-                style={{ background: cfg.bg, borderColor: cfg.border }}
+                className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+                style={{ background: "oklch(0.18 0.04 280)", border: "1px solid oklch(0.35 0.10 280)" }}
               >
-                <Icon className="w-5 h-5 shrink-0" style={{ color: cfg.badge }} />
-                <div>
-                  <div className="text-xl font-bold" style={{ color: cfg.badge }}>{count}</div>
-                  <div className="text-xs" style={{ color: cfg.text }}>{cfg.label}</div>
+                <FileText className="w-8 h-8" style={{ color: "oklch(0.55 0.15 280)" }} />
+              </div>
+              <h3 className="text-base font-semibold mb-2" style={{ color: "oklch(0.80 0.02 250)" }}>
+                No briefing yet
+              </h3>
+              <p className="text-sm mb-6 max-w-sm mx-auto" style={{ color: "oklch(0.50 0.01 250)" }}>
+                Generate today's briefing to get an AI-written morning report with top actions, escalations, and per-member task assignments. Runs automatically every night at midnight PST.
+              </p>
+              <button
+                onClick={handleGenerateBriefing}
+                disabled={isGeneratingBriefing}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold mx-auto transition-all disabled:opacity-60"
+                style={{ background: "oklch(0.55 0.18 280)", color: "white" }}
+              >
+                {isGeneratingBriefing ? (
+                  <><RefreshCw className="w-4 h-4 animate-spin" /> Generating…</>
+                ) : (
+                  <><Sparkles className="w-4 h-4" /> Generate Today's Briefing</>
+                )}
+              </button>
+            </div>
+          )}
+
+          {!briefingLoading && latestBriefing && (
+            <div className="space-y-5">
+              {/* Briefing date + meta */}
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-2 text-sm" style={{ color: "oklch(0.60 0.05 280)" }}>
+                  <Calendar className="w-4 h-4" />
+                  <span className="font-semibold" style={{ color: "oklch(0.85 0.08 280)" }}>
+                    {new Date(latestBriefing.briefingDate + "T12:00:00").toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+                  </span>
+                </div>
+                <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "oklch(0.18 0.04 280)", color: "oklch(0.65 0.12 280)", border: "1px solid oklch(0.35 0.10 280)" }}>
+                  Auto-refreshes nightly at midnight PST
+                </span>
+              </div>
+
+              {/* Main briefing markdown */}
+              <div
+                className="rounded-xl border p-5"
+                style={{ background: "oklch(0.14 0.02 250)", borderColor: "oklch(0.22 0.03 250)" }}
+              >
+                <div className="flex items-center gap-2 mb-4">
+                  <Brain className="w-4 h-4" style={{ color: "oklch(0.75 0.18 280)" }} />
+                  <span className="text-sm font-semibold" style={{ color: "oklch(0.80 0.05 280)" }}>Morning Report</span>
+                </div>
+                <div className="prose prose-invert prose-sm max-w-none" style={{ color: "oklch(0.80 0.02 250)" }}>
+                  <Streamdown>{latestBriefing.content}</Streamdown>
                 </div>
               </div>
-            );
-          })}
-        </div>
-      )}
 
-      {/* Unanalyzed notice */}
-      {unanalyzedCount > 0 && (
-        <div
-          className="rounded-xl p-4 mb-6 flex items-center justify-between gap-4 border"
-          style={{ background: "oklch(0.16 0.03 280)", borderColor: "oklch(0.40 0.10 280)" }}
-        >
-          <div className="flex items-center gap-3">
-            <Target className="w-5 h-5 shrink-0" style={{ color: "oklch(0.65 0.18 280)" }} />
-            <div>
-              <p className="text-sm font-medium" style={{ color: "oklch(0.90 0.05 280)" }}>
-                {unanalyzedCount} lead{unanalyzedCount !== 1 ? "s" : ""} not yet analyzed
-              </p>
-              <p className="text-xs" style={{ color: "oklch(0.55 0.05 280)" }}>
-                Click "Analyze Pipeline" to get AI priority scores for all active leads
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={handleAnalyzeAll}
-            disabled={isAnalyzingAll}
-            className="text-xs px-3 py-1.5 rounded-lg font-medium transition-all disabled:opacity-60 shrink-0"
-            style={{ background: "oklch(0.55 0.18 280)", color: "white" }}
-          >
-            Analyze Now
-          </button>
-        </div>
-      )}
-
-      {/* Loading state */}
-      {isLoading && (
-        <div className="text-center py-16" style={{ color: "oklch(0.55 0.01 250)" }}>
-          <Brain className="w-10 h-10 mx-auto mb-3 opacity-40 animate-pulse" />
-          <p>Loading analyses…</p>
-        </div>
-      )}
-
-      {/* Empty state */}
-      {!isLoading && analyses.length === 0 && (
-        <div className="text-center py-20">
-          <div
-            className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
-            style={{ background: "oklch(0.18 0.04 280)", border: "1px solid oklch(0.35 0.10 280)" }}
-          >
-            <Brain className="w-8 h-8" style={{ color: "oklch(0.55 0.15 280)" }} />
-          </div>
-          <h3 className="text-base font-semibold mb-2" style={{ color: "oklch(0.80 0.02 250)" }}>
-            No analyses yet
-          </h3>
-          <p className="text-sm mb-6 max-w-sm mx-auto" style={{ color: "oklch(0.50 0.01 250)" }}>
-            Click "Analyze Pipeline" to have AI read every lead's full history and rank them by conversion likelihood.
-          </p>
-          <button
-            onClick={handleAnalyzeAll}
-            disabled={isAnalyzingAll}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold mx-auto transition-all disabled:opacity-60"
-            style={{ background: "oklch(0.55 0.18 280)", color: "white" }}
-          >
-            {isAnalyzingAll ? (
-              <><RefreshCw className="w-4 h-4 animate-spin" /> Analyzing…</>
-            ) : (
-              <><Zap className="w-4 h-4" /> Analyze Pipeline</>
-            )}
-          </button>
-        </div>
-      )}
-
-      {/* Tier columns */}
-      {!isLoading && analyses.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-5">
-          {tiers.map(tier => {
-            const cfg = TIER_CONFIG[tier];
-            const Icon = cfg.icon;
-            const tierLeads = grouped[tier];
-            return (
-              <div key={tier}>
-                {/* Column header */}
-                <div className="flex items-center gap-2 mb-3 px-1">
-                  <Icon className="w-4 h-4" style={{ color: cfg.badge }} />
-                  <span className="text-sm font-semibold" style={{ color: cfg.badge }}>
-                    {cfg.label}
-                  </span>
-                  <span
-                    className="ml-auto text-xs px-1.5 py-0.5 rounded-full font-bold"
-                    style={{ background: cfg.bg, color: cfg.badge, border: `1px solid ${cfg.border}` }}
-                  >
-                    {tierLeads.length}
-                  </span>
+              {/* Top actions + Escalations row */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {/* Top Actions */}
+                <div
+                  className="rounded-xl border p-4"
+                  style={{ background: "oklch(0.14 0.02 250)", borderColor: "oklch(0.22 0.03 250)" }}
+                >
+                  <div className="flex items-center gap-2 mb-3">
+                    <Target className="w-4 h-4" style={{ color: "oklch(0.72 0.18 80)" }} />
+                    <span className="text-sm font-semibold" style={{ color: "oklch(0.85 0.08 80)" }}>Top Actions Today</span>
+                    <span className="ml-auto text-xs px-1.5 py-0.5 rounded-full" style={{ background: "oklch(0.18 0.04 80)", color: "oklch(0.72 0.18 80)" }}>{topActions.length}</span>
+                  </div>
+                  {topActions.length === 0 ? (
+                    <p className="text-xs" style={{ color: "oklch(0.45 0.01 250)" }}>No top actions — run pipeline analysis first.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {topActions.map((a, i) => (
+                        <div key={i} className="flex items-start gap-2.5 p-2.5 rounded-lg" style={{ background: "oklch(0.17 0.02 250)" }}>
+                          <span
+                            className="text-xs px-1.5 py-0.5 rounded font-bold shrink-0 mt-0.5"
+                            style={{ background: "oklch(0.18 0.04 80)", color: tierBadgeColors[a.tier] ?? "oklch(0.70 0.05 250)" }}
+                          >
+                            {a.tier}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-xs font-semibold" style={{ color: "oklch(0.88 0.02 250)" }}>{a.leadName}</p>
+                            <p className="text-xs mt-0.5" style={{ color: "oklch(0.65 0.01 250)" }}>{a.action}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
-                {/* Cards */}
-                <div className="flex flex-col gap-3">
-                  {tierLeads.length === 0 ? (
-                    <div
-                      className="rounded-xl border border-dashed p-6 text-center text-xs"
-                      style={{ borderColor: cfg.border, color: "oklch(0.45 0.01 250)" }}
-                    >
-                      No {tier.toLowerCase()} leads
-                    </div>
+                {/* Escalations */}
+                <div
+                  className="rounded-xl border p-4"
+                  style={{ background: "oklch(0.14 0.02 250)", borderColor: "oklch(0.22 0.03 250)" }}
+                >
+                  <div className="flex items-center gap-2 mb-3">
+                    <TriangleAlert className="w-4 h-4" style={{ color: "oklch(0.65 0.22 25)" }} />
+                    <span className="text-sm font-semibold" style={{ color: "oklch(0.85 0.10 25)" }}>Escalations</span>
+                    <span className="ml-auto text-xs px-1.5 py-0.5 rounded-full" style={{ background: "oklch(0.18 0.04 25)", color: "oklch(0.65 0.22 25)" }}>{escalations.length}</span>
+                  </div>
+                  {escalations.length === 0 ? (
+                    <p className="text-xs" style={{ color: "oklch(0.45 0.01 250)" }}>No escalations — all leads are on track.</p>
                   ) : (
-                    tierLeads.map(lead => {
-                      const analysis = analysisMap.get(lead.id)!;
-                      return (
-                        <LeadIntelCard
-                          key={lead.id}
-                          analysis={analysis}
-                          lead={lead}
-                          onReanalyze={handleReanalyze}
-                          isReanalyzing={analyzingIds.has(lead.id)}
-                        />
-                      );
-                    })
+                    <div className="space-y-2">
+                      {escalations.map((e, i) => (
+                        <div key={i} className="p-2.5 rounded-lg" style={{ background: "oklch(0.17 0.03 25)" }}>
+                          <p className="text-xs font-semibold" style={{ color: "oklch(0.88 0.08 25)" }}>{e.leadName}</p>
+                          <p className="text-xs mt-0.5" style={{ color: "oklch(0.70 0.05 25)" }}>{e.reason}</p>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
               </div>
-            );
-          })}
+
+              {/* Member assignments */}
+              {memberAssignments.length > 0 && (
+                <div
+                  className="rounded-xl border p-4"
+                  style={{ background: "oklch(0.14 0.02 250)", borderColor: "oklch(0.22 0.03 250)" }}
+                >
+                  <div className="flex items-center gap-2 mb-4">
+                    <Users className="w-4 h-4" style={{ color: "oklch(0.65 0.15 200)" }} />
+                    <span className="text-sm font-semibold" style={{ color: "oklch(0.85 0.08 200)" }}>Team Task Assignments</span>
+                    <span className="text-xs ml-auto" style={{ color: "oklch(0.45 0.01 250)" }}>AI-assigned based on pipeline priorities</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {memberAssignments.map((m, i) => (
+                      <div key={i} className="rounded-lg p-3" style={{ background: "oklch(0.17 0.02 250)" }}>
+                        <div className="flex items-center gap-2 mb-2">
+                          <div
+                            className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
+                            style={{ background: "oklch(0.25 0.05 200)", color: "oklch(0.75 0.15 200)" }}
+                          >
+                            {m.memberName.charAt(0).toUpperCase()}
+                          </div>
+                          <span className="text-sm font-semibold" style={{ color: "oklch(0.88 0.02 250)" }}>{m.memberName}</span>
+                          <span className="ml-auto text-xs" style={{ color: "oklch(0.50 0.01 250)" }}>{m.tasks.length} task{m.tasks.length !== 1 ? "s" : ""}</span>
+                        </div>
+                        <ul className="space-y-1">
+                          {m.tasks.map((task, j) => (
+                            <li key={j} className="flex items-start gap-1.5 text-xs" style={{ color: "oklch(0.68 0.01 250)" }}>
+                              <span className="mt-0.5 shrink-0" style={{ color: "oklch(0.65 0.15 200)" }}>•</span>
+                              {task}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── PIPELINE TAB ─────────────────────────────────────────── */}
+      {activeTab === "pipeline" && (
+        <div className="space-y-6">
+          {/* Summary stats */}
+          {analyses.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {tiers.map(tier => {
+                const cfg = TIER_CONFIG[tier];
+                const Icon = cfg.icon;
+                const count = grouped[tier].length;
+                return (
+                  <div
+                    key={tier}
+                    className="rounded-xl p-3 border flex items-center gap-3"
+                    style={{ background: cfg.bg, borderColor: cfg.border }}
+                  >
+                    <Icon className="w-5 h-5 shrink-0" style={{ color: cfg.badge }} />
+                    <div>
+                      <div className="text-xl font-bold" style={{ color: cfg.badge }}>{count}</div>
+                      <div className="text-xs" style={{ color: cfg.text }}>{cfg.label}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Unanalyzed notice */}
+          {unanalyzedCount > 0 && (
+            <div
+              className="rounded-xl p-4 flex items-center justify-between gap-4 border"
+              style={{ background: "oklch(0.16 0.03 280)", borderColor: "oklch(0.40 0.10 280)" }}
+            >
+              <div className="flex items-center gap-3">
+                <Target className="w-5 h-5 shrink-0" style={{ color: "oklch(0.65 0.18 280)" }} />
+                <div>
+                  <p className="text-sm font-medium" style={{ color: "oklch(0.90 0.05 280)" }}>
+                    {unanalyzedCount} lead{unanalyzedCount !== 1 ? "s" : ""} not yet analyzed
+                  </p>
+                  <p className="text-xs" style={{ color: "oklch(0.55 0.05 280)" }}>
+                    Click "Analyze Pipeline" to get AI priority scores for all active leads
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleAnalyzeAll}
+                disabled={isAnalyzingAll}
+                className="text-xs px-3 py-1.5 rounded-lg font-medium transition-all disabled:opacity-60 shrink-0"
+                style={{ background: "oklch(0.55 0.18 280)", color: "white" }}
+              >
+                Analyze Now
+              </button>
+            </div>
+          )}
+
+          {/* Loading state */}
+          {isLoading && (
+            <div className="text-center py-16" style={{ color: "oklch(0.55 0.01 250)" }}>
+              <Brain className="w-10 h-10 mx-auto mb-3 opacity-40 animate-pulse" />
+              <p>Loading analyses…</p>
+            </div>
+          )}
+
+          {/* Empty state */}
+          {!isLoading && analyses.length === 0 && (
+            <div className="text-center py-20">
+              <div
+                className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+                style={{ background: "oklch(0.18 0.04 280)", border: "1px solid oklch(0.35 0.10 280)" }}
+              >
+                <Brain className="w-8 h-8" style={{ color: "oklch(0.55 0.15 280)" }} />
+              </div>
+              <h3 className="text-base font-semibold mb-2" style={{ color: "oklch(0.80 0.02 250)" }}>
+                No analyses yet
+              </h3>
+              <p className="text-sm mb-6 max-w-sm mx-auto" style={{ color: "oklch(0.50 0.01 250)" }}>
+                Click "Analyze Pipeline" to have AI read every lead's full history and rank them by conversion likelihood.
+              </p>
+              <button
+                onClick={handleAnalyzeAll}
+                disabled={isAnalyzingAll}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold mx-auto transition-all disabled:opacity-60"
+                style={{ background: "oklch(0.55 0.18 280)", color: "white" }}
+              >
+                {isAnalyzingAll ? (
+                  <><RefreshCw className="w-4 h-4 animate-spin" /> Analyzing…</>
+                ) : (
+                  <><Zap className="w-4 h-4" /> Analyze Pipeline</>
+                )}
+              </button>
+            </div>
+          )}
+
+          {/* Tier columns */}
+          {!isLoading && analyses.length > 0 && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-5">
+              {tiers.map(tier => {
+                const cfg = TIER_CONFIG[tier];
+                const Icon = cfg.icon;
+                const tierLeads = grouped[tier];
+                return (
+                  <div key={tier}>
+                    {/* Column header */}
+                    <div className="flex items-center gap-2 mb-3 px-1">
+                      <Icon className="w-4 h-4" style={{ color: cfg.badge }} />
+                      <span className="text-sm font-semibold" style={{ color: cfg.badge }}>
+                        {cfg.label}
+                      </span>
+                      <span
+                        className="ml-auto text-xs px-1.5 py-0.5 rounded-full font-bold"
+                        style={{ background: cfg.bg, color: cfg.badge, border: `1px solid ${cfg.border}` }}
+                      >
+                        {tierLeads.length}
+                      </span>
+                    </div>
+                    {/* Cards */}
+                    <div className="flex flex-col gap-3">
+                      {tierLeads.length === 0 ? (
+                        <div
+                          className="rounded-xl border border-dashed p-6 text-center text-xs"
+                          style={{ borderColor: cfg.border, color: "oklch(0.45 0.01 250)" }}
+                        >
+                          No {tier.toLowerCase()} leads
+                        </div>
+                      ) : (
+                        tierLeads.map(lead => {
+                          const analysis = analysisMap.get(lead.id)!;
+                          return (
+                            <LeadIntelCard
+                              key={lead.id}
+                              analysis={analysis}
+                              lead={lead}
+                              onReanalyze={handleReanalyze}
+                              isReanalyzing={analyzingIds.has(lead.id)}
+                            />
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -268,3 +268,23 @@ export const aiLeadAnalysis = mysqlTable("ai_lead_analysis", {
 });
 export type DbAiLeadAnalysis = typeof aiLeadAnalysis.$inferSelect;
 export type InsertAiLeadAnalysis = typeof aiLeadAnalysis.$inferInsert;
+
+/** Daily AI Chief of Staff briefing — generated each morning */
+export const dailyBriefings = mysqlTable("daily_briefings", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  /** PST date this briefing covers, e.g. 2026-06-05 */
+  briefingDate: varchar("briefingDate", { length: 10 }).notNull(),
+  /** Full markdown briefing text */
+  content: text("content").notNull(),
+  /** JSON: { hot: number, warm: number, atRisk: number, cold: number } */
+  tierSummary: text("tierSummary").notNull(),
+  /** JSON array of { leadId, name, tier, action } — top priority actions */
+  topActions: text("topActions").notNull(),
+  /** JSON array of { memberId, memberName, tasks: string[] } */
+  memberAssignments: text("memberAssignments").notNull(),
+  /** JSON array of { leadId, name, reason } — unassigned or at-risk escalations */
+  escalations: text("escalations").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type DbDailyBriefing = typeof dailyBriefings.$inferSelect;
+export type InsertDailyBriefing = typeof dailyBriefings.$inferInsert;

@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
 import net from "net";
+import cron from "node-cron";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { registerStorageProxy } from "./storageProxy";
@@ -36,6 +37,25 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   registerStorageProxy(app);
   registerOAuthRoutes(app);
+
+  // ── Nightly heartbeat endpoint (called by scheduled task) ──────────────
+  app.post("/api/heartbeat/nightly", async (_req, res) => {
+    try {
+      console.log("[Heartbeat] Nightly AI Chief of Staff analysis started");
+      // Create a minimal context for the server-side caller (no real req/res needed for public procedures)
+      const caller = appRouter.createCaller({ user: null, req: {} as any, res: {} as any });
+      // Step 1: Re-analyze all active leads
+      const analysisResult = await caller.intelligence.analyzeAll();
+      console.log(`[Heartbeat] Analysis complete: ${analysisResult.total} leads processed`);
+      // Step 2: Generate the daily briefing
+      const briefingResult = await caller.intelligence.generateBriefing();
+      console.log(`[Heartbeat] Briefing generated for ${briefingResult.briefingDate}`);
+      res.json({ ok: true, analysisTotal: analysisResult.total, briefingDate: briefingResult.briefingDate });
+    } catch (err) {
+      console.error("[Heartbeat] Nightly job failed:", err);
+      res.status(500).json({ ok: false, error: String(err) });
+    }
+  });
   // tRPC API
   app.use(
     "/api/trpc",
@@ -61,6 +81,23 @@ async function startServer() {
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
   });
+
+  // ── AI Chief of Staff nightly cron (midnight PST = 08:00 UTC) ─────────
+  // Runs every day: re-analyzes all active leads, then generates the daily briefing.
+  cron.schedule("0 8 * * *", async () => {
+    console.log("[Cron] AI Chief of Staff nightly analysis starting...");
+    try {
+      const caller = appRouter.createCaller({ user: null, req: {} as any, res: {} as any });
+      const analysisResult = await caller.intelligence.analyzeAll();
+      console.log(`[Cron] Analysis complete: ${analysisResult.total} leads processed`);
+      const briefingResult = await caller.intelligence.generateBriefing();
+      console.log(`[Cron] Daily briefing generated for ${briefingResult.briefingDate}`);
+    } catch (err) {
+      console.error("[Cron] Nightly AI Chief of Staff job failed:", err);
+    }
+  }, { timezone: "UTC" });
+
+  console.log("[Cron] AI Chief of Staff nightly job scheduled at 08:00 UTC (midnight PST)");
 }
 
 startServer().catch(console.error);

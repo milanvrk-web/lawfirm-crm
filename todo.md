@@ -426,3 +426,24 @@
 - [x] Show Hot/Warm/At-Risk/Cold badge on each Kanban lead card
 - [x] Badge color matches tier: Hot=red, Warm=amber, At-Risk=orange, Cold=slate
 - [x] Tooltip shows AI score and headline on hover
+
+## Nightly AI Chief of Staff Auto-Analysis
+- [x] Install node-cron package
+- [x] Add nightly cron job in server/_core/index.ts (08:00 UTC = midnight PST)
+- [x] Cron job calls analyzeAll then generateBriefing automatically every night
+- [x] Add POST /api/heartbeat/nightly endpoint for manual trigger
+
+## AI Chief of Staff — Full Automation Suite
+- [x] Nightly midnight PST schedule: auto re-analyze entire pipeline (node-cron)
+- [x] Daily briefing generation: AI-generated report with executive summary, top actions, at-risk escalations, per-member task lists, pipeline health
+- [x] daily_briefings table created in TiDB for briefing storage
+- [x] generateBriefing, getLatestBriefing, getBriefingHistory tRPC procedures added
+- [x] AI Chief of Staff page: two-tab layout (Daily Briefing / Pipeline)
+- [x] Briefing tab: executive summary, top priority actions, at-risk escalations, per-member task lists
+- [x] Manual "Generate Briefing" button for on-demand reports
+- [ ] Unassigned follow-up flagging: AI flags leads with no assigned team member
+- [ ] Per-team-member daily task list view (each person sees their own prioritized to-do)
+- [ ] At-risk escalation: AI sends owner notification when a Hot lead has no activity for 3+ days
+- [ ] Briefing history: view past daily briefings on the AI Chief of Staff page
+- [ ] AI badge on Follow-Ups page rows
+- [ ] "Share Briefing" / export feature for Sachin to send to the owner

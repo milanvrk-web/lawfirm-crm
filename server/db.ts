@@ -717,3 +717,40 @@ export async function deleteAiAnalysis(leadId: string) {
   const { eq } = await import("drizzle-orm");
   await db.delete(aiLeadAnalysis).where(eq(aiLeadAnalysis.leadId, leadId));
 }
+
+// ── Daily Briefing helpers ────────────────────────────────────────────────
+
+export async function saveDailyBriefing(data: {
+  id: string;
+  briefingDate: string;
+  content: string;
+  tierSummary: string;
+  topActions: string;
+  memberAssignments: string;
+  escalations: string;
+}): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const { dailyBriefings } = await import("../drizzle/schema");
+  const { eq } = await import("drizzle-orm");
+  // Replace any existing briefing for this date
+  await db.delete(dailyBriefings).where(eq(dailyBriefings.briefingDate, data.briefingDate));
+  await db.insert(dailyBriefings).values({ ...data, createdAt: new Date() });
+}
+
+export async function getLatestBriefing() {
+  const db = await getDb();
+  if (!db) return null;
+  const { dailyBriefings } = await import("../drizzle/schema");
+  const { desc } = await import("drizzle-orm");
+  const rows = await db.select().from(dailyBriefings).orderBy(desc(dailyBriefings.createdAt)).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function getBriefingHistory(limit = 14) {
+  const db = await getDb();
+  if (!db) return [];
+  const { dailyBriefings } = await import("../drizzle/schema");
+  const { desc } = await import("drizzle-orm");
+  return db.select().from(dailyBriefings).orderBy(desc(dailyBriefings.createdAt)).limit(limit);
+}

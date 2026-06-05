@@ -979,6 +979,124 @@ Based on this information, provide:
         return { ok: true, leadId: input.leadId, tier: parsed.tier, score: parsed.score };
       }),
 
+    /** Generate the daily AI Chief of Staff briefing */
+    generateBriefing: publicProcedure.mutation(async () => {
+      const { invokeLLM } = await import("./_core/llm");
+      const allLeads = await db.getAllLeads();
+      const activeLeads = allLeads.filter(l => l.stage !== "Lost");
+      const analyses = await db.getAllAiAnalyses();
+      const members = await db.getCrmMembers();
+      const analysisMap = new Map(analyses.map(a => [a.leadId, a]));
+
+      // Build context for the LLM
+      const leadSummaries = activeLeads.map(l => {
+        const a = analysisMap.get(l.id);
+        return `- ${l.name} | ${l.caseType} | Stage: ${l.stage} | Tier: ${a?.tier ?? "Unanalyzed"} | Score: ${a?.score ?? "?"}/10 | Next: ${l.followUpDate || "None"} | Action: ${a?.nextAction ?? "N/A"}`;
+      }).join("\n");
+
+      const tierCounts = { Hot: 0, Warm: 0, "At-Risk": 0, Cold: 0, Unanalyzed: 0 };
+      for (const l of activeLeads) {
+        const a = analysisMap.get(l.id);
+        const tier = (a?.tier as keyof typeof tierCounts) ?? "Unanalyzed";
+        tierCounts[tier] = (tierCounts[tier] ?? 0) + 1;
+      }
+
+      const memberNames = members.map(m => m.name).join(", ") || "No team members";
+      const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
+
+      const response = await invokeLLM({
+        messages: [
+          {
+            role: "system",
+            content: `You are the AI Chief of Staff for an immigration law firm. Your job is to generate a concise, actionable daily briefing for the firm's leadership. Be direct, specific, and prioritize revenue-generating actions. Today is ${today} PST. Team members: ${memberNames}.`,
+          },
+          {
+            role: "user",
+            content: `Generate today's pipeline briefing. Here are all active leads:\n\n${leadSummaries}\n\nPipeline health: Hot=${tierCounts.Hot}, Warm=${tierCounts.Warm}, At-Risk=${tierCounts["At-Risk"]}, Cold=${tierCounts.Cold}, Unanalyzed=${tierCounts.Unanalyzed}`,
+          },
+        ],
+        response_format: {
+          type: "json_schema",
+          json_schema: {
+            name: "daily_briefing",
+            strict: true,
+            schema: {
+              type: "object",
+              properties: {
+                briefingMarkdown: { type: "string", description: "Full briefing in markdown, 3-5 paragraphs. Start with overall health, then hot leads, then at-risk escalations, then team focus for today." },
+                topActions: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      leadName: { type: "string" },
+                      tier: { type: "string" },
+                      action: { type: "string" },
+                    },
+                    required: ["leadName", "tier", "action"],
+                    additionalProperties: false,
+                  },
+                },
+                escalations: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      leadName: { type: "string" },
+                      reason: { type: "string" },
+                    },
+                    required: ["leadName", "reason"],
+                    additionalProperties: false,
+                  },
+                },
+                memberAssignments: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      memberName: { type: "string" },
+                      tasks: { type: "array", items: { type: "string" } },
+                    },
+                    required: ["memberName", "tasks"],
+                    additionalProperties: false,
+                  },
+                },
+              },
+              required: ["briefingMarkdown", "topActions", "escalations", "memberAssignments"],
+              additionalProperties: false,
+            },
+          },
+        },
+      });
+
+      const content = response.choices[0]?.message?.content;
+      if (!content) throw new Error("No LLM response");
+      const parsed = typeof content === "string" ? JSON.parse(content) : content;
+
+      const briefingId = nanoid();
+      await db.saveDailyBriefing({
+        id: briefingId,
+        briefingDate: today,
+        content: parsed.briefingMarkdown,
+        tierSummary: JSON.stringify(tierCounts),
+        topActions: JSON.stringify(parsed.topActions ?? []),
+        memberAssignments: JSON.stringify(parsed.memberAssignments ?? []),
+        escalations: JSON.stringify(parsed.escalations ?? []),
+      });
+
+      return { ok: true, briefingDate: today, briefingId };
+    }),
+
+    /** Get the latest daily briefing */
+    getLatestBriefing: publicProcedure.query(async () => {
+      return db.getLatestBriefing();
+    }),
+
+    /** Get briefing history (last 14 days) */
+    getBriefingHistory: publicProcedure.query(async () => {
+      return db.getBriefingHistory(14);
+    }),
+
     /** Analyze all active (non-Lost) leads in batch */
     analyzeAll: publicProcedure.mutation(async () => {
       const allLeads = await db.getAllLeads();
