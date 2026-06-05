@@ -130,6 +130,18 @@ export default function Leads() {
   const { data: dbStages = [] } = trpc.pipeline.getStages.useQuery();
   const { data: allChecklistTemplates = [] } = trpc.pipeline.getAllChecklistTemplates.useQuery();
 
+  // ── AI intelligence tier map (cached, no LLM call) ────────
+  const { data: aiAnalyses = [] } = trpc.intelligence.getAll.useQuery(undefined, {
+    refetchInterval: 300_000, // refresh every 5 minutes
+  });
+  const aiTierMap = useMemo(() => {
+    const map: Record<string, { tier: string; score: number; headline: string }> = {};
+    aiAnalyses.forEach((a: { leadId: string; tier: string; score: number; headline: string }) => {
+      map[a.leadId] = { tier: a.tier, score: a.score, headline: a.headline };
+    });
+    return map;
+  }, [aiAnalyses]);
+
   // ── Reschedule counts for warning badges ─────────────────
   const { data: rescheduleCounts = {} } = trpc.leads.getRescheduleCounts.useQuery(undefined, {
     refetchInterval: 60_000, // refresh every minute
@@ -708,6 +720,7 @@ export default function Leads() {
                       stageTemplates={stageTemplates}
                       stageColor={color}
                       rescheduleCount={rescheduleCounts[lead.id] ?? 0}
+                      aiTier={aiTierMap[lead.id]}
                       onOpenDetail={() => openDetail(lead)}
                       onEdit={() => openEdit(lead)}
                       onDelete={() => { deleteLead(lead.id); toast.success("Lead deleted"); }}
@@ -986,12 +999,13 @@ export default function Leads() {
 type ChecklistTemplate = { id: string; stageId: string; label: string; description: string | null; order: number; createdAt: Date; };
 
 function LeadCard({
-  lead, stageTemplates = [], stageColor: cardStageColor, rescheduleCount = 0, onOpenDetail, onEdit, onDelete, onConvert, onMarkDone, onReschedule, onSetFollowUpDate,
+  lead, stageTemplates = [], stageColor: cardStageColor, rescheduleCount = 0, aiTier, onOpenDetail, onEdit, onDelete, onConvert, onMarkDone, onReschedule, onSetFollowUpDate,
 }: {
   lead: Lead;
   stageTemplates?: ChecklistTemplate[];
   stageColor?: string;
   rescheduleCount?: number;
+  aiTier?: { tier: string; score: number; headline: string };
   onOpenDetail: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -1109,6 +1123,28 @@ function LeadCard({
             <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: "oklch(0.72 0.12 75 / 15%)", color: "oklch(0.72 0.12 75)" }}>{lead.caseType}</span>
             {lead.caseNumber && <span className="text-xs" style={{ color: "oklch(0.50 0.01 250)" }}>#{lead.caseNumber}</span>}
             <LeadAgeBadge dateStr={lead.date} />
+            {aiTier && (
+              <span
+                className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                title={`AI Score: ${aiTier.score}/10 — ${aiTier.headline}`}
+                style={{
+                  background: aiTier.tier === "Hot" ? "oklch(0.55 0.22 25 / 20%)" :
+                              aiTier.tier === "Warm" ? "oklch(0.65 0.18 75 / 20%)" :
+                              aiTier.tier === "At-Risk" ? "oklch(0.60 0.20 50 / 20%)" :
+                              "oklch(0.40 0.01 250 / 30%)",
+                  color: aiTier.tier === "Hot" ? "oklch(0.75 0.22 25)" :
+                         aiTier.tier === "Warm" ? "oklch(0.80 0.18 75)" :
+                         aiTier.tier === "At-Risk" ? "oklch(0.75 0.20 50)" :
+                         "oklch(0.55 0.01 250)",
+                  border: `1px solid ${aiTier.tier === "Hot" ? "oklch(0.55 0.22 25 / 40%)" :
+                                       aiTier.tier === "Warm" ? "oklch(0.65 0.18 75 / 40%)" :
+                                       aiTier.tier === "At-Risk" ? "oklch(0.60 0.20 50 / 40%)" :
+                                       "oklch(0.40 0.01 250 / 40%)"}`,
+                }}
+              >
+                {aiTier.tier === "Hot" ? "🔥" : aiTier.tier === "Warm" ? "⚡" : aiTier.tier === "At-Risk" ? "⚠️" : "❄️"} {aiTier.tier}
+              </span>
+            )}
             {lead.stage === "Lost" && lead.lostReason && (
               <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: "oklch(0.60 0.22 25 / 12%)", color: "oklch(0.70 0.22 25)" }}>
                 {lead.lostReason}

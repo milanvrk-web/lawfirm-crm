@@ -420,3 +420,9 @@
 - [x] Add last-analyzed timestamp and stale warning if analysis is >24h old
 - [x] Add summary stat cards (count per tier) at top of page
 - [x] Add unanalyzed leads notice with one-click Analyze Now button
+
+## AI Priority Badge on Kanban Cards
+- [x] Read cached AI analysis from trpc.intelligence.getAll on Leads page
+- [x] Show Hot/Warm/At-Risk/Cold badge on each Kanban lead card
+- [x] Badge color matches tier: Hot=red, Warm=amber, At-Risk=orange, Cold=slate
+- [x] Tooltip shows AI score and headline on hover
