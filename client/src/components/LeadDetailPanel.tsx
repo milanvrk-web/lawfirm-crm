@@ -45,7 +45,33 @@ import {
   AlertCircle, StickyNote, PhoneCall,
 } from "lucide-react";
 
-// ── CompleteFollowUpModal ──────────────────────────────────
+// ── AssignedToSelectInline ──────────────────────────────────
+function AssignedToSelectInline({
+  value, onSave, onCancel,
+}: { value: string | null; onSave: (v: string | null) => Promise<void>; onCancel: () => void }) {
+  const { data: members = [] } = trpc.members.list.useQuery();
+  const [selected, setSelected] = useState<string>(value ?? "");
+  return (
+    <div className="flex gap-1 mt-1">
+      <select
+        autoFocus
+        value={selected}
+        onChange={e => setSelected(e.target.value)}
+        className="flex-1 text-xs px-2 py-1 rounded outline-none"
+        style={{ background: "oklch(0.22 0.025 250)", border: "1px solid oklch(0.72 0.12 75 / 40%)", color: "oklch(0.90 0.005 250)" }}
+      >
+        <option value="">Unassigned</option>
+        {members.map((m: { id: string; name: string }) => (
+          <option key={m.id} value={m.name}>{m.name}</option>
+        ))}
+      </select>
+      <button onClick={() => onSave(selected || null)} className="px-2 py-1 rounded text-xs font-semibold" style={{ background: "oklch(0.72 0.12 75)", color: "oklch(0.13 0.025 250)" }}>Save</button>
+      <button onClick={onCancel} className="px-2 py-1 rounded text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>✕</button>
+    </div>
+  );
+}
+
+// ── CompleteFollowUpModal ──────────────────────────
 function CompleteFollowUpModal({
   lead,
   onConfirm,
@@ -404,7 +430,7 @@ export default function LeadDetailPanel({
     return () => document.removeEventListener("mousedown", handler);
   }, [showFollowUpDatePicker]);
   // Inline contact info editing (phone / email)
-  const [editingContactField, setEditingContactField] = useState<"phone" | "email" | null>(null);
+  const [editingContactField, setEditingContactField] = useState<"phone" | "email" | "assignedTo" | null>(null);
   const [contactEditValue, setContactEditValue] = useState("");
   const handleSaveContactField = async (field: "phone" | "email") => {
     if (!lead) return;
@@ -792,6 +818,34 @@ export default function LeadDetailPanel({
                 ) : (
                   <div className="text-sm font-medium truncate" style={{ color: lead.phone ? "oklch(0.82 0.005 250)" : "oklch(0.40 0.01 250)" }}>
                     {lead.phone || "—"}
+                  </div>
+                )}
+              </div>
+              {/* Assigned To — inline editable */}
+              <div className="rounded-lg p-2.5" style={{ background: "oklch(0.18 0.025 250)" }}>
+                <div className="flex items-center justify-between mb-0.5">
+                  <div className="text-[10px] uppercase tracking-wider" style={{ color: "oklch(0.40 0.01 250)" }}>Assigned To</div>
+                  <button
+                    onClick={() => { setEditingContactField("assignedTo"); setContactEditValue(lead.assignedTo || ""); }}
+                    className="text-[10px] px-1 py-0.5 rounded hover:opacity-80 transition-opacity"
+                    style={{ color: "oklch(0.72 0.12 75)", border: "1px solid oklch(0.72 0.12 75 / 30%)" }}
+                  >
+                    {lead.assignedTo ? "Change" : "+ Assign"}
+                  </button>
+                </div>
+                {editingContactField === "assignedTo" ? (
+                  <AssignedToSelectInline
+                    value={lead.assignedTo ?? null}
+                    onSave={async (v) => {
+                      await updateLead(lead.id, { assignedTo: v });
+                      setEditingContactField(null);
+                      toast.success(v ? `Assigned to ${v}` : "Unassigned");
+                    }}
+                    onCancel={() => setEditingContactField(null)}
+                  />
+                ) : (
+                  <div className="text-sm font-medium truncate" style={{ color: lead.assignedTo ? "oklch(0.72 0.12 250)" : "oklch(0.40 0.01 250)" }}>
+                    {lead.assignedTo || "Unassigned"}
                   </div>
                 )}
               </div>

@@ -348,8 +348,12 @@ export default function FollowUps() {
 
   const [panelLeadId, setPanelLeadId] = useState<string | null>(null);
   const [filter, setFilter] = useState<"All" | "Overdue" | "Today" | "Upcoming">("All");
+  const [memberFilter, setMemberFilter] = useState<string>("All");
   const [completingLead, setCompletingLead] = useState<Lead | null>(null);
   const [reschedulingLead, setReschedulingLead] = useState<Lead | null>(null);
+
+  // Fetch team members for the member filter
+  const { data: members = [] } = trpc.members.list.useQuery();
 
   // Leads with a follow-up date set
   const leadsWithFollowUp = useMemo(() =>
@@ -362,15 +366,16 @@ export default function FollowUps() {
   const todayLeads    = useMemo(() => leadsWithFollowUp.filter(l => l.followUpDate === today), [leadsWithFollowUp, today]);
   const upcomingLeads = useMemo(() => leadsWithFollowUp.filter(l => l.followUpDate! > today), [leadsWithFollowUp, today]);
 
-  // Filtered + sorted list
+  // Filtered + sorted list (with member filter)
   const filteredLeads = useMemo(() => {
     let list: Lead[];
     if (filter === "Overdue")  list = overdueLeads;
     else if (filter === "Today")    list = todayLeads;
     else if (filter === "Upcoming") list = upcomingLeads;
     else list = leadsWithFollowUp;
+    if (memberFilter !== "All") list = list.filter(l => l.assignedTo === memberFilter);
     return [...list].sort((a, b) => a.followUpDate!.localeCompare(b.followUpDate!));
-  }, [filter, leadsWithFollowUp, overdueLeads, todayLeads, upcomingLeads]);
+  }, [filter, memberFilter, leadsWithFollowUp, overdueLeads, todayLeads, upcomingLeads]);
 
   const handleMarkDoneClick = (lead: Lead, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -471,7 +476,28 @@ export default function FollowUps() {
         ))}
       </div>
 
-      {/* ── Lead List ───────────────────────────────────────── */}
+      {/* ── Member Filter Chips ─────────────────────────────────────────────────── */}
+      {members.length > 0 && (
+        <div className="flex flex-wrap gap-2 items-center">
+          <span className="text-xs" style={{ color: "oklch(0.45 0.01 250)" }}>Assigned to:</span>
+          {["All", ...members.map((m: { name: string }) => m.name)].map(name => (
+            <button
+              key={name}
+              onClick={() => setMemberFilter(name)}
+              className="text-xs px-2.5 py-1 rounded-full transition-all"
+              style={{
+                background: memberFilter === name ? "oklch(0.55 0.18 250 / 25%)" : "oklch(0.20 0.025 250)",
+                color: memberFilter === name ? "oklch(0.72 0.12 250)" : "oklch(0.55 0.01 250)",
+                border: memberFilter === name ? "1px solid oklch(0.55 0.18 250 / 50%)" : "1px solid oklch(1 0 0 / 10%)",
+              }}
+            >
+              {name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* ── Lead List ─────────────────────────────────────────────────── */}
       {filteredLeads.length === 0 ? (
         <div
           className="text-center py-16 rounded-xl"
@@ -621,8 +647,8 @@ function LeadFollowUpRow({
             </span>
           </div>
 
-          {/* Phone + case type */}
-          <div className="flex items-center gap-3 mt-0.5">
+          {/* Phone + case type + assignee */}
+          <div className="flex items-center gap-3 mt-0.5 flex-wrap">
             {lead.phone && (
               <span className="flex items-center gap-1 text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>
                 <Phone className="w-3 h-3" />
@@ -630,6 +656,14 @@ function LeadFollowUpRow({
               </span>
             )}
             <span className="text-xs" style={{ color: "oklch(0.45 0.01 250)" }}>{lead.caseType}</span>
+            {lead.assignedTo && (
+              <span
+                className="text-[10px] font-medium px-1.5 py-0 rounded-full"
+                style={{ background: "oklch(0.55 0.18 250 / 18%)", color: "oklch(0.72 0.12 250)", border: "1px solid oklch(0.55 0.18 250 / 35%)" }}
+              >
+                {lead.assignedTo}
+              </span>
+            )}
           </div>
 
           {/* Latest activity note preview */}

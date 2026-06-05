@@ -113,6 +113,13 @@
       "when": 1780634352605,
       "tag": "0015_dry_weapon_omega",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "5",
+      "when": 1780635839551,
+      "tag": "0016_third_madelyne_pryor",
+      "breakpoints": true
     }
   ]
 }

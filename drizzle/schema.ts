@@ -55,6 +55,8 @@ export const leads = mysqlTable("leads", {
   consultationFee: decimal("consultationFee", { precision: 10, scale: 2 }).default("0"),
   /** Next follow-up due date (YYYY-MM-DD). Null = no follow-up scheduled. */
   followUpDate: varchar("followUpDate", { length: 10 }),
+  /** Team member responsible for this lead (name string, matches crmMembers.name) */
+  assignedTo: varchar("assignedTo", { length: 100 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

@@ -48,10 +48,29 @@ const stageColor: Record<LeadStage, string> = {
   "Lost": "oklch(0.60 0.22 25)",
 };
 
+// ── AssignedToSelect: reusable dropdown for team member assignment ──────────
+function AssignedToSelect({ value, onChange }: { value: string | null; onChange: (v: string | null) => void }) {
+  const { data: members = [] } = trpc.members.list.useQuery();
+  return (
+    <Select value={value ?? "__unassigned__"} onValueChange={v => onChange(v === "__unassigned__" ? null : v)}>
+      <SelectTrigger style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }}>
+        <SelectValue placeholder="Unassigned" />
+      </SelectTrigger>
+      <SelectContent style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)" }}>
+        <SelectItem value="__unassigned__">Unassigned</SelectItem>
+        {members.map((m: { id: string; name: string }) => (
+          <SelectItem key={m.id} value={m.name}>{m.name}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
 const emptyLead: Omit<Lead, "id"> = {
   name: "", phone: "", email: "", caseType: "DA", caseNumber: "", source: "",
   stage: "New Lead", notes: "", date: todayPST(),
   retainerBooked: 0, downpayment: 0, quotedAmount: 0, referredBy: "", consultationFee: 0,
+  assignedTo: "Khushi",
 };
 
 // ── Helpers ────────────────────────────────────────────────
@@ -866,6 +885,13 @@ export default function Leads() {
               <Input type="number" value={form.consultationFee || ""} onChange={e => setForm(f => ({ ...f, consultationFee: parseFloat(e.target.value) || 0 }))} placeholder="e.g. 150"
                 style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
             </div>
+            <div>
+              <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Assigned To</Label>
+              <AssignedToSelect
+                value={form.assignedTo ?? null}
+                onChange={v => setForm(f => ({ ...f, assignedTo: v }))}
+              />
+            </div>
             <div className="col-span-2">
               <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Notes</Label>
               <Textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Any additional notes..."
@@ -1153,7 +1179,16 @@ function LeadCard({
 
             {lead.notes && (
               <span className="text-xs italic truncate max-w-[180px]" style={{ color: "oklch(0.45 0.01 250)" }} title={lead.notes}>
-                {lead.notes.length > 60 ? lead.notes.slice(0, 60) + "…" : lead.notes}
+                {lead.notes.length > 60 ? lead.notes.slice(0, 60) + "\u2026" : lead.notes}
+              </span>
+            )}
+            {lead.assignedTo && (
+              <span
+                className="text-[10px] font-medium px-1.5 py-0.5 rounded-full flex-shrink-0"
+                title={`Assigned to ${lead.assignedTo}`}
+                style={{ background: "oklch(0.55 0.18 250 / 18%)", color: "oklch(0.72 0.12 250)", border: "1px solid oklch(0.55 0.18 250 / 35%)" }}
+              >
+                {lead.assignedTo.split(" ")[0]}
               </span>
             )}
           </div>

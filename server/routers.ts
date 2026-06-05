@@ -31,6 +31,7 @@ const LeadInput = z.object({
   convertedDate: z.string().optional().nullable(),
   lostReason: z.string().optional().nullable(),
   consultationFee: z.number().default(0).optional(),
+  assignedTo: z.string().optional().nullable(),
 });
 
 const PaymentInput = z.object({
@@ -92,6 +93,7 @@ export const appRouter = router({
         downpayment: Number(r.downpayment),
         quotedAmount: Number(r.quotedAmount),
         consultationFee: Number((r as any).consultationFee ?? 0),
+        assignedTo: (r as any).assignedTo ?? null,
       }));
     }),
 
@@ -106,6 +108,7 @@ export const appRouter = router({
         convertedDate: input.convertedDate ?? null,
         lostReason: input.lostReason ?? null,
         consultationFee: String(input.consultationFee ?? 0),
+        assignedTo: input.assignedTo ?? null,
       });
       return { id };
     }),
@@ -118,6 +121,7 @@ export const appRouter = router({
         if (input.data.downpayment !== undefined) data.downpayment = String(input.data.downpayment);
         if (input.data.quotedAmount !== undefined) data.quotedAmount = String(input.data.quotedAmount);
         if (input.data.consultationFee !== undefined) data.consultationFee = String(input.data.consultationFee);
+        if (input.data.assignedTo !== undefined) data.assignedTo = input.data.assignedTo ?? null;
         await db.updateLead(input.id, data as Parameters<typeof db.updateLead>[1]);
         return { success: true };
       }),
@@ -185,6 +189,7 @@ export const appRouter = router({
           quotedAmount: Number(r.quotedAmount),
           consultationFee: Number((r as any).consultationFee ?? 0),
           followUpDate: (r as any).followUpDate as string,
+          assignedTo: (r as any).assignedTo ?? null,
         }));
     }),
   }),
@@ -991,7 +996,7 @@ Based on this information, provide:
       // Build context for the LLM
       const leadSummaries = activeLeads.map(l => {
         const a = analysisMap.get(l.id);
-        return `- ${l.name} | ${l.caseType} | Stage: ${l.stage} | Tier: ${a?.tier ?? "Unanalyzed"} | Score: ${a?.score ?? "?"}/10 | Next: ${l.followUpDate || "None"} | Action: ${a?.nextAction ?? "N/A"}`;
+        return `- ${l.name} | ${l.caseType} | Stage: ${l.stage} | Assigned: ${l.assignedTo || "Unassigned"} | Tier: ${a?.tier ?? "Unanalyzed"} | Score: ${a?.score ?? "?"}/10 | Next: ${l.followUpDate || "None"} | Action: ${a?.nextAction ?? "N/A"}`;
       }).join("\n");
 
       const tierCounts = { Hot: 0, Warm: 0, "At-Risk": 0, Cold: 0, Unanalyzed: 0 };
@@ -1001,18 +1006,30 @@ Based on this information, provide:
         tierCounts[tier] = (tierCounts[tier] ?? 0) + 1;
       }
 
+      // Pre-group leads by assigned member so the AI can produce accurate per-member task lists
       const memberNames = members.map(m => m.name).join(", ") || "No team members";
+      const assignmentGroups: Record<string, string[]> = {};
+      for (const l of activeLeads) {
+        const owner = l.assignedTo || "Unassigned";
+        if (!assignmentGroups[owner]) assignmentGroups[owner] = [];
+        const a = analysisMap.get(l.id);
+        assignmentGroups[owner].push(`${l.name} (${l.caseType}, ${a?.tier ?? "Unanalyzed"}, next: ${l.followUpDate || "TBD"})`);
+      }
+      const assignmentContext = Object.entries(assignmentGroups)
+        .map(([owner, leads]) => `${owner}: ${leads.join("; ")}`)
+        .join("\n");
+
       const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
 
       const response = await invokeLLM({
         messages: [
           {
             role: "system",
-            content: `You are the AI Chief of Staff for an immigration law firm. Your job is to generate a concise, actionable daily briefing for the firm's leadership. Be direct, specific, and prioritize revenue-generating actions. Today is ${today} PST. Team members: ${memberNames}.`,
+            content: `You are the AI Chief of Staff for an immigration law firm. Your job is to generate a concise, actionable daily briefing for the firm's leadership (Sachin, Chief of Staff). Be direct, specific, and prioritize revenue-generating actions. Today is ${today} PST. Team members: ${memberNames}. Khushi is the primary client intake specialist — most new leads are assigned to her. When generating per-member task lists, use the actual lead assignments provided in the prompt, not guesses.`,
           },
           {
             role: "user",
-            content: `Generate today's pipeline briefing. Here are all active leads:\n\n${leadSummaries}\n\nPipeline health: Hot=${tierCounts.Hot}, Warm=${tierCounts.Warm}, At-Risk=${tierCounts["At-Risk"]}, Cold=${tierCounts.Cold}, Unanalyzed=${tierCounts.Unanalyzed}`,
+            content: `Generate today's pipeline briefing.\n\nAll active leads (with assigned owner):\n${leadSummaries}\n\nPipeline health: Hot=${tierCounts.Hot}, Warm=${tierCounts.Warm}, At-Risk=${tierCounts["At-Risk"]}, Cold=${tierCounts.Cold}, Unanalyzed=${tierCounts.Unanalyzed}\n\nLead assignments by team member:\n${assignmentContext}\n\nFor memberAssignments, generate 2-4 specific action tasks per person based on their assigned leads. Focus on the most urgent actions (overdue follow-ups, Hot leads needing contact, At-Risk leads needing intervention).`,
           },
         ],
         response_format: {

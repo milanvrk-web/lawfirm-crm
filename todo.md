@@ -447,3 +447,18 @@
 - [ ] Briefing history: view past daily briefings on the AI Chief of Staff page
 - [ ] AI badge on Follow-Ups page rows
 - [ ] "Share Briefing" / export feature for Sachin to send to the owner
+
+## Lead Assignment System (assignedTo)
+- [x] Add `assignedTo` column to leads table in drizzle/schema.ts
+- [x] Run DB migration (SQL direct) to add column to TiDB
+- [x] Update leads.add and leads.update tRPC procedures to accept and save assignedTo
+- [x] Update getLead / getAllLeads DB helpers to return assignedTo
+- [x] Update Lead type in shared/store.ts to include assignedTo field
+- [x] Update CRMContext handleAddLead and handleUpdateLead to include assignedTo
+- [x] Add assignedTo dropdown (team members list) to Add Lead form — default to Khushi
+- [x] Add assignedTo dropdown to Lead Detail panel Info tab (editable inline)
+- [x] Show assignee badge on Kanban lead cards (blue pill)
+- [x] Show assignee badge on Follow-Ups page rows
+- [x] Add member filter chip bar on Follow-Ups page (All / per member)
+- [x] Wire assignedTo into generateBriefing AI prompt for per-member task grouping
+- [x] Update AI briefing member task lists to group by lead's assignedTo field
