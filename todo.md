@@ -462,3 +462,14 @@
 - [x] Add member filter chip bar on Follow-Ups page (All / per member)
 - [x] Wire assignedTo into generateBriefing AI prompt for per-member task grouping
 - [x] Update AI briefing member task lists to group by lead's assignedTo field
+
+## AI Chief of Staff — Hierarchy-Aware Briefing (Signals, Not Noise)
+- [x] Save lead intake hierarchy as project knowledge entry (Khushi primary, Sachin supervisor/escalation, others only if explicitly assigned)
+- [x] Update generateBriefing prompt: Khushi owns all unassigned leads by default; briefing groups her tasks separately from Sachin's escalation list
+- [x] Update generateBriefing prompt: Sachin's section shows ONLY leads Khushi has escalated to him (assignedTo = Sachin) — not the full pipeline
+- [x] Update generateBriefing prompt: suppress other team members from briefing unless they have an explicit assignedTo lead
+- [x] Default assignedTo for new leads = "Khushi" in the Add Lead form (enforced)
+- [x] Briefing executive summary: focused on Khushi's workload + Sachin's escalations, not generic stats
+- [x] Remove random/generic pipeline stats from briefing that don't map to a specific person's action
+- [x] Hot leads with no activity 3+ days flagged as suggested escalations to Sachin (not auto-reassigned)
+- [x] Unassigned leads flagged with Khushi as suggested owner

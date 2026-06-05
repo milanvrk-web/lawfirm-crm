@@ -990,46 +990,92 @@ Based on this information, provide:
       const allLeads = await db.getAllLeads();
       const activeLeads = allLeads.filter(l => l.stage !== "Lost");
       const analyses = await db.getAllAiAnalyses();
-      const members = await db.getCrmMembers();
       const analysisMap = new Map(analyses.map(a => [a.leadId, a]));
 
-      // Build context for the LLM
-      const leadSummaries = activeLeads.map(l => {
-        const a = analysisMap.get(l.id);
-        return `- ${l.name} | ${l.caseType} | Stage: ${l.stage} | Assigned: ${l.assignedTo || "Unassigned"} | Tier: ${a?.tier ?? "Unanalyzed"} | Score: ${a?.score ?? "?"}/10 | Next: ${l.followUpDate || "None"} | Action: ${a?.nextAction ?? "N/A"}`;
-      }).join("\n");
-
-      const tierCounts = { Hot: 0, Warm: 0, "At-Risk": 0, Cold: 0, Unanalyzed: 0 };
-      for (const l of activeLeads) {
-        const a = analysisMap.get(l.id);
-        const tier = (a?.tier as keyof typeof tierCounts) ?? "Unanalyzed";
-        tierCounts[tier] = (tierCounts[tier] ?? 0) + 1;
-      }
-
-      // Pre-group leads by assigned member so the AI can produce accurate per-member task lists
-      const memberNames = members.map(m => m.name).join(", ") || "No team members";
-      const assignmentGroups: Record<string, string[]> = {};
-      for (const l of activeLeads) {
-        const owner = l.assignedTo || "Unassigned";
-        if (!assignmentGroups[owner]) assignmentGroups[owner] = [];
-        const a = analysisMap.get(l.id);
-        assignmentGroups[owner].push(`${l.name} (${l.caseType}, ${a?.tier ?? "Unanalyzed"}, next: ${l.followUpDate || "TBD"})`);
-      }
-      const assignmentContext = Object.entries(assignmentGroups)
-        .map(([owner, leads]) => `${owner}: ${leads.join("; ")}`)
-        .join("\n");
-
       const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
+      const todayMs = new Date(today + "T12:00:00-08:00").getTime();
+
+      // ── Ownership segmentation ────────────────────────────────
+      // Khushi = primary intake owner (all unassigned leads default to her)
+      // Sachin = supervisor, only sees leads explicitly escalated to him
+      // Others = only if explicitly assigned
+      const khushiLeads = activeLeads.filter(l => !l.assignedTo || l.assignedTo.toLowerCase() === "khushi");
+      const sachinLeads = activeLeads.filter(l => l.assignedTo?.toLowerCase() === "sachin");
+      const otherLeads  = activeLeads.filter(l => l.assignedTo && l.assignedTo.toLowerCase() !== "khushi" && l.assignedTo.toLowerCase() !== "sachin");
+      const unassignedLeads = activeLeads.filter(l => !l.assignedTo);
+
+      const fmtLead = (l: typeof activeLeads[0]) => {
+        const a = analysisMap.get(l.id);
+        const daysOverdue = l.followUpDate
+          ? Math.floor((todayMs - new Date(l.followUpDate + "T12:00:00-08:00").getTime()) / 86400000)
+          : null;
+        const overdueTag = daysOverdue !== null && daysOverdue > 0 ? ` [OVERDUE ${daysOverdue}d]` : "";
+        return `  • ${l.name} | ${l.caseType} | ${l.stage} | Tier: ${a?.tier ?? "Unanalyzed"} | Score: ${a?.score ?? "?"}/10 | Next follow-up: ${l.followUpDate || "None"}${overdueTag} | Suggested action: ${a?.nextAction ?? "N/A"}`;
+      };
+
+      // Flag Hot leads with no activity for 3+ days (still assigned to Khushi) as suggested escalations
+      const hotStaleThresholdDays = 3;
+      const suggestedEscalations = khushiLeads.filter(l => {
+        const a = analysisMap.get(l.id);
+        if (a?.tier !== "Hot") return false;
+        if (!l.followUpDate) return true;
+        const daysSince = Math.floor((todayMs - new Date(l.followUpDate + "T12:00:00-08:00").getTime()) / 86400000);
+        return daysSince >= hotStaleThresholdDays;
+      });
+
+      const khushiSection = khushiLeads.length > 0
+        ? `KHUSHI'S LEADS (${khushiLeads.length} active, she is the primary intake owner):\n${khushiLeads.map(fmtLead).join("\n")}`
+        : "KHUSHI'S LEADS: None active.";
+
+      const sachinSection = sachinLeads.length > 0
+        ? `SACHIN'S ESCALATIONS (${sachinLeads.length} leads Khushi has explicitly escalated to him):\n${sachinLeads.map(fmtLead).join("\n")}`
+        : "SACHIN'S ESCALATIONS: None. Khushi has not escalated any leads to Sachin today.";
+
+      const otherSection = otherLeads.length > 0
+        ? `OTHER ASSIGNED LEADS:\n${otherLeads.map(l => `  • ${l.name} → ${l.assignedTo}`).join("\n")}`
+        : "";
+
+      const escalationHints = suggestedEscalations.length > 0
+        ? `SUGGESTED ESCALATIONS TO SACHIN (Hot leads with no activity for ${hotStaleThresholdDays}+ days, still with Khushi — do NOT auto-reassign, just flag):\n${suggestedEscalations.map(l => `  • ${l.name} (${l.caseType})`).join("\n")}`
+        : "";
+
+      const unassignedSection = unassignedLeads.length > 0
+        ? `UNASSIGNED LEADS (must be assigned to Khushi immediately):\n${unassignedLeads.map(l => `  • ${l.name} (${l.caseType})`).join("\n")}`
+        : "";
+
+      const contextBlock = [khushiSection, sachinSection, otherSection, escalationHints, unassignedSection]
+        .filter(Boolean).join("\n\n");
 
       const response = await invokeLLM({
         messages: [
           {
             role: "system",
-            content: `You are the AI Chief of Staff for an immigration law firm. Your job is to generate a concise, actionable daily briefing for the firm's leadership (Sachin, Chief of Staff). Be direct, specific, and prioritize revenue-generating actions. Today is ${today} PST. Team members: ${memberNames}. Khushi is the primary client intake specialist — most new leads are assigned to her. When generating per-member task lists, use the actual lead assignments provided in the prompt, not guesses.`,
+            content: `You are the AI Chief of Staff for an immigration law firm. You produce a FOCUSED, ACTIONABLE daily briefing — signals, not noise.
+
+OWNERSHIP RULES (non-negotiable):
+- Khushi is the Client Intake Specialist. She owns ALL leads by default. Her section lists her top 3-5 priority actions for today: overdue follow-ups first, then Hot leads, then leads at risk of going cold.
+- Sachin is the Chief of Staff / Supervisor. His section shows ONLY leads explicitly escalated to him (assignedTo = Sachin). If none, write exactly: "No escalations today."
+- Other team members appear ONLY if they have an explicit lead assignment. If no other members have assigned leads, omit their section entirely — silence is better than noise.
+- Unassigned leads must be flagged as needing immediate Khushi assignment.
+- Do NOT pad with generic pipeline stats or counts. Every sentence must map to a specific person's action.
+
+Today is ${today} PST.`,
           },
           {
             role: "user",
-            content: `Generate today's pipeline briefing.\n\nAll active leads (with assigned owner):\n${leadSummaries}\n\nPipeline health: Hot=${tierCounts.Hot}, Warm=${tierCounts.Warm}, At-Risk=${tierCounts["At-Risk"]}, Cold=${tierCounts.Cold}, Unanalyzed=${tierCounts.Unanalyzed}\n\nLead assignments by team member:\n${assignmentContext}\n\nFor memberAssignments, generate 2-4 specific action tasks per person based on their assigned leads. Focus on the most urgent actions (overdue follow-ups, Hot leads needing contact, At-Risk leads needing intervention).\n\nIMPORTANT: If any leads are listed as "Unassigned", include them in the unassignedLeads array with a suggested owner from the team.`,
+            content: `Generate today's briefing using the data below. Be specific — name the lead, state the action, state the urgency.
+
+${contextBlock}
+
+For memberAssignments:
+- Include Khushi with her top 3-5 specific actions (name the lead + what to do).
+- Include Sachin ONLY if he has escalated leads. If none, set tasks to ["No escalations today."].
+- Include other members ONLY if they appear in OTHER ASSIGNED LEADS above.
+- Do NOT invent tasks for people who have no assigned leads.
+
+For escalations: list only leads that are genuinely at risk (Hot + overdue, or Hot + no activity 3+ days). Keep it short — max 3.
+
+For unassignedLeads: list any lead from UNASSIGNED LEADS above, suggest Khushi as owner for all of them.`,
           },
         ],
         response_format: {
@@ -1102,12 +1148,20 @@ Based on this information, provide:
       if (!content) throw new Error("No LLM response");
       const parsed = typeof content === "string" ? JSON.parse(content) : content;
 
+      // Build tier summary from analyses for storage
+      const tierSummary: Record<string, number> = { Hot: 0, Warm: 0, "At-Risk": 0, Cold: 0, Unanalyzed: 0 };
+      for (const l of activeLeads) {
+        const a = analysisMap.get(l.id);
+        const tier = (a?.tier as keyof typeof tierSummary) ?? "Unanalyzed";
+        tierSummary[tier] = (tierSummary[tier] ?? 0) + 1;
+      }
+
       const briefingId = nanoid();
       await db.saveDailyBriefing({
         id: briefingId,
         briefingDate: today,
         content: parsed.briefingMarkdown,
-        tierSummary: JSON.stringify(tierCounts),
+        tierSummary: JSON.stringify(tierSummary),
         topActions: JSON.stringify(parsed.topActions ?? []),
         memberAssignments: JSON.stringify(parsed.memberAssignments ?? []),
         escalations: JSON.stringify(parsed.escalations ?? []),
