@@ -49,7 +49,7 @@ const BASE_NAV = [
   { path: "/close-day", icon: CalendarCheck, label: "Close Day" },
   { path: "/all-data", icon: Database, label: "All Data" },
   { path: "/members", icon: UserCog, label: "Members" },
-  { path: "/intelligence", icon: Brain, label: "AI Intelligence" },
+  { path: "/intelligence", icon: Brain, label: "AI Chief of Staff" },
   { path: "/settings", icon: Settings2, label: "Settings" },
 ];
 

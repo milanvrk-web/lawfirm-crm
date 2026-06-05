@@ -1,5 +1,5 @@
 /* ============================================================
-   AI Lead Intelligence — Pipeline Health Analyzer
+   AI Chief of Staff — Pipeline Health & Lead Prioritization
    Reads each lead's full history and produces priority tiers,
    scores, headlines, and recommended next actions using AI.
    ============================================================ */
@@ -353,7 +353,7 @@ export default function Intelligence() {
               <Brain className="w-5 h-5" style={{ color: "oklch(0.75 0.18 280)" }} />
             </div>
             <h1 className="text-xl font-bold" style={{ color: "oklch(0.95 0.01 250)" }}>
-              AI Lead Intelligence
+              AI Chief of Staff
             </h1>
           </div>
           <p className="text-sm" style={{ color: "oklch(0.55 0.01 250)" }}>
