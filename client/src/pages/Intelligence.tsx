@@ -260,10 +260,11 @@ export default function Intelligence() {
   const [analyzingIds, setAnalyzingIds] = useState<Set<string>>(new Set());
   const [isAnalyzingAll, setIsAnalyzingAll] = useState(false);
   const [isGeneratingBriefing, setIsGeneratingBriefing] = useState(false);
-  const [activeTab, setActiveTab] = useState<"briefing" | "pipeline">("briefing");
+  const [activeTab, setActiveTab] = useState<"briefing" | "pipeline" | "history">("briefing");
 
   const { data: analyses = [], isLoading } = trpc.intelligence.getAll.useQuery();
   const { data: latestBriefing, isLoading: briefingLoading } = trpc.intelligence.getLatestBriefing.useQuery();
+  const { data: briefingHistory = [], isLoading: historyLoading } = trpc.intelligence.getBriefingHistory.useQuery();
 
   const generateBriefingMut = trpc.intelligence.generateBriefing.useMutation({
     onSuccess: () => {
@@ -376,6 +377,10 @@ export default function Intelligence() {
     if (!latestBriefing?.memberAssignments) return [];
     try { return JSON.parse(latestBriefing.memberAssignments); } catch { return []; }
   }, [latestBriefing]);
+  const unassignedLeads: { leadName: string; suggestedOwner: string }[] = useMemo(() => {
+    if (!latestBriefing?.unassignedLeads) return [];
+    try { return JSON.parse(latestBriefing.unassignedLeads); } catch { return []; }
+  }, [latestBriefing]);
 
   const tierBadgeColors: Record<string, string> = {
     Hot: "oklch(0.65 0.22 25)",
@@ -439,7 +444,7 @@ export default function Intelligence() {
 
       {/* Tab navigation */}
       <div className="flex gap-1 mb-6 p-1 rounded-xl" style={{ background: "oklch(0.14 0.02 250)" }}>
-        {(["briefing", "pipeline"] as const).map(tab => (
+        {(["briefing", "pipeline", "history"] as const).map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -450,7 +455,7 @@ export default function Intelligence() {
               border: activeTab === tab ? "1px solid oklch(0.35 0.10 280)" : "1px solid transparent",
             }}
           >
-            {tab === "briefing" ? <><Sparkles className="w-4 h-4" /> Daily Briefing</> : <><ListChecks className="w-4 h-4" /> Pipeline Analysis</>}
+            {tab === "briefing" ? <><Sparkles className="w-4 h-4" /> Daily Briefing</> : tab === "pipeline" ? <><ListChecks className="w-4 h-4" /> Pipeline Analysis</> : <><Calendar className="w-4 h-4" /> History</>}
           </button>
         ))}
       </div>
@@ -581,6 +586,29 @@ export default function Intelligence() {
                   )}
                 </div>
               </div>
+
+              {/* Unassigned leads warning */}
+              {unassignedLeads.length > 0 && (
+                <div
+                  className="rounded-xl border p-4"
+                  style={{ background: "oklch(0.15 0.04 50)", borderColor: "oklch(0.55 0.18 50)" }}
+                >
+                  <div className="flex items-center gap-2 mb-3">
+                    <TriangleAlert className="w-4 h-4" style={{ color: "oklch(0.72 0.18 50)" }} />
+                    <span className="text-sm font-semibold" style={{ color: "oklch(0.85 0.12 50)" }}>Unassigned Leads — Action Required</span>
+                    <span className="ml-auto text-xs px-1.5 py-0.5 rounded-full" style={{ background: "oklch(0.20 0.06 50)", color: "oklch(0.72 0.18 50)" }}>{unassignedLeads.length}</span>
+                  </div>
+                  <p className="text-xs mb-3" style={{ color: "oklch(0.65 0.05 50)" }}>These leads have no assigned team member. Assign them now so they appear in the right person's task list.</p>
+                  <div className="space-y-2">
+                    {unassignedLeads.map((u, i) => (
+                      <div key={i} className="flex items-center justify-between p-2.5 rounded-lg" style={{ background: "oklch(0.18 0.04 50)" }}>
+                        <span className="text-xs font-semibold" style={{ color: "oklch(0.90 0.05 50)" }}>{u.leadName}</span>
+                        <span className="text-xs" style={{ color: "oklch(0.65 0.08 50)" }}>Suggested: <span className="font-medium" style={{ color: "oklch(0.80 0.12 50)" }}>{u.suggestedOwner}</span></span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Member assignments */}
               {memberAssignments.length > 0 && (
@@ -764,6 +792,75 @@ export default function Intelligence() {
                       )}
                     </div>
                   </div>
+                );
+               })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── HISTORY TAB ─────────────────────────────────────────── */}
+      {activeTab === "history" && (
+        <div className="space-y-4">
+          {historyLoading && (
+            <div className="text-center py-16" style={{ color: "oklch(0.55 0.01 250)" }}>
+              <Calendar className="w-10 h-10 mx-auto mb-3 opacity-40 animate-pulse" />
+              <p>Loading history…</p>
+            </div>
+          )}
+          {!historyLoading && briefingHistory.length === 0 && (
+            <div className="text-center py-20">
+              <div
+                className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+                style={{ background: "oklch(0.18 0.04 280)", border: "1px solid oklch(0.35 0.10 280)" }}
+              >
+                <Calendar className="w-8 h-8" style={{ color: "oklch(0.55 0.15 280)" }} />
+              </div>
+              <h3 className="text-base font-semibold mb-2" style={{ color: "oklch(0.80 0.02 250)" }}>No briefing history yet</h3>
+              <p className="text-sm max-w-sm mx-auto" style={{ color: "oklch(0.50 0.01 250)" }}>Briefings are stored automatically each time you generate one. Past briefings will appear here.</p>
+            </div>
+          )}
+          {!historyLoading && briefingHistory.length > 0 && (
+            <div className="space-y-3">
+              <p className="text-xs" style={{ color: "oklch(0.50 0.01 250)" }}>Showing last {briefingHistory.length} briefing{briefingHistory.length !== 1 ? "s" : ""}. Briefings are auto-generated nightly at midnight PST.</p>
+              {briefingHistory.map((b) => {
+                const bTopActions: { leadName: string; tier: string; action: string }[] = (() => { try { return JSON.parse(b.topActions); } catch { return []; } })();
+                const bEscalations: { leadName: string; reason: string }[] = (() => { try { return JSON.parse(b.escalations); } catch { return []; } })();
+                const bMemberAssignments: { memberName: string; tasks: string[] }[] = (() => { try { return JSON.parse(b.memberAssignments); } catch { return []; } })();
+                return (
+                  <details key={b.id} className="rounded-xl border overflow-hidden" style={{ background: "oklch(0.14 0.02 250)", borderColor: "oklch(0.22 0.03 250)" }}>
+                    <summary
+                      className="flex items-center gap-3 p-4 cursor-pointer select-none"
+                      style={{ color: "oklch(0.80 0.02 250)" }}
+                    >
+                      <Calendar className="w-4 h-4 shrink-0" style={{ color: "oklch(0.65 0.12 280)" }} />
+                      <span className="font-semibold text-sm">
+                        {new Date(b.briefingDate + "T12:00:00").toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+                      </span>
+                      <span className="ml-auto text-xs" style={{ color: "oklch(0.50 0.01 250)" }}>
+                        {bTopActions.length} action{bTopActions.length !== 1 ? "s" : ""} · {bEscalations.length} escalation{bEscalations.length !== 1 ? "s" : ""} · {bMemberAssignments.length} member{bMemberAssignments.length !== 1 ? "s" : ""}
+                      </span>
+                    </summary>
+                    <div className="px-4 pb-4 space-y-3 border-t" style={{ borderColor: "oklch(0.20 0.02 250)" }}>
+                      <div className="pt-3 prose prose-invert prose-sm max-w-none" style={{ color: "oklch(0.75 0.02 250)" }}>
+                        <Streamdown>{b.content}</Streamdown>
+                      </div>
+                      {bTopActions.length > 0 && (
+                        <div>
+                          <p className="text-xs font-semibold mb-1.5" style={{ color: "oklch(0.72 0.18 80)" }}>Top Actions</p>
+                          <div className="space-y-1">
+                            {bTopActions.map((a, i) => (
+                              <div key={i} className="flex items-start gap-2 text-xs" style={{ color: "oklch(0.65 0.01 250)" }}>
+                                <span className="shrink-0 font-bold" style={{ color: tierBadgeColors[a.tier] ?? "oklch(0.70 0.05 250)" }}>{a.tier}</span>
+                                <span className="font-medium" style={{ color: "oklch(0.80 0.02 250)" }}>{a.leadName}</span>
+                                <span>— {a.action}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </details>
                 );
               })}
             </div>

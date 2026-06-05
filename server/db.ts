@@ -728,6 +728,7 @@ export async function saveDailyBriefing(data: {
   topActions: string;
   memberAssignments: string;
   escalations: string;
+  unassignedLeads?: string;
 }): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");

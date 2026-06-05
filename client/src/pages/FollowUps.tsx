@@ -355,6 +355,16 @@ export default function FollowUps() {
   // Fetch team members for the member filter
   const { data: members = [] } = trpc.members.list.useQuery();
 
+  // Cached AI analysis for priority badges
+  const { data: aiAnalyses = [] } = trpc.intelligence.getAll.useQuery(undefined, { staleTime: 300_000 });
+  const aiTierMap = useMemo(() => {
+    const map: Record<string, { tier: string; score: number; headline: string }> = {};
+    aiAnalyses.forEach((a: { leadId: string; tier: string; score: number; headline: string }) => {
+      map[a.leadId] = { tier: a.tier, score: a.score, headline: a.headline };
+    });
+    return map;
+  }, [aiAnalyses]);
+
   // Leads with a follow-up date set
   const leadsWithFollowUp = useMemo(() =>
     leads.filter(l => l.followUpDate),
@@ -521,6 +531,7 @@ export default function FollowUps() {
                 lead={lead}
                 badge={badge}
                 stageColor={stageColor[lead.stage] ?? "oklch(0.55 0.01 250)"}
+                aiTier={aiTierMap[lead.id]}
                 onOpen={() => setPanelLeadId(lead.id)}
                 onMarkDone={handleMarkDoneClick}
                 onSetDate={handleSetDate}
@@ -561,10 +572,18 @@ export default function FollowUps() {
 
 // ── LeadFollowUpRow ────────────────────────────────────────
 
+const AI_TIER_COLORS: Record<string, { color: string; bg: string }> = {
+  Hot:       { color: "oklch(0.65 0.22 25)",  bg: "oklch(0.65 0.22 25 / 15%)" },
+  Warm:      { color: "oklch(0.72 0.18 80)",  bg: "oklch(0.72 0.18 80 / 15%)" },
+  "At-Risk": { color: "oklch(0.65 0.20 300)", bg: "oklch(0.65 0.20 300 / 15%)" },
+  Cold:      { color: "oklch(0.55 0.12 250)", bg: "oklch(0.55 0.12 250 / 15%)" },
+};
+
 function LeadFollowUpRow({
   lead,
   badge,
   stageColor,
+  aiTier,
   onOpen,
   onMarkDone,
   onSetDate,
@@ -572,6 +591,7 @@ function LeadFollowUpRow({
   lead: Lead;
   badge: { label: string; color: string; bg: string };
   stageColor: string;
+  aiTier?: { tier: string; score: number; headline: string };
   onOpen: () => void;
   onMarkDone: (lead: Lead, e: React.MouseEvent) => void;
   onSetDate: (lead: Lead, date: string) => void;
@@ -645,6 +665,15 @@ function LeadFollowUpRow({
             >
               {badge.label}
             </span>
+            {aiTier && AI_TIER_COLORS[aiTier.tier] && (
+              <span
+                className="text-[10px] px-1.5 py-0 rounded font-bold"
+                title={`AI: ${aiTier.headline} (score ${aiTier.score}/10)`}
+                style={{ background: AI_TIER_COLORS[aiTier.tier].bg, color: AI_TIER_COLORS[aiTier.tier].color }}
+              >
+                AI·{aiTier.tier}
+              </span>
+            )}
           </div>
 
           {/* Phone + case type + assignee */}

@@ -441,11 +441,11 @@
 - [x] AI Chief of Staff page: two-tab layout (Daily Briefing / Pipeline)
 - [x] Briefing tab: executive summary, top priority actions, at-risk escalations, per-member task lists
 - [x] Manual "Generate Briefing" button for on-demand reports
-- [ ] Unassigned follow-up flagging: AI flags leads with no assigned team member
+- [x] Unassigned follow-up flagging: AI flags leads with no assigned team member (shown in briefing as orange warning card)
 - [ ] Per-team-member daily task list view (each person sees their own prioritized to-do)
 - [ ] At-risk escalation: AI sends owner notification when a Hot lead has no activity for 3+ days
-- [ ] Briefing history: view past daily briefings on the AI Chief of Staff page
-- [ ] AI badge on Follow-Ups page rows
+- [x] Briefing history: view past daily briefings on the AI Chief of Staff page (History tab)
+- [x] AI badge on Follow-Ups page rows (AI·Hot / AI·Warm / AI·At-Risk / AI·Cold with tooltip)
 - [ ] "Share Briefing" / export feature for Sachin to send to the owner
 
 ## Lead Assignment System (assignedTo)

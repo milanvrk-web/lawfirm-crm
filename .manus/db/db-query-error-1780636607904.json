@@ -1,0 +1,8 @@
+{
+  "query": "ALTER TABLE daily_briefings ADD COLUMN unassignedLeads TEXT NOT NULL DEFAULT '[]';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute ALTER TABLE daily_briefings ADD COLUMN unassignedLeads TEXT NOT NULL DEFAULT '[]';",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1101 (42000) at line 1: BLOB/TEXT/JSON column 'unassignedLeads' can't have a default value"
+  ]
+}

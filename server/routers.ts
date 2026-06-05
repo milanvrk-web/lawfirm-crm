@@ -1029,7 +1029,7 @@ Based on this information, provide:
           },
           {
             role: "user",
-            content: `Generate today's pipeline briefing.\n\nAll active leads (with assigned owner):\n${leadSummaries}\n\nPipeline health: Hot=${tierCounts.Hot}, Warm=${tierCounts.Warm}, At-Risk=${tierCounts["At-Risk"]}, Cold=${tierCounts.Cold}, Unanalyzed=${tierCounts.Unanalyzed}\n\nLead assignments by team member:\n${assignmentContext}\n\nFor memberAssignments, generate 2-4 specific action tasks per person based on their assigned leads. Focus on the most urgent actions (overdue follow-ups, Hot leads needing contact, At-Risk leads needing intervention).`,
+            content: `Generate today's pipeline briefing.\n\nAll active leads (with assigned owner):\n${leadSummaries}\n\nPipeline health: Hot=${tierCounts.Hot}, Warm=${tierCounts.Warm}, At-Risk=${tierCounts["At-Risk"]}, Cold=${tierCounts.Cold}, Unanalyzed=${tierCounts.Unanalyzed}\n\nLead assignments by team member:\n${assignmentContext}\n\nFor memberAssignments, generate 2-4 specific action tasks per person based on their assigned leads. Focus on the most urgent actions (overdue follow-ups, Hot leads needing contact, At-Risk leads needing intervention).\n\nIMPORTANT: If any leads are listed as "Unassigned", include them in the unassignedLeads array with a suggested owner from the team.`,
           },
         ],
         response_format: {
@@ -1078,8 +1078,20 @@ Based on this information, provide:
                     additionalProperties: false,
                   },
                 },
+                unassignedLeads: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      leadName: { type: "string" },
+                      suggestedOwner: { type: "string" },
+                    },
+                    required: ["leadName", "suggestedOwner"],
+                    additionalProperties: false,
+                  },
+                },
               },
-              required: ["briefingMarkdown", "topActions", "escalations", "memberAssignments"],
+              required: ["briefingMarkdown", "topActions", "escalations", "memberAssignments", "unassignedLeads"],
               additionalProperties: false,
             },
           },
@@ -1099,6 +1111,7 @@ Based on this information, provide:
         topActions: JSON.stringify(parsed.topActions ?? []),
         memberAssignments: JSON.stringify(parsed.memberAssignments ?? []),
         escalations: JSON.stringify(parsed.escalations ?? []),
+        unassignedLeads: JSON.stringify(parsed.unassignedLeads ?? []),
       });
 
       return { ok: true, briefingDate: today, briefingId };

@@ -1,0 +1,1 @@
+ALTER TABLE `daily_briefings` ADD `unassignedLeads` text;

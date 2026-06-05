@@ -286,6 +286,8 @@ export const dailyBriefings = mysqlTable("daily_briefings", {
   memberAssignments: text("memberAssignments").notNull(),
   /** JSON array of { leadId, name, reason } — unassigned or at-risk escalations */
   escalations: text("escalations").notNull(),
+  /** JSON array of { leadName, suggestedOwner } — leads with no assignedTo */
+  unassignedLeads: text("unassignedLeads"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 export type DbDailyBriefing = typeof dailyBriefings.$inferSelect;
