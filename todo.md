@@ -407,3 +407,16 @@
 - [x] Fix Clients page — added View Lead button (ExternalLink icon) on each client card
 - [x] Fix StaleLeadsDrawer — added View button that closes drawer and opens lead detail panel
 - [x] Fix Leads.tsx — reads ?lead=ID URL param on mount and auto-opens the detail panel
+
+## AI Lead Intelligence (Pipeline Health Analyzer)
+- [x] Add intelligence tRPC router with analyzeLead, analyzeAll, getAll, getForLead procedures
+- [x] Design JSON schema for AI response: priority tier (Hot/Warm/Cold/At-Risk), score 1-10, one-line headline, recommended next action, risk flags, reasoning
+- [x] Build AI Intelligence page with four priority tier columns (Hot / Warm / At-Risk / Cold)
+- [x] Each lead card shows: score bar, headline summary, recommended next action, risk flags, expandable reasoning
+- [x] Add "Analyze Pipeline" button that triggers analysis for all active leads in batch
+- [x] Add per-lead "Re-analyze" button (refresh icon) to refresh a single lead's score
+- [x] Add AI Intelligence nav item to sidebar (Brain icon)
+- [x] Cache analysis results in ai_lead_analysis DB table so the page loads instantly
+- [x] Add last-analyzed timestamp and stale warning if analysis is >24h old
+- [x] Add summary stat cards (count per tier) at top of page
+- [x] Add unanalyzed leads notice with one-click Analyze Now button

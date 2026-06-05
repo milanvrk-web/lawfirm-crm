@@ -860,5 +860,205 @@ export const appRouter = router({
         return db.getStageChecklistCompletions(input.leadId);
       }),
   }),
+
+  // ─── AI Lead Intelligence ──────────────────────────────────────────────
+  intelligence: router({
+
+    /** Get all cached AI analyses */
+    getAll: publicProcedure.query(async () => {
+      return db.getAllAiAnalyses();
+    }),
+
+    /** Get cached AI analysis for a single lead */
+    getForLead: publicProcedure
+      .input(z.object({ leadId: z.string() }))
+      .query(async ({ input }) => {
+        return db.getAiAnalysisForLead(input.leadId);
+      }),
+
+    /** Analyze a single lead using AI */
+    analyzeLead: publicProcedure
+      .input(z.object({ leadId: z.string() }))
+      .mutation(async ({ input }) => {
+        const { invokeLLM } = await import("./_core/llm");
+        const lead = await db.getLeadById(input.leadId);
+        if (!lead) throw new Error("Lead not found");
+
+        const notes = await db.getLeadNotes(input.leadId);
+        const payments = await db.getPaymentsByLead(input.leadId);
+        const followUps = await db.getFollowUpsByLead(input.leadId);
+
+        // Build reschedule count from notes
+        const rescheduleCount = notes.filter(n => n.text.includes("__RESCHEDULE__")).length;
+        const completedFollowUps = notes.filter(n => n.text.includes("__DONE__")).length;
+        const daysInPipeline = Math.floor((Date.now() - new Date(lead.date + "T12:00:00").getTime()) / 86400000);
+        const hasPayment = payments.length > 0;
+        const totalPaid = payments.reduce((s, p) => s + parseFloat(String(p.amount)), 0);
+
+        // Filter out system audit notes for LLM context
+        const humanNotes = notes
+          .filter(n => !n.text.startsWith("__RESCHEDULE__") && !n.text.startsWith("__DONE__"))
+          .map(n => `[${n.timestamp}${n.authorName ? " by " + n.authorName : ""}]: ${n.text}`)
+          .join("\n");
+
+        const prompt = `You are an expert immigration law firm CRM analyst. Analyze this lead and provide a priority assessment.
+
+LEAD PROFILE:
+- Name: ${lead.name}
+- Case Type: ${lead.caseType}
+- Stage: ${lead.stage}
+- Days in Pipeline: ${daysInPipeline}
+- Quoted Amount: $${lead.quotedAmount}
+- Retainer Booked: $${lead.retainerBooked}
+- Down Payment: $${lead.downpayment}
+- Total Paid: $${totalPaid}
+- Consultation Fee: $${lead.consultationFee ?? 0}
+- Source: ${lead.source || "Unknown"}
+- Referred By: ${lead.referredBy || "None"}
+- Follow-Up Date: ${lead.followUpDate || "Not scheduled"}
+- Times Rescheduled: ${rescheduleCount}
+- Completed Follow-Ups: ${completedFollowUps}
+- Has Made Payment: ${hasPayment ? "Yes" : "No"}
+- Lost Reason: ${lead.lostReason || "N/A"}
+
+NOTES HISTORY (most recent first):
+${humanNotes || "No notes recorded"}
+
+Based on this information, provide:
+1. A priority tier: Hot (likely to convert soon, high engagement), Warm (interested but needs nurturing), Cold (low engagement, may need re-qualification), or At-Risk (was engaged but going silent or showing disengagement signals)
+2. A score from 1-10 (10 = highest priority)
+3. A one-line headline summarizing the lead's current status (max 100 chars)
+4. A specific recommended next action for the team
+5. Up to 3 risk flags (specific concerns or warning signs)
+6. Brief reasoning for your assessment`;
+
+        const response = await invokeLLM({
+          messages: [
+            { role: "system", content: "You are an expert CRM analyst for an immigration law firm. Always respond with valid JSON matching the schema exactly." },
+            { role: "user", content: prompt },
+          ],
+          response_format: {
+            type: "json_schema",
+            json_schema: {
+              name: "lead_analysis",
+              strict: true,
+              schema: {
+                type: "object",
+                properties: {
+                  tier: { type: "string", enum: ["Hot", "Warm", "Cold", "At-Risk"], description: "Priority tier" },
+                  score: { type: "integer", description: "Priority score 1-10" },
+                  headline: { type: "string", description: "One-line status summary (max 100 chars)" },
+                  nextAction: { type: "string", description: "Specific recommended next action" },
+                  riskFlags: { type: "array", items: { type: "string" }, description: "Up to 3 risk flags" },
+                  reasoning: { type: "string", description: "Brief reasoning for the assessment" },
+                },
+                required: ["tier", "score", "headline", "nextAction", "riskFlags", "reasoning"],
+                additionalProperties: false,
+              },
+            },
+          },
+        });
+
+        const content = response.choices[0]?.message?.content;
+        if (!content) throw new Error("No AI response received");
+
+        const parsed = typeof content === "string" ? JSON.parse(content) : content;
+
+        const id = nanoid();
+        await db.upsertAiAnalysis({
+          id,
+          leadId: input.leadId,
+          tier: parsed.tier,
+          score: Math.min(10, Math.max(1, parsed.score)),
+          headline: parsed.headline.slice(0, 500),
+          nextAction: parsed.nextAction,
+          riskFlags: JSON.stringify(parsed.riskFlags ?? []),
+          reasoning: parsed.reasoning,
+        });
+
+        return { ok: true, leadId: input.leadId, tier: parsed.tier, score: parsed.score };
+      }),
+
+    /** Analyze all active (non-Lost) leads in batch */
+    analyzeAll: publicProcedure.mutation(async () => {
+      const allLeads = await db.getAllLeads();
+      const activeLeads = allLeads.filter(l => l.stage !== "Lost" && l.stage !== "Retained");
+      const results: { leadId: string; ok: boolean; error?: string }[] = [];
+
+      // Process in small batches to avoid overwhelming the LLM
+      for (const lead of activeLeads) {
+        try {
+          const { invokeLLM } = await import("./_core/llm");
+          const notes = await db.getLeadNotes(lead.id);
+          const payments = await db.getPaymentsByLead(lead.id);
+
+          const rescheduleCount = notes.filter(n => n.text.includes("__RESCHEDULE__")).length;
+          const completedFollowUps = notes.filter(n => n.text.includes("__DONE__")).length;
+          const daysInPipeline = Math.floor((Date.now() - new Date(lead.date + "T12:00:00").getTime()) / 86400000);
+          const totalPaid = payments.reduce((s, p) => s + parseFloat(String(p.amount)), 0);
+
+          const humanNotes = notes
+            .filter(n => !n.text.startsWith("__RESCHEDULE__") && !n.text.startsWith("__DONE__"))
+            .map(n => `[${n.timestamp}]: ${n.text}`)
+            .join("\n");
+
+          const prompt = `Analyze this immigration law firm lead for priority.
+
+LEAD: ${lead.name} | Case: ${lead.caseType} | Stage: ${lead.stage} | Days: ${daysInPipeline} | Quoted: $${lead.quotedAmount} | Paid: $${totalPaid} | Rescheduled: ${rescheduleCount}x | Completed follow-ups: ${completedFollowUps} | Next follow-up: ${lead.followUpDate || "None"}
+
+NOTES:
+${humanNotes || "No notes"}`;
+
+          const response = await invokeLLM({
+            messages: [
+              { role: "system", content: "You are an expert CRM analyst for an immigration law firm. Respond with valid JSON only." },
+              { role: "user", content: prompt },
+            ],
+            response_format: {
+              type: "json_schema",
+              json_schema: {
+                name: "lead_analysis",
+                strict: true,
+                schema: {
+                  type: "object",
+                  properties: {
+                    tier: { type: "string", enum: ["Hot", "Warm", "Cold", "At-Risk"] },
+                    score: { type: "integer" },
+                    headline: { type: "string" },
+                    nextAction: { type: "string" },
+                    riskFlags: { type: "array", items: { type: "string" } },
+                    reasoning: { type: "string" },
+                  },
+                  required: ["tier", "score", "headline", "nextAction", "riskFlags", "reasoning"],
+                  additionalProperties: false,
+                },
+              },
+            },
+          });
+
+          const content = response.choices[0]?.message?.content;
+          if (!content) throw new Error("No response");
+          const parsed = typeof content === "string" ? JSON.parse(content) : content;
+
+          await db.upsertAiAnalysis({
+            id: nanoid(),
+            leadId: lead.id,
+            tier: parsed.tier,
+            score: Math.min(10, Math.max(1, parsed.score)),
+            headline: parsed.headline.slice(0, 500),
+            nextAction: parsed.nextAction,
+            riskFlags: JSON.stringify(parsed.riskFlags ?? []),
+            reasoning: parsed.reasoning,
+          });
+
+          results.push({ leadId: lead.id, ok: true });
+        } catch (err) {
+          results.push({ leadId: lead.id, ok: false, error: String(err) });
+        }
+      }
+
+      return { total: activeLeads.length, results };
+    }),
+  }),
 });
 export type AppRouter = typeof appRouter;

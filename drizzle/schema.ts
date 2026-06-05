@@ -246,3 +246,25 @@ export const stageChecklistCompletions = mysqlTable("stage_checklist_completions
 });
 export type DbStageChecklistCompletion = typeof stageChecklistCompletions.$inferSelect;
 export type InsertStageChecklistCompletion = typeof stageChecklistCompletions.$inferInsert;
+
+// ─── AI Lead Intelligence Cache ──────────────────────────────
+export const aiLeadAnalysis = mysqlTable("ai_lead_analysis", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  leadId: varchar("leadId", { length: 36 }).notNull(),
+  /** Priority tier: Hot | Warm | Cold | At-Risk */
+  tier: varchar("tier", { length: 20 }).notNull(),
+  /** Score 1-10 */
+  score: int("score").notNull(),
+  /** One-line AI headline summary */
+  headline: varchar("headline", { length: 500 }).notNull(),
+  /** Recommended next action */
+  nextAction: text("nextAction").notNull(),
+  /** JSON array of risk flag strings */
+  riskFlags: text("riskFlags").notNull(),
+  /** Full AI reasoning (for transparency) */
+  reasoning: text("reasoning").notNull(),
+  analyzedAt: timestamp("analyzedAt").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type DbAiLeadAnalysis = typeof aiLeadAnalysis.$inferSelect;
+export type InsertAiLeadAnalysis = typeof aiLeadAnalysis.$inferInsert;

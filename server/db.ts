@@ -665,3 +665,55 @@ export async function deleteDayClose(date: string) {
   if (!db) throw new Error("Database not available");
   await db.delete(dayCloses).where(eq(dayCloses.date, date));
 }
+
+// ─── AI Lead Intelligence ─────────────────────────────────────────────────────
+export async function getAiAnalysisForLead(leadId: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const { aiLeadAnalysis } = await import("../drizzle/schema");
+  const { eq, desc } = await import("drizzle-orm");
+  const rows = await db.select().from(aiLeadAnalysis)
+    .where(eq(aiLeadAnalysis.leadId, leadId))
+    .orderBy(desc(aiLeadAnalysis.analyzedAt))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+export async function getAllAiAnalyses() {
+  const db = await getDb();
+  if (!db) return [];
+  const { aiLeadAnalysis } = await import("../drizzle/schema");
+  const { desc } = await import("drizzle-orm");
+  return db.select().from(aiLeadAnalysis).orderBy(desc(aiLeadAnalysis.analyzedAt));
+}
+
+export async function upsertAiAnalysis(data: {
+  id: string;
+  leadId: string;
+  tier: string;
+  score: number;
+  headline: string;
+  nextAction: string;
+  riskFlags: string;
+  reasoning: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const { aiLeadAnalysis } = await import("../drizzle/schema");
+  const { eq } = await import("drizzle-orm");
+  // Delete existing analysis for this lead, then insert fresh
+  await db.delete(aiLeadAnalysis).where(eq(aiLeadAnalysis.leadId, data.leadId));
+  await db.insert(aiLeadAnalysis).values({
+    ...data,
+    analyzedAt: new Date(),
+    createdAt: new Date(),
+  });
+}
+
+export async function deleteAiAnalysis(leadId: string) {
+  const db = await getDb();
+  if (!db) return;
+  const { aiLeadAnalysis } = await import("../drizzle/schema");
+  const { eq } = await import("drizzle-orm");
+  await db.delete(aiLeadAnalysis).where(eq(aiLeadAnalysis.leadId, leadId));
+}

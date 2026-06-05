@@ -1,0 +1,13 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS `ai_lead_analysis` (\n  `id` varchar(36) NOT NULL,\n  `leadId` varchar(36) NOT NULL,\n  `tier` varchar(20) NOT NULL,\n  `score` int NOT NULL,\n  `headline` varchar(500) NOT NULL,\n  `nextAction` text NOT NULL,\n  `riskFlags` text NOT NULL DEFAULT ('[]'),\n  `reasoning` text NOT NULL DEFAULT (''),\n  `analyzedAt` timestamp NOT NULL DEFAULT (now()),\n  `createdAt` timestamp NOT NULL DEFAULT (now()),\n  CONSTRAINT `ai_lead_analysis_id` PRIMARY KEY(`id`)\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute CREATE TABLE IF NOT EXISTS `ai_lead_analysis` (\n  `id` varchar(36) NOT NULL,\n  `leadId` varchar(36) NOT NULL,\n  `tier` varchar(20) NOT NULL,\n  `score` int NOT NULL,\n  `headline` varchar(500) NOT NULL,\n  `nextAction` text NOT NULL,\n  `riskFlags` text NOT NULL DEFAULT ('[]'),\n  `reasoning` text NOT NULL DEFAULT (''),\n  `analyzedAt` timestamp NOT NULL DEFAULT (now()),\n  `createdAt` timestamp NOT NULL DEFAULT (now()),\n  CONSTRAINT `ai_lead_analysis_id` PRIMARY KEY(`id`)\n);",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1064 (42000) at line 1: You have an error in your SQL syntax; check the manual that corresponds to your TiDB version for the right syntax to use line 8 column 42 near \"'[]'),",
+    "  `reasoning` text NOT NULL DEFAULT (''),",
+    "  `analyzedAt` timestamp NOT NULL DEFAULT (now()),",
+    "  `createdAt` timestamp NOT NULL DEFAULT (now()),",
+    "  CONSTRAINT `ai_lead_analysis_id` PRIMARY KEY(`id`)",
+    ")\""
+  ]
+}
