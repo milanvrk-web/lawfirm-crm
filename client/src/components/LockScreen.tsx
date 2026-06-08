@@ -64,7 +64,7 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
         {/* Logo */}
         <div className="flex flex-col items-center gap-4 mb-8">
           <img
-            src="/manus-storage/graham-logo_86d1eaea.png"
+            src="/graham-logo.png"
             alt="Graham Immigration Law, P.C."
             className="h-16 w-auto object-contain"
           />

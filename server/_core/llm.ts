@@ -1,4 +1,8 @@
-import { ENV } from "./env";
+// ─────────────────────────────────────────────────────────────────────────────
+// LLM helper — powered by Groq API (llama-3.3-70b-versatile)
+// Drop-in replacement for the Manus Forge LLM helper.
+// Set GROQ_API_KEY in your environment to enable AI features.
+// ─────────────────────────────────────────────────────────────────────────────
 
 export type Role = "system" | "user" | "assistant" | "tool" | "function";
 
@@ -15,80 +19,51 @@ export type ImageContent = {
   };
 };
 
-export type FileContent = {
-  type: "file_url";
-  file_url: {
-    url: string;
-    mime_type?: "audio/mpeg" | "audio/wav" | "application/pdf" | "audio/mp4" | "video/mp4" ;
-  };
-};
-
-export type MessageContent = string | TextContent | ImageContent | FileContent;
-
 export type Message = {
   role: Role;
-  content: MessageContent | MessageContent[];
-  name?: string;
-  tool_call_id?: string;
+  content: string | Array<TextContent | ImageContent>;
 };
 
-export type Tool = {
-  type: "function";
-  function: {
-    name: string;
-    description?: string;
-    parameters?: Record<string, unknown>;
-  };
+export type JsonSchema = {
+  name: string;
+  strict?: boolean;
+  schema: Record<string, unknown>;
 };
 
-export type ToolChoicePrimitive = "none" | "auto" | "required";
-export type ToolChoiceByName = { name: string };
-export type ToolChoiceExplicit = {
-  type: "function";
-  function: {
-    name: string;
-  };
-};
+export type ResponseFormat =
+  | { type: "json_schema"; json_schema: JsonSchema }
+  | { type: "text" }
+  | { type: "json_object" };
 
-export type ToolChoice =
-  | ToolChoicePrimitive
-  | ToolChoiceByName
-  | ToolChoiceExplicit;
+export type OutputSchema = {
+  name: string;
+  schema: Record<string, unknown>;
+  strict?: boolean;
+};
 
 export type InvokeParams = {
   messages: Message[];
-  tools?: Tool[];
-  toolChoice?: ToolChoice;
-  tool_choice?: ToolChoice;
-  maxTokens?: number;
-  max_tokens?: number;
-  outputSchema?: OutputSchema;
-  output_schema?: OutputSchema;
   responseFormat?: ResponseFormat;
   response_format?: ResponseFormat;
-};
-
-export type ToolCall = {
-  id: string;
-  type: "function";
-  function: {
-    name: string;
-    arguments: string;
-  };
+  outputSchema?: OutputSchema;
+  output_schema?: OutputSchema;
+  tools?: unknown[];
+  toolChoice?: unknown;
+  tool_choice?: unknown;
 };
 
 export type InvokeResult = {
   id: string;
+  object: string;
   created: number;
   model: string;
   choices: Array<{
     index: number;
     message: {
-      role: Role;
-      content: string | Array<TextContent | ImageContent | FileContent>;
-      tool_calls?: ToolCall[];
+      role: string;
+      content: string | null;
     };
-    finish_reason: string | null;
+    finish_reason: string;
   }>;
   usage?: {
     prompt_tokens: number;
@@ -97,176 +72,57 @@ export type InvokeResult = {
   };
 };
 
-export type JsonSchema = {
-  name: string;
-  schema: Record<string, unknown>;
-  strict?: boolean;
-};
+const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
+// Primary model: llama-3.3-70b-versatile (fast, free tier, great for structured JSON)
+const GROQ_MODEL = "llama-3.3-70b-versatile";
 
-export type OutputSchema = JsonSchema;
-
-export type ResponseFormat =
-  | { type: "text" }
-  | { type: "json_object" }
-  | { type: "json_schema"; json_schema: JsonSchema };
-
-const ensureArray = (
-  value: MessageContent | MessageContent[]
-): MessageContent[] => (Array.isArray(value) ? value : [value]);
-
-const normalizeContentPart = (
-  part: MessageContent
-): TextContent | ImageContent | FileContent => {
-  if (typeof part === "string") {
-    return { type: "text", text: part };
+function getGroqApiKey(): string {
+  const key = process.env.GROQ_API_KEY ?? "";
+  if (!key) {
+    throw new Error(
+      "GROQ_API_KEY is not configured. Set it in your environment variables."
+    );
   }
+  return key;
+}
 
-  if (part.type === "text") {
-    return part;
+function normalizeMessage(msg: Message): Record<string, unknown> {
+  if (typeof msg.content === "string") {
+    return { role: msg.role, content: msg.content };
   }
+  // Groq supports text content arrays; strip image_url parts (not supported on free tier)
+  const textParts = (msg.content as Array<TextContent | ImageContent>)
+    .filter((c): c is TextContent => c.type === "text")
+    .map(c => c.text)
+    .join("\n");
+  return { role: msg.role, content: textParts };
+}
 
-  if (part.type === "image_url") {
-    return part;
-  }
-
-  if (part.type === "file_url") {
-    return part;
-  }
-
-  throw new Error("Unsupported message content part");
-};
-
-const normalizeMessage = (message: Message) => {
-  const { role, name, tool_call_id } = message;
-
-  if (role === "tool" || role === "function") {
-    const content = ensureArray(message.content)
-      .map(part => (typeof part === "string" ? part : JSON.stringify(part)))
-      .join("\n");
-
-    return {
-      role,
-      name,
-      tool_call_id,
-      content,
-    };
-  }
-
-  const contentParts = ensureArray(message.content).map(normalizeContentPart);
-
-  // If there's only text content, collapse to a single string for compatibility
-  if (contentParts.length === 1 && contentParts[0].type === "text") {
-    return {
-      role,
-      name,
-      content: contentParts[0].text,
-    };
-  }
-
-  return {
-    role,
-    name,
-    content: contentParts,
-  };
-};
-
-const normalizeToolChoice = (
-  toolChoice: ToolChoice | undefined,
-  tools: Tool[] | undefined
-): "none" | "auto" | ToolChoiceExplicit | undefined => {
-  if (!toolChoice) return undefined;
-
-  if (toolChoice === "none" || toolChoice === "auto") {
-    return toolChoice;
-  }
-
-  if (toolChoice === "required") {
-    if (!tools || tools.length === 0) {
-      throw new Error(
-        "tool_choice 'required' was provided but no tools were configured"
-      );
-    }
-
-    if (tools.length > 1) {
-      throw new Error(
-        "tool_choice 'required' needs a single tool or specify the tool name explicitly"
-      );
-    }
-
-    return {
-      type: "function",
-      function: { name: tools[0].function.name },
-    };
-  }
-
-  if ("name" in toolChoice) {
-    return {
-      type: "function",
-      function: { name: toolChoice.name },
-    };
-  }
-
-  return toolChoice;
-};
-
-const resolveApiUrl = () =>
-  ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
-    ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/chat/completions`
-    : "https://forge.manus.im/v1/chat/completions";
-
-const assertApiKey = () => {
-  if (!ENV.forgeApiKey) {
-    throw new Error("OPENAI_API_KEY is not configured");
-  }
-};
-
-const normalizeResponseFormat = ({
-  responseFormat,
-  response_format,
-  outputSchema,
-  output_schema,
-}: {
+function normalizeResponseFormat(params: {
   responseFormat?: ResponseFormat;
   response_format?: ResponseFormat;
   outputSchema?: OutputSchema;
   output_schema?: OutputSchema;
-}):
-  | { type: "json_schema"; json_schema: JsonSchema }
-  | { type: "text" }
-  | { type: "json_object" }
-  | undefined => {
-  const explicitFormat = responseFormat || response_format;
-  if (explicitFormat) {
-    if (
-      explicitFormat.type === "json_schema" &&
-      !explicitFormat.json_schema?.schema
-    ) {
-      throw new Error(
-        "responseFormat json_schema requires a defined schema object"
-      );
+}): Record<string, unknown> | undefined {
+  const explicit = params.responseFormat || params.response_format;
+  if (explicit) {
+    // Groq supports json_object but not json_schema — fall back to json_object
+    if (explicit.type === "json_schema" || explicit.type === "json_object") {
+      return { type: "json_object" };
     }
-    return explicitFormat;
+    return undefined;
   }
 
-  const schema = outputSchema || output_schema;
-  if (!schema) return undefined;
-
-  if (!schema.name || !schema.schema) {
-    throw new Error("outputSchema requires both name and schema");
+  const schema = params.outputSchema || params.output_schema;
+  if (schema) {
+    return { type: "json_object" };
   }
 
-  return {
-    type: "json_schema",
-    json_schema: {
-      name: schema.name,
-      schema: schema.schema,
-      ...(typeof schema.strict === "boolean" ? { strict: schema.strict } : {}),
-    },
-  };
-};
+  return undefined;
+}
 
 export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
-  assertApiKey();
+  const apiKey = getGroqApiKey();
 
   const {
     messages,
@@ -280,43 +136,32 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   } = params;
 
   const payload: Record<string, unknown> = {
-    model: "gemini-2.5-flash",
+    model: GROQ_MODEL,
     messages: messages.map(normalizeMessage),
+    max_tokens: 8192,
   };
 
   if (tools && tools.length > 0) {
     payload.tools = tools;
+    const tc = toolChoice || tool_choice;
+    if (tc) payload.tool_choice = tc;
   }
 
-  const normalizedToolChoice = normalizeToolChoice(
-    toolChoice || tool_choice,
-    tools
-  );
-  if (normalizedToolChoice) {
-    payload.tool_choice = normalizedToolChoice;
-  }
-
-  payload.max_tokens = 32768
-  payload.thinking = {
-    "budget_tokens": 128
-  }
-
-  const normalizedResponseFormat = normalizeResponseFormat({
+  const normalizedFormat = normalizeResponseFormat({
     responseFormat,
     response_format,
     outputSchema,
     output_schema,
   });
-
-  if (normalizedResponseFormat) {
-    payload.response_format = normalizedResponseFormat;
+  if (normalizedFormat) {
+    payload.response_format = normalizedFormat;
   }
 
-  const response = await fetch(resolveApiUrl(), {
+  const response = await fetch(GROQ_API_URL, {
     method: "POST",
     headers: {
-      "content-type": "application/json",
-      authorization: `Bearer ${ENV.forgeApiKey}`,
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify(payload),
   });
@@ -324,7 +169,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   if (!response.ok) {
     const errorText = await response.text();
     throw new Error(
-      `LLM invoke failed: ${response.status} ${response.statusText} – ${errorText}`
+      `Groq LLM invoke failed: ${response.status} ${response.statusText} – ${errorText}`
     );
   }
 

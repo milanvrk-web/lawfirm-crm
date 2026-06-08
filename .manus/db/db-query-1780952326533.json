@@ -1,0 +1,170 @@
+{
+  "query": "SELECT * FROM pipeline_stages; SELECT * FROM stage_checklist_templates ORDER BY stageId;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute SELECT * FROM pipeline_stages; SELECT * FROM stage_checklist_templates ORDER BY stageId;",
+  "rows": [
+    {
+      "id": "gPSYP8XAbBgidfaft2eQp",
+      "name": "Lost",
+      "color": "oklch(0.60 0.22 25)",
+      "order": "6",
+      "isDefault": "1",
+      "createdAt": "2026-05-08 21:51:39"
+    },
+    {
+      "id": "lOl0DC0pNku5HCEycWIOC",
+      "name": "Retained",
+      "color": "oklch(0.55 0.18 145)",
+      "order": "3",
+      "isDefault": "1",
+      "createdAt": "2026-05-08 21:51:39"
+    },
+    {
+      "id": "Rn6QoQ6UypTHYmdiCaSxp",
+      "name": "Onboarding",
+      "color": "oklch(0.65 0.18 200)",
+      "order": "4",
+      "isDefault": "1",
+      "createdAt": "2026-05-08 21:51:39"
+    },
+    {
+      "id": "SGlzJ_IASsfPM_T-IgqhX",
+      "name": "Consultation",
+      "color": "oklch(0.72 0.15 80)",
+      "order": "2",
+      "isDefault": "1",
+      "createdAt": "2026-05-08 21:51:39"
+    },
+    {
+      "id": "UAmpGAtvu-cS5RFpiEf2F",
+      "name": "New Lead",
+      "color": "oklch(0.55 0.18 250)",
+      "order": "0",
+      "isDefault": "1",
+      "createdAt": "2026-05-08 21:51:39"
+    },
+    {
+      "id": "uHWksD4rU_MDofbs3YhvB",
+      "name": "Follow-Up",
+      "color": "oklch(0.65 0.20 300)",
+      "order": "1",
+      "isDefault": "1",
+      "createdAt": "2026-05-08 21:51:39"
+    },
+    {
+      "id": "id",
+      "name": "stageId",
+      "color": "label",
+      "order": "description",
+      "isDefault": "order",
+      "createdAt": "createdAt"
+    },
+    {
+      "id": "oNuGF7fjzBKjKow6pv5l5",
+      "name": "lOl0DC0pNku5HCEycWIOC",
+      "color": "Initial forms/questionnaires sent",
+      "order": "NULL",
+      "isDefault": "8",
+      "createdAt": "2026-05-13 17:26:05"
+    },
+    {
+      "id": "BO76PPfWHQqYllAqlCkru",
+      "name": "lOl0DC0pNku5HCEycWIOC",
+      "color": "Receipt sent to client for payment that we already received.",
+      "order": "NULL",
+      "isDefault": "7",
+      "createdAt": "2026-05-13 17:25:23"
+    },
+    {
+      "id": "fkxxwFPIlxl6alhQo3d8A",
+      "name": "lOl0DC0pNku5HCEycWIOC",
+      "color": "Added to Cerenade",
+      "order": "NULL",
+      "isDefault": "2",
+      "createdAt": "2026-05-08 22:09:56"
+    },
+    {
+      "id": "fY7f8rEU5jszfASNbvLU_",
+      "name": "lOl0DC0pNku5HCEycWIOC",
+      "color": "Retainer Sent",
+      "order": "NULL",
+      "isDefault": "4",
+      "createdAt": "2026-05-08 22:10:08"
+    },
+    {
+      "id": "iq0mAu6u-s3D2jXp-HktQ",
+      "name": "lOl0DC0pNku5HCEycWIOC",
+      "color": "Added to Planner",
+      "order": "NULL",
+      "isDefault": "3",
+      "createdAt": "2026-05-08 22:10:01"
+    },
+    {
+      "id": "KNQpACmqF_duXKrnBdRv5",
+      "name": "lOl0DC0pNku5HCEycWIOC",
+      "color": "Details added to Complete Client List",
+      "order": "NULL",
+      "isDefault": "6",
+      "createdAt": "2026-05-13 17:19:45"
+    },
+    {
+      "id": "bC-rfkAG_jLJ_YZkz574S",
+      "name": "lOl0DC0pNku5HCEycWIOC",
+      "color": "Hearing added on Calendar",
+      "order": "NULL",
+      "isDefault": "5",
+      "createdAt": "2026-05-08 22:10:20"
+    },
+    {
+      "id": "yzGmt2YU-WIPWPaJWb9j5",
+      "name": "lOl0DC0pNku5HCEycWIOC",
+      "color": "Consultation Scheduled",
+      "order": "NULL",
+      "isDefault": "1",
+      "createdAt": "2026-05-08 22:09:48"
+    },
+    {
+      "id": "ZtaDqdFGlKSO6iLQaSh6M",
+      "name": "lOl0DC0pNku5HCEycWIOC",
+      "color": "Folder and Case notes created",
+      "order": "NULL",
+      "isDefault": "0",
+      "createdAt": "2026-05-08 22:09:42"
+    },
+    {
+      "id": "R8SPEJYUTXL48dp5-IzIt",
+      "name": "Rn6QoQ6UypTHYmdiCaSxp",
+      "color": "Case Notes Created",
+      "order": "Initial case notes and intake information documented in the system",
+      "isDefault": "1",
+      "createdAt": "2026-05-08 21:51:39"
+    },
+    {
+      "id": "uThFQmOzRs__FMOdxMjbk",
+      "name": "Rn6QoQ6UypTHYmdiCaSxp",
+      "color": "Task Added in Planner",
+      "order": "Task added to team planner for workflow tracking",
+      "isDefault": "3",
+      "createdAt": "2026-05-08 21:51:39"
+    },
+    {
+      "id": "vFqdhMB5vWk-c_cU4M9mW",
+      "name": "Rn6QoQ6UypTHYmdiCaSxp",
+      "color": "Consultation Booked",
+      "order": "Attorney consultation has been scheduled and confirmed with the client",
+      "isDefault": "0",
+      "createdAt": "2026-05-08 21:51:39"
+    },
+    {
+      "id": "XM6TXHEJJG0FJR-C37lb-",
+      "name": "Rn6QoQ6UypTHYmdiCaSxp",
+      "color": "Task Added in Cerenade",
+      "order": "Case task created and assigned in Cerenade case management",
+      "isDefault": "2",
+      "createdAt": "2026-05-08 21:51:39"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tcolor\torder\tisDefault\tcreatedAt\ngPSYP8XAbBgidfaft2eQp\tLost\toklch(0.60 0.22 25)\t6\t1\t2026-05-08 21:51:39\nlOl0DC0pNku5HCEycWIOC\tRetained\toklch(0.55 0.18 145)\t3\t1\t2026-05-08 21:51:39\nRn6QoQ6UypTHYmdiCaSxp\tOnboarding\toklch(0.65 0.18 200)\t4\t1\t2026-05-08 21:51:39\nSGlzJ_IASsfPM_T-IgqhX\tConsultation\toklch(0.72 0.15 80)\t2\t1\t2026-05-08 21:51:39\nUAmpGAtvu-cS5RFpiEf2F\tNew Lead\toklch(0.55 0.18 250)\t0\t1\t2026-05-08 21:51:39\nuHWksD4rU_MDofbs3YhvB\tFollow-Up\toklch(0.65 0.20 300)\t1\t1\t2026-05-08 21:51:39\nid\tstageId\tlabel\tdescription\torder\tcreatedAt\noNuGF7fjzBKjKow6pv5l5\tlOl0DC0pNku5HCEycWIOC\tInitial forms/questionnaires sent\tNULL\t8\t2026-05-13 17:26:05\nBO76PPfWHQqYllAqlCkru\tlOl0DC0pNku5HCEycWIOC\tReceipt sent to client for payment that we already received.\tNULL\t7\t2026-05-13 17:25:23\nfkxxwFPIlxl6alhQo3d8A\tlOl0DC0pNku5HCEycWIOC\tAdded to Cerenade\tNULL\t2\t2026-05-08 22:09:56\nfY7f8rEU5jszfASNbvLU_\tlOl0DC0pNku5HCEycWIOC\tRetainer Sent\tNULL\t4\t2026-05-08 22:10:08\niq0mAu6u-s3D2jXp-HktQ\tlOl0DC0pNku5HCEycWIOC\tAdded to Planner\tNULL\t3\t2026-05-08 22:10:01\nKNQpACmqF_duXKrnBdRv5\tlOl0DC0pNku5HCEycWIOC\tDetails added to Complete Client List\tNULL\t6\t2026-05-13 17:19:45\nbC-rfkAG_jLJ_YZkz574S\tlOl0DC0pNku5HCEycWIOC\tHearing added on Calendar\tNULL\t5\t2026-05-08 22:10:20\nyzGmt2YU-WIPWPaJWb9j5\tlOl0DC0pNku5HCEycWIOC\tConsultation Scheduled\tNULL\t1\t2026-05-08 22:09:48\nZtaDqdFGlKSO6iLQaSh6M\tlOl0DC0pNku5HCEycWIOC\tFolder and Case notes created\tNULL\t0\t2026-05-08 22:09:42\nR8SPEJYUTXL48dp5-IzIt\tRn6QoQ6UypTHYmdiCaSxp\tCase Notes Created\tInitial case notes and intake information documented in the system\t1\t2026-05-08 21:51:39\nuThFQmOzRs__FMOdxMjbk\tRn6QoQ6UypTHYmdiCaSxp\tTask Added in Planner\tTask added to team planner for workflow tracking\t3\t2026-05-08 21:51:39\nvFqdhMB5vWk-c_cU4M9mW\tRn6QoQ6UypTHYmdiCaSxp\tConsultation Booked\tAttorney consultation has been scheduled and confirmed with the client\t0\t2026-05-08 21:51:39\nXM6TXHEJJG0FJR-C37lb-\tRn6QoQ6UypTHYmdiCaSxp\tTask Added in Cerenade\tCase task created and assigned in Cerenade case management\t2\t2026-05-08 21:51:39\n",
+  "stderr": "",
+  "execution_time_ms": 277
+}

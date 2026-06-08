@@ -1,0 +1,78 @@
+{
+  "query": "SELECT TABLE_NAME, TABLE_ROWS FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() ORDER BY TABLE_NAME;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute SELECT TABLE_NAME, TABLE_ROWS FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() ORDER BY TABLE_NAME;",
+  "rows": [
+    {
+      "TABLE_NAME": "__drizzle_migrations",
+      "TABLE_ROWS": "8"
+    },
+    {
+      "TABLE_NAME": "ai_lead_analysis",
+      "TABLE_ROWS": "28"
+    },
+    {
+      "TABLE_NAME": "crm_members",
+      "TABLE_ROWS": "4"
+    },
+    {
+      "TABLE_NAME": "daily_briefings",
+      "TABLE_ROWS": "4"
+    },
+    {
+      "TABLE_NAME": "day_closes",
+      "TABLE_ROWS": "6"
+    },
+    {
+      "TABLE_NAME": "follow_up_comments",
+      "TABLE_ROWS": "7"
+    },
+    {
+      "TABLE_NAME": "follow_ups",
+      "TABLE_ROWS": "23"
+    },
+    {
+      "TABLE_NAME": "installment_items",
+      "TABLE_ROWS": "0"
+    },
+    {
+      "TABLE_NAME": "installment_plans",
+      "TABLE_ROWS": "0"
+    },
+    {
+      "TABLE_NAME": "lead_notes",
+      "TABLE_ROWS": "119"
+    },
+    {
+      "TABLE_NAME": "leads",
+      "TABLE_ROWS": "42"
+    },
+    {
+      "TABLE_NAME": "onboarding_checklist",
+      "TABLE_ROWS": "4"
+    },
+    {
+      "TABLE_NAME": "payments",
+      "TABLE_ROWS": "90"
+    },
+    {
+      "TABLE_NAME": "pipeline_stages",
+      "TABLE_ROWS": "6"
+    },
+    {
+      "TABLE_NAME": "stage_checklist_completions",
+      "TABLE_ROWS": "69"
+    },
+    {
+      "TABLE_NAME": "stage_checklist_templates",
+      "TABLE_ROWS": "13"
+    },
+    {
+      "TABLE_NAME": "users",
+      "TABLE_ROWS": "1"
+    }
+  ],
+  "messages": [],
+  "stdout": "TABLE_NAME\tTABLE_ROWS\n__drizzle_migrations\t8\nai_lead_analysis\t28\ncrm_members\t4\ndaily_briefings\t4\nday_closes\t6\nfollow_up_comments\t7\nfollow_ups\t23\ninstallment_items\t0\ninstallment_plans\t0\nlead_notes\t119\nleads\t42\nonboarding_checklist\t4\npayments\t90\npipeline_stages\t6\nstage_checklist_completions\t69\nstage_checklist_templates\t13\nusers\t1\n",
+  "stderr": "",
+  "execution_time_ms": 289
+}

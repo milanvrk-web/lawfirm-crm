@@ -161,7 +161,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         {/* Logo */}
         <div className="flex items-center justify-between px-4 py-4 border-b" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
           <img
-            src="/manus-storage/graham-logo_86d1eaea.png"
+            src="/graham-logo.png"
             alt="Graham Immigration Law, P.C."
             className="h-12 w-auto object-contain"
           />
@@ -325,7 +325,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <Menu className="w-5 h-5" />
           </button>
           <img
-            src="/manus-storage/graham-logo_86d1eaea.png"
+            src="/graham-logo.png"
             alt="Graham Immigration Law, P.C."
             className="h-8 w-auto object-contain"
           />

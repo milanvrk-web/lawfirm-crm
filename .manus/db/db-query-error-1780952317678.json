@@ -1,0 +1,13 @@
+{
+  "query": "SELECT * FROM crm_members ORDER BY name; SELECT * FROM pipeline_stages ORDER BY position;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute SELECT * FROM crm_members ORDER BY name; SELECT * FROM pipeline_stages ORDER BY position;",
+  "returncode": 1,
+  "logs": [
+    "id\tname\trole\tcolor\tcreatedAt",
+    "ALtrqYPZVkwwZIZESrNFP\tJosh\tParalegal\toklch(0.72 0.15 80)\t2026-05-15 14:08:25",
+    "yM6Q5KgRDSGT8PD09DWWt\tKhushi Arora\tStaff\toklch(0.60 0.15 195)\t2026-06-05 02:49:16",
+    "mbD5YUEb3GN3UBC-fts7u\tMilan Singh\tManager\toklch(0.60 0.18 145)\t2026-05-15 14:08:44",
+    "dsAiGsPVu57p0udae22BD\tSachin\tManager\toklch(0.55 0.18 250)\t2026-05-08 20:23:58",
+    "ERROR 1054 (42S22) at line 1: Unknown column 'position' in 'order clause'"
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "query": "SELECT * FROM crm_members ORDER BY name;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute SELECT * FROM crm_members ORDER BY name;",
+  "rows": [
+    {
+      "id": "ALtrqYPZVkwwZIZESrNFP",
+      "name": "Josh",
+      "role": "Paralegal",
+      "color": "oklch(0.72 0.15 80)",
+      "createdAt": "2026-05-15 14:08:25"
+    },
+    {
+      "id": "yM6Q5KgRDSGT8PD09DWWt",
+      "name": "Khushi Arora",
+      "role": "Staff",
+      "color": "oklch(0.60 0.15 195)",
+      "createdAt": "2026-06-05 02:49:16"
+    },
+    {
+      "id": "mbD5YUEb3GN3UBC-fts7u",
+      "name": "Milan Singh",
+      "role": "Manager",
+      "color": "oklch(0.60 0.18 145)",
+      "createdAt": "2026-05-15 14:08:44"
+    },
+    {
+      "id": "dsAiGsPVu57p0udae22BD",
+      "name": "Sachin",
+      "role": "Manager",
+      "color": "oklch(0.55 0.18 250)",
+      "createdAt": "2026-05-08 20:23:58"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\trole\tcolor\tcreatedAt\nALtrqYPZVkwwZIZESrNFP\tJosh\tParalegal\toklch(0.72 0.15 80)\t2026-05-15 14:08:25\nyM6Q5KgRDSGT8PD09DWWt\tKhushi Arora\tStaff\toklch(0.60 0.15 195)\t2026-06-05 02:49:16\nmbD5YUEb3GN3UBC-fts7u\tMilan Singh\tManager\toklch(0.60 0.18 145)\t2026-05-15 14:08:44\ndsAiGsPVu57p0udae22BD\tSachin\tManager\toklch(0.55 0.18 250)\t2026-05-08 20:23:58\n",
+  "stderr": "",
+  "execution_time_ms": 258
+}
