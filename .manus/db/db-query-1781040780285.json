@@ -1,0 +1,37 @@
+{
+  "query": "SELECT name, phone, LEFT(notes, 80) as notes_preview FROM leads WHERE id IN ('D_GyHTBybRYB7-zGONgCH', '1pMi-iVTvhUVoBr7BsrYQ', 'cQwfaiTVuBY2N1PJRji8F', 'fSMz4BnpXXvwoQWk_GcqR', 'enxUgT1dCBp-yOmZADiK3') ORDER BY name;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute SELECT name, phone, LEFT(notes, 80) as notes_preview FROM leads WHERE id IN ('D_GyHTBybRYB7-zGONgCH', '1pMi-iVTvhUVoBr7BsrYQ', 'cQwfaiTVuBY2N1PJRji8F', 'fSMz4BnpXXvwoQWk_GcqR', 'enxUgT1dCBp-yOmZADiK3') ORDER BY name;",
+  "rows": [
+    {
+      "name": "Abdul Adam",
+      "phone": "+1916-289-6843",
+      "notes_preview": "Abdul Adam reached out regarding his relative's green card. The relative, Mohame"
+    },
+    {
+      "name": "Akashdeep Singh",
+      "phone": "2039199535",
+      "notes_preview": "He has attorney on record named Simran Kaur. He was detained and came out of det"
+    },
+    {
+      "name": "Manpreet Singh ",
+      "phone": "5599280234",
+      "notes_preview": "Lives in Tracy "
+    },
+    {
+      "name": "Tajinder Singh",
+      "phone": "+1 (559) 801-2384",
+      "notes_preview": "He is already our client for I-130, now his merit is coming he wants to purse hi"
+    }
+  ],
+  "messages": [
+    "Needs to file Affirmative asylum",
+    "Referred by Varun Handa. ",
+    "Came ",
+    "Sahil Kalyan\t+15599426154\t•\tProgress so far: I589, Work permit, available",
+    "•\tCurrent Status: Pending",
+    "•\tFili"
+  ],
+  "stdout": "name\tphone\tnotes_preview\nAbdul Adam\t+1916-289-6843\tAbdul Adam reached out regarding his relative's green card. The relative, Mohame\nAkashdeep Singh\t2039199535\tHe has attorney on record named Simran Kaur. He was detained and came out of det\nManpreet Singh \t5599280234\tLives in Tracy \nNeeds to file Affirmative asylum\nReferred by Varun Handa. \nCame \nSahil Kalyan\t+15599426154\t•\tProgress so far: I589, Work permit, available\n•\tCurrent Status: Pending\n•\tFili\nTajinder Singh\t+1 (559) 801-2384\tHe is already our client for I-130, now his merit is coming he wants to purse hi\n",
+  "stderr": "",
+  "execution_time_ms": 274
+}

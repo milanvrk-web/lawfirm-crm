@@ -1,0 +1,20 @@
+{
+  "query": "SELECT id, name, phone, email, source, referredBy, stage, LEFT(notes, 50) as notes FROM leads WHERE name LIKE '%Test%' ORDER BY createdAt DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute SELECT id, name, phone, email, source, referredBy, stage, LEFT(notes, 50) as notes FROM leads WHERE name LIKE '%Test%' ORDER BY createdAt DESC LIMIT 5;",
+  "rows": [
+    {
+      "id": "JGC-sSVTBU2djnMpYsvFr",
+      "name": "Test Lead",
+      "phone": "",
+      "email": "",
+      "source": "",
+      "referredBy": "",
+      "stage": "Consultation",
+      "notes": ""
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tphone\temail\tsource\treferredBy\tstage\tnotes\nJGC-sSVTBU2djnMpYsvFr\tTest Lead\t\t\t\t\tConsultation\t\n",
+  "stderr": "",
+  "execution_time_ms": 1083
+}

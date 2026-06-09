@@ -1,0 +1,31 @@
+{
+  "query": "SELECT id, name, phone, email, LEFT(notes, 100) as notes_preview FROM leads WHERE name LIKE '%Antonia%' OR name LIKE '%Tajinder%' OR name LIKE '%Milan Preet%' ORDER BY name;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute SELECT id, name, phone, email, LEFT(notes, 100) as notes_preview FROM leads WHERE name LIKE '%Antonia%' OR name LIKE '%Tajinder%' OR name LIKE '%Milan Preet%' ORDER BY name;",
+  "rows": [
+    {
+      "id": "hEfaOcpCS0DahOJkGmB7a",
+      "name": "Antonia Hohensee",
+      "phone": "",
+      "email": "",
+      "notes_preview": ""
+    },
+    {
+      "id": "RsD9_-8N_ccc2mGAZOXJx",
+      "name": "Milan Preet Singh",
+      "phone": "+1 (559) 803-9767",
+      "email": "",
+      "notes_preview": ""
+    },
+    {
+      "id": "D_GyHTBybRYB7-zGONgCH",
+      "name": "Tajinder Singh",
+      "phone": "+1 (559) 801-2384",
+      "email": "",
+      "notes_preview": "He is already our client for I-130, now his merit is coming he wants to purse his DA case with us si"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tphone\temail\tnotes_preview\nhEfaOcpCS0DahOJkGmB7a\tAntonia Hohensee\t\t\t\nRsD9_-8N_ccc2mGAZOXJx\tMilan Preet Singh\t+1 (559) 803-9767\t\t\nD_GyHTBybRYB7-zGONgCH\tTajinder Singh\t+1 (559) 801-2384\t\tHe is already our client for I-130, now his merit is coming he wants to purse his DA case with us si\n",
+  "stderr": "",
+  "execution_time_ms": 258
+}

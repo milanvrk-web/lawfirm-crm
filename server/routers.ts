@@ -14,6 +14,7 @@ const CaseTypeEnum = z.enum(["DA", "SIJS", "AOS", "AO", "K1/K2", "U-Visa", "Gree
 const PaymentTypeEnum = z.enum(["New Client", "Existing Client"]);
 const FollowUpStatusEnum = z.enum(["Pending", "Done", "Snoozed"]);
 
+// Schema for CREATE — includes .default() so missing fields get sensible values
 const LeadInput = z.object({
   name: z.string().min(1),
   phone: z.string().default(""),
@@ -32,6 +33,30 @@ const LeadInput = z.object({
   lostReason: z.string().optional().nullable(),
   consultationFee: z.number().default(0).optional(),
   assignedTo: z.string().optional().nullable(),
+});
+
+// Schema for UPDATE — NO .default() values so only explicitly provided fields are updated.
+// Using .partial() on a schema with .default() causes Zod to fill missing fields with
+// their defaults, which then overwrites existing DB data. This schema avoids that.
+const LeadUpdateInput = z.object({
+  name: z.string().min(1).optional(),
+  phone: z.string().optional(),
+  email: z.string().optional(),
+  caseType: CaseTypeEnum.optional(),
+  caseNumber: z.string().optional(),
+  source: z.string().optional(),
+  stage: LeadStageEnum.optional(),
+  notes: z.string().optional(),
+  date: z.string().optional(),
+  retainerBooked: z.number().optional(),
+  downpayment: z.number().optional(),
+  quotedAmount: z.number().optional(),
+  referredBy: z.string().optional(),
+  convertedDate: z.string().optional().nullable(),
+  lostReason: z.string().optional().nullable(),
+  consultationFee: z.number().optional(),
+  assignedTo: z.string().optional().nullable(),
+  followUpDate: z.string().optional().nullable(),
 });
 
 const PaymentInput = z.object({
@@ -114,7 +139,7 @@ export const appRouter = router({
     }),
 
     update: publicProcedure
-      .input(z.object({ id: z.string(), data: LeadInput.partial() }))
+      .input(z.object({ id: z.string(), data: LeadUpdateInput }))
       .mutation(async ({ input }) => {
         const data: Record<string, unknown> = { ...input.data };
         if (input.data.retainerBooked !== undefined) data.retainerBooked = String(input.data.retainerBooked);
