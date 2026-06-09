@@ -1,0 +1,151 @@
+{
+  "query": "SELECT ln.leadId, l.name, ln.text, ln.authorName, ln.createdAt FROM lead_notes ln JOIN leads l ON l.id = ln.leadId ORDER BY ln.createdAt DESC LIMIT 30;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute SELECT ln.leadId, l.name, ln.text, ln.authorName, ln.createdAt FROM lead_notes ln JOIN leads l ON l.id = ln.leadId ORDER BY ln.createdAt DESC LIMIT 30;",
+  "rows": [
+    {
+      "leadId": "8eXxdH9S-tZKSjM0v3Kml",
+      "name": "Sarah Sahota ",
+      "text": "Hi, thank you we were able to figure it out. So won’t be needing a lawyer moving forward",
+      "authorName": "Sachin",
+      "createdAt": "2026-06-09 21:03:53"
+    },
+    {
+      "leadId": "8eXxdH9S-tZKSjM0v3Kml",
+      "name": "Sarah Sahota ",
+      "text": "Hi, thank you we were able to figure it out. So won’t be needing a lawyer moving forward",
+      "authorName": "Sachin",
+      "createdAt": "2026-06-09 21:03:52"
+    },
+    {
+      "leadId": "h0dzs2vub66X8cxAVO54h",
+      "name": "Rajninder Kaur",
+      "text": "Consultation scheduled for june 22nd",
+      "authorName": "Khushi Arora",
+      "createdAt": "2026-06-09 18:33:45"
+    },
+    {
+      "leadId": "RsD9_-8N_ccc2mGAZOXJx",
+      "name": "Milan Preet Singh",
+      "text": "Consultation scheduled for 06/11/2026",
+      "authorName": "Khushi Arora",
+      "createdAt": "2026-06-09 18:33:18"
+    },
+    {
+      "leadId": "RsD9_-8N_ccc2mGAZOXJx",
+      "name": "Milan Preet Singh",
+      "text": "$1000 received via zelle from Milan Singh on 06/08/2026",
+      "authorName": "Khushi Arora",
+      "createdAt": "2026-06-09 16:56:47"
+    },
+    {
+      "leadId": "hNM5AoXqCkBX_n3DhHVMH",
+      "name": "Navdeep Kaur and Harvinder Singh",
+      "text": "CNC, dropped a message, will follow up again on 06/11/2026",
+      "authorName": "Khushi Arora",
+      "createdAt": "2026-06-09 16:52:27"
+    },
+    {
+      "leadId": "97APXSl9qwIELiMNuhSOb",
+      "name": "Navneet",
+      "text": "Cnc, dropped a messagw, will follow up again on 06/11/2026",
+      "authorName": "Khushi Arora",
+      "createdAt": "2026-06-09 16:47:13"
+    },
+    {
+      "leadId": "xaWqfnS6ZBTRCnChX0mBj",
+      "name": "Balwant singh",
+      "text": "CNC, dropped a message, will follow up again on 06/11/2026",
+      "authorName": "Khushi Arora",
+      "createdAt": "2026-06-09 16:44:28"
+    },
+    {
+      "leadId": "lead-rajender-kumar-01",
+      "name": "Rajender Kumar",
+      "text": "K: CNC, dropped a message, client is non-responsive, will follow up again tomorrow, escalated to Sachin",
+      "authorName": "Khushi Arora",
+      "createdAt": "2026-06-09 16:39:10"
+    },
+    {
+      "leadId": "Hrca7F8T4cwLHNv9iQPfF",
+      "name": "Rajender Kumar",
+      "text": "K: CNC, dropped a message, client is non-responsive, will follow up again tomorrow, escalated to Sachin",
+      "authorName": "Khushi Arora",
+      "createdAt": "2026-06-09 16:36:00"
+    },
+    {
+      "leadId": "CnEwQa-qk6I0rUo1MJe6-",
+      "name": "Soni",
+      "text": "CNC, dropped a message, will follow up again on 06/11/2026",
+      "authorName": "Khushi Arora",
+      "createdAt": "2026-06-09 16:25:06"
+    },
+    {
+      "leadId": "qMG_lNSUr93-AFLf2PscW",
+      "name": "Satnam Singh Batth & Gurpreet Kaur Panesar",
+      "text": "No update from client yet, will follow up again after some time, will follow up on  on 06/17/2026",
+      "authorName": "Khushi Arora",
+      "createdAt": "2026-06-08 18:12:05"
+    },
+    {
+      "leadId": "SKxHtLKyTu80J8xxa4g6l",
+      "name": "Noime Cruz",
+      "text": "client didn't share   info about current status,  Doesn’t wanna reveal anything to anyone else,we are not scheduling the consultation until we have the details",
+      "authorName": "Khushi Arora",
+      "createdAt": "2026-06-08 18:05:59"
+    },
+    {
+      "leadId": "8eXxdH9S-tZKSjM0v3Kml",
+      "name": "Sarah Sahota ",
+      "text": "CNC, dropped a message, will follow up again on 06/10/2026",
+      "authorName": "Khushi Arora",
+      "createdAt": "2026-06-08 18:00:21"
+    },
+    {
+      "leadId": "97APXSl9qwIELiMNuhSOb",
+      "name": "Navneet",
+      "text": "CNC, dropped a message, will follow up again tomorrow",
+      "authorName": "Khushi Arora",
+      "createdAt": "2026-06-08 17:58:11"
+    },
+    {
+      "leadId": "MW959ff-YUx7IMK3bGHBm",
+      "name": "Jaskaran ",
+      "text": "CNC, dropped a message, client is non-responsive, will follow up again on 06/10/2026",
+      "authorName": "Khushi Arora",
+      "createdAt": "2026-06-08 17:55:23"
+    }
+  ],
+  "messages": [
+    "RsD9_-8N_ccc2mGAZOXJx\tMilan Preet Singh\tConsultation scheduled for 06/11/2026",
+    "__DONE__:Khushi Arora:Jun 9, 2026 at 11:33 AM\tKhushi Arora\t2026-06-09 18:33:23",
+    "RsD9_-8N_ccc2mGAZOXJx\tMilan Preet Singh\t$1000 received via zelle from Milan Singh on 06/08/2026",
+    "__DONE__:Khushi Arora:Jun 9, 2026 at 9:57 AM\tKhushi Arora\t2026-06-09 16:57:57",
+    "hNM5AoXqCkBX_n3DhHVMH\tNavdeep Kaur and Harvinder Singh\tCNC, dropped a message, will follow up again on 06/11/2026",
+    "__DONE__:Khushi Arora:Jun 9, 2026 at 9:52 AM\tKhushi Arora\t2026-06-09 16:52:32",
+    "97APXSl9qwIELiMNuhSOb\tNavneet\tCnc, dropped a messagw, will follow up again on 06/11/2026",
+    "__DONE__:Khushi Arora:Jun 9, 2026 at 9:47 AM\tKhushi Arora\t2026-06-09 16:47:18",
+    "xaWqfnS6ZBTRCnChX0mBj\tBalwant singh\tCNC, dropped a message, will follow up again on 06/11/2026",
+    "__DONE__:Khushi Arora:Jun 9, 2026 at 9:44 AM\tKhushi Arora\t2026-06-09 16:44:34",
+    "lead-rajender-kumar-01\tRajender Kumar\tK: CNC, dropped a message, client is non-responsive, will follow up again tomorrow, escalated to Sachin",
+    "__DONE__:Khushi Arora:Jun 9, 2026 at 9:39 AM\tKhushi Arora\t2026-06-09 16:39:07",
+    "Hrca7F8T4cwLHNv9iQPfF\tRajender Kumar\tK: CNC, dropped a message, client is non-responsive, will follow up again tomorrow, escalated to Sachin",
+    "__DONE__:Khushi Arora:Jun 9, 2026 at 9:36 AM\tKhushi Arora\t2026-06-09 16:36:06",
+    "CnEwQa-qk6I0rUo1MJe6-\tSoni\tCNC, dropped a message, will follow up again on 06/11/2026",
+    "__DONE__:Khushi Arora:Jun 9, 2026 at 9:25 AM\tKhushi Arora\t2026-06-09 16:25:15",
+    "r6Fhbms_Mwn5mwxmlS_KE\tSujeet Singh  (Mother Green card)\tClient denied to proceed. expected $2500 instead of $4500 quote. denied. closing lead. told client if he wants we can initiate i-130 for $2000.",
+    "__DONE__:Sachin:Jun 8, 2026 at 2:45 PM\tSachin\t2026-06-08 21:45:55",
+    "qMG_lNSUr93-AFLf2PscW\tSatnam Singh Batth & Gurpreet Kaur Panesar\tNo update from client yet, will follow up again after some time, will follow up on  on 06/17/2026",
+    "__DONE__:Khushi Arora:Jun 8, 2026 at 11:12 AM\tKhushi Arora\t2026-06-08 18:12:09",
+    "8eXxdH9S-tZKSjM0v3Kml\tSarah Sahota \tCNC, dropped a message, will follow up again on 06/10/2026",
+    "__DONE__:Khushi Arora:Jun 8, 2026 at 11:00 AM\tKhushi Arora\t2026-06-08 18:00:25",
+    "97APXSl9qwIELiMNuhSOb\tNavneet\tCNC, dropped a message, will follow up again tomorrow",
+    "__DONE__:Khushi Arora:Jun 8, 2026 at 10:58 AM\tKhushi Arora\t2026-06-08 17:58:16",
+    "MW959ff-YUx7IMK3bGHBm\tJaskaran \tCNC, dropped a message, client is non-responsive, will follow up again on 06/10/2026",
+    "__DONE__:Khushi Arora:Jun 8, 2026 at 10:55 AM\tKhushi Arora\t2026-06-08 17:55:27",
+    "GaibNN5qq0p1x9cwlgG9f\tSharanpreet Singh 996\tclient will get the police report after a week, will follow up again next monday",
+    "__DONE__:Khushi Arora:Jun 8, 2026 at 10:53 AM\tKhushi Arora\t2026-06-08 17:53:28"
+  ],
+  "stdout": "leadId\tname\ttext\tauthorName\tcreatedAt\n8eXxdH9S-tZKSjM0v3Kml\tSarah Sahota \tHi, thank you we were able to figure it out. So won’t be needing a lawyer moving forward\tSachin\t2026-06-09 21:03:53\n8eXxdH9S-tZKSjM0v3Kml\tSarah Sahota \tHi, thank you we were able to figure it out. So won’t be needing a lawyer moving forward\tSachin\t2026-06-09 21:03:52\nh0dzs2vub66X8cxAVO54h\tRajninder Kaur\tConsultation scheduled for june 22nd\tKhushi Arora\t2026-06-09 18:33:45\nRsD9_-8N_ccc2mGAZOXJx\tMilan Preet Singh\tConsultation scheduled for 06/11/2026\n__DONE__:Khushi Arora:Jun 9, 2026 at 11:33 AM\tKhushi Arora\t2026-06-09 18:33:23\nRsD9_-8N_ccc2mGAZOXJx\tMilan Preet Singh\tConsultation scheduled for 06/11/2026\tKhushi Arora\t2026-06-09 18:33:18\nRsD9_-8N_ccc2mGAZOXJx\tMilan Preet Singh\t$1000 received via zelle from Milan Singh on 06/08/2026\n__DONE__:Khushi Arora:Jun 9, 2026 at 9:57 AM\tKhushi Arora\t2026-06-09 16:57:57\nRsD9_-8N_ccc2mGAZOXJx\tMilan Preet Singh\t$1000 received via zelle from Milan Singh on 06/08/2026\tKhushi Arora\t2026-06-09 16:56:47\nhNM5AoXqCkBX_n3DhHVMH\tNavdeep Kaur and Harvinder Singh\tCNC, dropped a message, will follow up again on 06/11/2026\n__DONE__:Khushi Arora:Jun 9, 2026 at 9:52 AM\tKhushi Arora\t2026-06-09 16:52:32\nhNM5AoXqCkBX_n3DhHVMH\tNavdeep Kaur and Harvinder Singh\tCNC, dropped a message, will follow up again on 06/11/2026\tKhushi Arora\t2026-06-09 16:52:27\n97APXSl9qwIELiMNuhSOb\tNavneet\tCnc, dropped a messagw, will follow up again on 06/11/2026\n__DONE__:Khushi Arora:Jun 9, 2026 at 9:47 AM\tKhushi Arora\t2026-06-09 16:47:18\n97APXSl9qwIELiMNuhSOb\tNavneet\tCnc, dropped a messagw, will follow up again on 06/11/2026\tKhushi Arora\t2026-06-09 16:47:13\nxaWqfnS6ZBTRCnChX0mBj\tBalwant singh\tCNC, dropped a message, will follow up again on 06/11/2026\n__DONE__:Khushi Arora:Jun 9, 2026 at 9:44 AM\tKhushi Arora\t2026-06-09 16:44:34\nxaWqfnS6ZBTRCnChX0mBj\tBalwant singh\tCNC, dropped a message, will follow up again on 06/11/2026\tKhushi Arora\t2026-06-09 16:44:28\nlead-rajender-kumar-01\tRajender Kumar\tK: CNC, dropped a message, client is non-responsive, will follow up again tomorrow, escalated to Sachin\tKhushi Arora\t2026-06-09 16:39:10\nlead-rajender-kumar-01\tRajender Kumar\tK: CNC, dropped a message, client is non-responsive, will follow up again tomorrow, escalated to Sachin\n__DONE__:Khushi Arora:Jun 9, 2026 at 9:39 AM\tKhushi Arora\t2026-06-09 16:39:07\nHrca7F8T4cwLHNv9iQPfF\tRajender Kumar\tK: CNC, dropped a message, client is non-responsive, will follow up again tomorrow, escalated to Sachin\n__DONE__:Khushi Arora:Jun 9, 2026 at 9:36 AM\tKhushi Arora\t2026-06-09 16:36:06\nHrca7F8T4cwLHNv9iQPfF\tRajender Kumar\tK: CNC, dropped a message, client is non-responsive, will follow up again tomorrow, escalated to Sachin\tKhushi Arora\t2026-06-09 16:36:00\nCnEwQa-qk6I0rUo1MJe6-\tSoni\tCNC, dropped a message, will follow up again on 06/11/2026\n__DONE__:Khushi Arora:Jun 9, 2026 at 9:25 AM\tKhushi Arora\t2026-06-09 16:25:15\nCnEwQa-qk6I0rUo1MJe6-\tSoni\tCNC, dropped a message, will follow up again on 06/11/2026\tKhushi Arora\t2026-06-09 16:25:06\nr6Fhbms_Mwn5mwxmlS_KE\tSujeet Singh  (Mother Green card)\tClient denied to proceed. expected $2500 instead of $4500 quote. denied. closing lead. told client if he wants we can initiate i-130 for $2000.\n__DONE__:Sachin:Jun 8, 2026 at 2:45 PM\tSachin\t2026-06-08 21:45:55\nqMG_lNSUr93-AFLf2PscW\tSatnam Singh Batth & Gurpreet Kaur Panesar\tNo update from client yet, will follow up again after some time, will follow up on  on 06/17/2026\n__DONE__:Khushi Arora:Jun 8, 2026 at 11:12 AM\tKhushi Arora\t2026-06-08 18:12:09\nqMG_lNSUr93-AFLf2PscW\tSatnam Singh Batth & Gurpreet Kaur Panesar\tNo update from client yet, will follow up again after some time, will follow up on  on 06/17/2026\tKhushi Arora\t2026-06-08 18:12:05\nSKxHtLKyTu80J8xxa4g6l\tNoime Cruz\tclient didn't share   info about current status,  Doesn’t wanna reveal anything to anyone else,we are not scheduling the consultation until we have the details\tKhushi Arora\t2026-06-08 18:05:59\n8eXxdH9S-tZKSjM0v3Kml\tSarah Sahota \tCNC, dropped a message, will follow up again on 06/10/2026\n__DONE__:Khushi Arora:Jun 8, 2026 at 11:00 AM\tKhushi Arora\t2026-06-08 18:00:25\n8eXxdH9S-tZKSjM0v3Kml\tSarah Sahota \tCNC, dropped a message, will follow up again on 06/10/2026\tKhushi Arora\t2026-06-08 18:00:21\n97APXSl9qwIELiMNuhSOb\tNavneet\tCNC, dropped a message, will follow up again tomorrow\n__DONE__:Khushi Arora:Jun 8, 2026 at 10:58 AM\tKhushi Arora\t2026-06-08 17:58:16\n97APXSl9qwIELiMNuhSOb\tNavneet\tCNC, dropped a message, will follow up again tomorrow\tKhushi Arora\t2026-06-08 17:58:11\nMW959ff-YUx7IMK3bGHBm\tJaskaran \tCNC, dropped a message, client is non-responsive, will follow up again on 06/10/2026\n__DONE__:Khushi Arora:Jun 8, 2026 at 10:55 AM\tKhushi Arora\t2026-06-08 17:55:27\nMW959ff-YUx7IMK3bGHBm\tJaskaran \tCNC, dropped a message, client is non-responsive, will follow up again on 06/10/2026\tKhushi Arora\t2026-06-08 17:55:23\nGaibNN5qq0p1x9cwlgG9f\tSharanpreet Singh 996\tclient will get the police report after a week, will follow up again next monday\n__DONE__:Khushi Arora:Jun 8, 2026 at 10:53 AM\tKhushi Arora\t2026-06-08 17:53:28\n",
+  "stderr": "",
+  "execution_time_ms": 261
+}

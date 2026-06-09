@@ -1,0 +1,142 @@
+{
+  "query": "SELECT id, name, notes, caseType, stage FROM leads ORDER BY createdAt DESC LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute SELECT id, name, notes, caseType, stage FROM leads ORDER BY createdAt DESC LIMIT 20;",
+  "rows": [
+    {
+      "id": "jVGcI46zcJt2hJmc4whzQ",
+      "name": "Monika Sharma 177 (Sister Baljinder Singh 748)",
+      "notes": "",
+      "caseType": "AO",
+      "stage": "New Lead"
+    },
+    {
+      "id": "hEfaOcpCS0DahOJkGmB7a",
+      "name": "Antonia Hohensee",
+      "notes": "",
+      "caseType": "Green Card",
+      "stage": "Follow-Up"
+    },
+    {
+      "id": "32MEkORWqjaAxgLI1sOlS",
+      "name": "Deepak Gautam",
+      "notes": "",
+      "caseType": "AOS",
+      "stage": "Consultation"
+    },
+    {
+      "id": "h0dzs2vub66X8cxAVO54h",
+      "name": "Rajninder Kaur",
+      "notes": "",
+      "caseType": "DA",
+      "stage": "Consultation"
+    },
+    {
+      "id": "SKxHtLKyTu80J8xxa4g6l",
+      "name": "Noime Cruz",
+      "notes": "",
+      "caseType": "Other",
+      "stage": "Lost"
+    },
+    {
+      "id": "D_GyHTBybRYB7-zGONgCH",
+      "name": "Tajinder Singh",
+      "notes": "",
+      "caseType": "DA",
+      "stage": "Follow-Up"
+    },
+    {
+      "id": "1pMi-iVTvhUVoBr7BsrYQ",
+      "name": "Sahil Kalyan",
+      "notes": "",
+      "caseType": "DA",
+      "stage": "Follow-Up"
+    },
+    {
+      "id": "CnEwQa-qk6I0rUo1MJe6-",
+      "name": "Soni",
+      "notes": "",
+      "caseType": "AO",
+      "stage": "Follow-Up"
+    },
+    {
+      "id": "8eXxdH9S-tZKSjM0v3Kml",
+      "name": "Sarah Sahota ",
+      "notes": "",
+      "caseType": "K1/K2",
+      "stage": "Follow-Up"
+    },
+    {
+      "id": "GaibNN5qq0p1x9cwlgG9f",
+      "name": "Sharanpreet Singh 996",
+      "notes": "",
+      "caseType": "U-Visa",
+      "stage": "Follow-Up"
+    },
+    {
+      "id": "MW959ff-YUx7IMK3bGHBm",
+      "name": "Jaskaran ",
+      "notes": "",
+      "caseType": "DA",
+      "stage": "New Lead"
+    },
+    {
+      "id": "Z4BVicKvWcJjh1fe3J0Yp",
+      "name": "Tanvi (Minor) Vitek Vitek (Guardian)",
+      "notes": "",
+      "caseType": "SIJS",
+      "stage": "Onboarding"
+    },
+    {
+      "id": "cQwfaiTVuBY2N1PJRji8F",
+      "name": "Abdul Adam",
+      "notes": "",
+      "caseType": "Green Card",
+      "stage": "New Lead"
+    },
+    {
+      "id": "fSMz4BnpXXvwoQWk_GcqR",
+      "name": "Manpreet Singh ",
+      "notes": "",
+      "caseType": "DA",
+      "stage": "New Lead"
+    },
+    {
+      "id": "qMG_lNSUr93-AFLf2PscW",
+      "name": "Satnam Singh Batth & Gurpreet Kaur Panesar",
+      "notes": "",
+      "caseType": "AOS",
+      "stage": "New Lead"
+    },
+    {
+      "id": "inDZcWfZtCVQvlVuhGVmy",
+      "name": "Rajesh Kumar 601",
+      "notes": "",
+      "caseType": "DA",
+      "stage": "New Lead"
+    },
+    {
+      "id": "hNM5AoXqCkBX_n3DhHVMH",
+      "name": "Navdeep Kaur and Harvinder Singh",
+      "notes": "",
+      "caseType": "U-Visa",
+      "stage": "New Lead"
+    },
+    {
+      "id": "Hrca7F8T4cwLHNv9iQPfF",
+      "name": "Rajender Kumar",
+      "notes": "",
+      "caseType": "DA",
+      "stage": "Follow-Up"
+    }
+  ],
+  "messages": [
+    "pru1K2nuNxej7UsJn0nJz\tVarun Sood\tConfirmed from attorney. we cant take this case. Closing this lead. ",
+    "Attorney comments: I don’t employment based Cases\tOther\tLost",
+    "MqDaN2JIB8wIK4BNn8e-W\tGurpreet Singh (name to be confirmed)\tHandler- 951-622-5131 (neeraj)",
+    "Guardian (Surjeet Jangra)",
+    "Riverside county case\tSIJS\tNew Lead"
+  ],
+  "stdout": "id\tname\tnotes\tcaseType\tstage\njVGcI46zcJt2hJmc4whzQ\tMonika Sharma 177 (Sister Baljinder Singh 748)\t\tAO\tNew Lead\nhEfaOcpCS0DahOJkGmB7a\tAntonia Hohensee\t\tGreen Card\tFollow-Up\npru1K2nuNxej7UsJn0nJz\tVarun Sood\tConfirmed from attorney. we cant take this case. Closing this lead. \nAttorney comments: I don’t employment based Cases\tOther\tLost\n32MEkORWqjaAxgLI1sOlS\tDeepak Gautam\t\tAOS\tConsultation\nMqDaN2JIB8wIK4BNn8e-W\tGurpreet Singh (name to be confirmed)\tHandler- 951-622-5131 (neeraj)\nGuardian (Surjeet Jangra)\nRiverside county case\tSIJS\tNew Lead\nh0dzs2vub66X8cxAVO54h\tRajninder Kaur\t\tDA\tConsultation\nSKxHtLKyTu80J8xxa4g6l\tNoime Cruz\t\tOther\tLost\nD_GyHTBybRYB7-zGONgCH\tTajinder Singh\t\tDA\tFollow-Up\n1pMi-iVTvhUVoBr7BsrYQ\tSahil Kalyan\t\tDA\tFollow-Up\nCnEwQa-qk6I0rUo1MJe6-\tSoni\t\tAO\tFollow-Up\n8eXxdH9S-tZKSjM0v3Kml\tSarah Sahota \t\tK1/K2\tFollow-Up\nGaibNN5qq0p1x9cwlgG9f\tSharanpreet Singh 996\t\tU-Visa\tFollow-Up\nMW959ff-YUx7IMK3bGHBm\tJaskaran \t\tDA\tNew Lead\nZ4BVicKvWcJjh1fe3J0Yp\tTanvi (Minor) Vitek Vitek (Guardian)\t\tSIJS\tOnboarding\ncQwfaiTVuBY2N1PJRji8F\tAbdul Adam\t\tGreen Card\tNew Lead\nfSMz4BnpXXvwoQWk_GcqR\tManpreet Singh \t\tDA\tNew Lead\nqMG_lNSUr93-AFLf2PscW\tSatnam Singh Batth & Gurpreet Kaur Panesar\t\tAOS\tNew Lead\ninDZcWfZtCVQvlVuhGVmy\tRajesh Kumar 601\t\tDA\tNew Lead\nhNM5AoXqCkBX_n3DhHVMH\tNavdeep Kaur and Harvinder Singh\t\tU-Visa\tNew Lead\nHrca7F8T4cwLHNv9iQPfF\tRajender Kumar\t\tDA\tFollow-Up\n",
+  "stderr": "",
+  "execution_time_ms": 262
+}

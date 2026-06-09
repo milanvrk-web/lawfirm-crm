@@ -1,0 +1,61 @@
+{
+  "query": "SELECT id, name, notes, caseType, stage FROM leads WHERE notes != '' ORDER BY createdAt DESC LIMIT 30;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute SELECT id, name, notes, caseType, stage FROM leads WHERE notes != '' ORDER BY createdAt DESC LIMIT 30;",
+  "rows": [
+    {
+      "id": "nWzcVKinqIvNsNar3DRZ9",
+      "name": "Abraham Flores",
+      "notes": "Waiting for response from client, he, left a  note and slid it under the office door",
+      "caseType": "Other",
+      "stage": "Lost"
+    },
+    {
+      "id": "lead-monica-rai-01",
+      "name": "Monica Rai",
+      "notes": "A# 208-487-512. Alt phone: +1 (737) 363-5867. Address: 2755 Lavender Terrace, San Jose, CA 95111. Case moved from asylum office to court. Master hearing in person May 28, 2026 at 9:00 AM, Judge Star, Shadee M. Quote 10k confirmed. Call client Monday.",
+      "caseType": "DA",
+      "stage": "Lost"
+    },
+    {
+      "id": "lead-maninder-singh-01",
+      "name": "Maninder Singh",
+      "notes": "A# 215-550-409. DOB 11/20/1994. Address: 3661 West Shield Ave, Apt 129, Fresno, CA 93722. Already filed marriage petition with immigration consultant. Wife on work permit in Canada, husband has Green Card in US. Referred by Navjot Singh (I-130).",
+      "caseType": "I-130",
+      "stage": "Retained"
+    },
+    {
+      "id": "lead-vinit-kumar-01",
+      "name": "Vinit Kumar",
+      "notes": "Referred by Preet. A# A232-687-767. DOB 10/12/2005. Case type: Affirmative Asylum (Pending before USCIS) / Guardianship. Entered on F1 Visa (Atlanta, April 30, 2023). Place of birth: Kurukshetra, Haryana, India. Applying for guardianship case with us.",
+      "caseType": "Asylum",
+      "stage": "Retained"
+    },
+    {
+      "id": "lead-manjit-kumar-01",
+      "name": "Manjit Kumar",
+      "notes": "Varun Handa client - Case 515. Address: 9105 Barbaresco Cir, Stockton, CA 95212. Has work permit. Need to move DA case to us after filing MTS.",
+      "caseType": "DA",
+      "stage": "Retained"
+    }
+  ],
+  "messages": [
+    "pru1K2nuNxej7UsJn0nJz\tVarun Sood\tConfirmed from attorney. we cant take this case. Closing this lead. ",
+    "Attorney comments: I don’t employment based Cases\tOther\tLost",
+    "MqDaN2JIB8wIK4BNn8e-W\tGurpreet Singh (name to be confirmed)\tHandler- 951-622-5131 (neeraj)",
+    "Guardian (Surjeet Jangra)",
+    "Riverside county case\tSIJS\tNew Lead",
+    "P2HCcUgKjKxRzIANk_q-s\tMahak Mahak\tFull legal name: Mahak Mahak",
+    "A- number :A235337297",
+    "Date of birth: 10/21/2005",
+    "phone number 425-319(2491)",
+    "email address: mahakchoudhary021@gmail.com",
+    "physical address:3040 mammoth ave jurupa valley ca 92509",
+    "current immigration status:asylum\tSIJS\tRetained",
+    "xzP8_xXETNknSQlCZKyyj\tTejinder Singh\tConsult fee is awaited from client.",
+    "Client description of his case: Am currently in pending Asylum and my hearnjng is March 31st , i got married in November last year , and we living together since then in sunnyvale , i came to know she had a kid and also she is cheating",
+    " on me amd when i ask her about this , she was blackmailing me\tOther\tLost"
+  ],
+  "stdout": "id\tname\tnotes\tcaseType\tstage\npru1K2nuNxej7UsJn0nJz\tVarun Sood\tConfirmed from attorney. we cant take this case. Closing this lead. \nAttorney comments: I don’t employment based Cases\tOther\tLost\nMqDaN2JIB8wIK4BNn8e-W\tGurpreet Singh (name to be confirmed)\tHandler- 951-622-5131 (neeraj)\nGuardian (Surjeet Jangra)\nRiverside county case\tSIJS\tNew Lead\nP2HCcUgKjKxRzIANk_q-s\tMahak Mahak\tFull legal name: Mahak Mahak\nA- number :A235337297\nDate of birth: 10/21/2005\nphone number 425-319(2491)\nemail address: mahakchoudhary021@gmail.com\nphysical address:3040 mammoth ave jurupa valley ca 92509\ncurrent immigration status:asylum\tSIJS\tRetained\nnWzcVKinqIvNsNar3DRZ9\tAbraham Flores\tWaiting for response from client, he, left a  note and slid it under the office door\tOther\tLost\nxzP8_xXETNknSQlCZKyyj\tTejinder Singh\tConsult fee is awaited from client.\nClient description of his case: Am currently in pending Asylum and my hearnjng is March 31st , i got married in November last year , and we living together since then in sunnyvale , i came to know she had a kid and also she is cheating\n on me amd when i ask her about this , she was blackmailing me\tOther\tLost\nlead-monica-rai-01\tMonica Rai\tA# 208-487-512. Alt phone: +1 (737) 363-5867. Address: 2755 Lavender Terrace, San Jose, CA 95111. Case moved from asylum office to court. Master hearing in person May 28, 2026 at 9:00 AM, Judge Star, Shadee M. Quote 10k confirmed. Call client Monday.\tDA\tLost\nlead-maninder-singh-01\tManinder Singh\tA# 215-550-409. DOB 11/20/1994. Address: 3661 West Shield Ave, Apt 129, Fresno, CA 93722. Already filed marriage petition with immigration consultant. Wife on work permit in Canada, husband has Green Card in US. Referred by Navjot Singh (I-130).\tI-130\tRetained\nlead-vinit-kumar-01\tVinit Kumar\tReferred by Preet. A# A232-687-767. DOB 10/12/2005. Case type: Affirmative Asylum (Pending before USCIS) / Guardianship. Entered on F1 Visa (Atlanta, April 30, 2023). Place of birth: Kurukshetra, Haryana, India. Applying for guardianship case with us.\tAsylum\tRetained\nlead-manjit-kumar-01\tManjit Kumar\tVarun Handa client - Case 515. Address: 9105 Barbaresco Cir, Stockton, CA 95212. Has work permit. Need to move DA case to us after filing MTS.\tDA\tRetained\n",
+  "stderr": "",
+  "execution_time_ms": 257
+}

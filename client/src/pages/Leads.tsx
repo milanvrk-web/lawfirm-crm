@@ -372,7 +372,10 @@ export default function Leads() {
         setShowAdd(false);
         return;
       }
-      updateLead(editLead.id, form);
+      // Exclude 'notes' from edit dialog updates — case notes are only editable
+      // from the LeadDetailPanel dedicated notes editor to prevent accidental wipes.
+      const { notes: _notes, ...formWithoutNotes } = form;
+      updateLead(editLead.id, formWithoutNotes);
       toast.success("Lead updated");
       // Auto-log consultation fee when stage changes to Consultation via edit form
       if (form.stage === "Consultation" && editLead.stage !== "Consultation" && (form.consultationFee ?? 0) > 0) {
@@ -393,6 +396,7 @@ export default function Leads() {
         }
       }
       setEditLead(null);
+      setShowAdd(false);
     } else {
       addLead(form);
       toast.success("Lead added");
@@ -404,7 +408,8 @@ export default function Leads() {
   const handleConfirmLost = () => {
     if (!lostLeadPending) return;
     const reason = lostReason === "Other" ? lostReasonCustom : lostReason;
-    updateLead(lostLeadPending.id, { ...form, stage: "Lost", lostReason: reason || undefined });
+    const { notes: _lostNotes, ...formWithoutNotes } = form;
+    updateLead(lostLeadPending.id, { ...formWithoutNotes, stage: "Lost", lostReason: reason || undefined });
     toast.success(`${lostLeadPending.name} marked as Lost`);
     setLostLeadPending(null);
     setLostReason("");
@@ -892,12 +897,8 @@ export default function Leads() {
                 onChange={v => setForm(f => ({ ...f, assignedTo: v }))}
               />
             </div>
-            <div className="col-span-2">
-              <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Notes</Label>
-              <Textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Any additional notes..."
-                rows={3} style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
-            </div>
           </div>
+          {/* Note: Case notes are edited from the Lead Detail Panel, not here, to prevent accidental overwrites */}
           <div className="flex gap-3 mt-4">
             <Button onClick={handleSave} style={{ background: "oklch(0.72 0.12 75)", color: "oklch(0.13 0.025 250)" }}>
               {editLead ? "Save Changes" : "Add Lead"}

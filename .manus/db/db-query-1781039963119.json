@@ -1,0 +1,272 @@
+{
+  "query": "SELECT id, name, phone, email, notes, source, referredBy FROM leads WHERE phone = '' OR phone IS NULL ORDER BY createdAt DESC LIMIT 30;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute SELECT id, name, phone, email, notes, source, referredBy FROM leads WHERE phone = '' OR phone IS NULL ORDER BY createdAt DESC LIMIT 30;",
+  "rows": [
+    {
+      "id": "jVGcI46zcJt2hJmc4whzQ",
+      "name": "Monika Sharma 177 (Sister Baljinder Singh 748)",
+      "phone": "",
+      "email": "",
+      "notes": "",
+      "source": "",
+      "referredBy": ""
+    },
+    {
+      "id": "hEfaOcpCS0DahOJkGmB7a",
+      "name": "Antonia Hohensee",
+      "phone": "",
+      "email": "",
+      "notes": "",
+      "source": "",
+      "referredBy": ""
+    },
+    {
+      "id": "32MEkORWqjaAxgLI1sOlS",
+      "name": "Deepak Gautam",
+      "phone": "",
+      "email": "",
+      "notes": "",
+      "source": "",
+      "referredBy": ""
+    },
+    {
+      "id": "MqDaN2JIB8wIK4BNn8e-W",
+      "name": "Gurpreet Singh (name to be confirmed)",
+      "phone": "",
+      "email": "",
+      "notes": "",
+      "source": "",
+      "referredBy": ""
+    },
+    {
+      "id": "h0dzs2vub66X8cxAVO54h",
+      "name": "Rajninder Kaur",
+      "phone": "",
+      "email": "",
+      "notes": "",
+      "source": "",
+      "referredBy": ""
+    },
+    {
+      "id": "SKxHtLKyTu80J8xxa4g6l",
+      "name": "Noime Cruz",
+      "phone": "",
+      "email": "",
+      "notes": "",
+      "source": "",
+      "referredBy": ""
+    },
+    {
+      "id": "D_GyHTBybRYB7-zGONgCH",
+      "name": "Tajinder Singh",
+      "phone": "",
+      "email": "",
+      "notes": "",
+      "source": "",
+      "referredBy": ""
+    },
+    {
+      "id": "1pMi-iVTvhUVoBr7BsrYQ",
+      "name": "Sahil Kalyan",
+      "phone": "",
+      "email": "",
+      "notes": "",
+      "source": "",
+      "referredBy": ""
+    },
+    {
+      "id": "CnEwQa-qk6I0rUo1MJe6-",
+      "name": "Soni",
+      "phone": "",
+      "email": "",
+      "notes": "",
+      "source": "",
+      "referredBy": ""
+    },
+    {
+      "id": "8eXxdH9S-tZKSjM0v3Kml",
+      "name": "Sarah Sahota ",
+      "phone": "",
+      "email": "",
+      "notes": "",
+      "source": "",
+      "referredBy": ""
+    },
+    {
+      "id": "GaibNN5qq0p1x9cwlgG9f",
+      "name": "Sharanpreet Singh 996",
+      "phone": "",
+      "email": "",
+      "notes": "",
+      "source": "",
+      "referredBy": ""
+    },
+    {
+      "id": "MW959ff-YUx7IMK3bGHBm",
+      "name": "Jaskaran ",
+      "phone": "",
+      "email": "",
+      "notes": "",
+      "source": "",
+      "referredBy": ""
+    },
+    {
+      "id": "Z4BVicKvWcJjh1fe3J0Yp",
+      "name": "Tanvi (Minor) Vitek Vitek (Guardian)",
+      "phone": "",
+      "email": "",
+      "notes": "",
+      "source": "",
+      "referredBy": ""
+    },
+    {
+      "id": "cQwfaiTVuBY2N1PJRji8F",
+      "name": "Abdul Adam",
+      "phone": "",
+      "email": "",
+      "notes": "",
+      "source": "",
+      "referredBy": ""
+    },
+    {
+      "id": "fSMz4BnpXXvwoQWk_GcqR",
+      "name": "Manpreet Singh ",
+      "phone": "",
+      "email": "",
+      "notes": "",
+      "source": "",
+      "referredBy": ""
+    },
+    {
+      "id": "qMG_lNSUr93-AFLf2PscW",
+      "name": "Satnam Singh Batth & Gurpreet Kaur Panesar",
+      "phone": "",
+      "email": "",
+      "notes": "",
+      "source": "",
+      "referredBy": ""
+    },
+    {
+      "id": "inDZcWfZtCVQvlVuhGVmy",
+      "name": "Rajesh Kumar 601",
+      "phone": "",
+      "email": "",
+      "notes": "",
+      "source": "",
+      "referredBy": ""
+    },
+    {
+      "id": "hNM5AoXqCkBX_n3DhHVMH",
+      "name": "Navdeep Kaur and Harvinder Singh",
+      "phone": "",
+      "email": "",
+      "notes": "",
+      "source": "",
+      "referredBy": ""
+    },
+    {
+      "id": "Hrca7F8T4cwLHNv9iQPfF",
+      "name": "Rajender Kumar",
+      "phone": "",
+      "email": "",
+      "notes": "",
+      "source": "",
+      "referredBy": ""
+    },
+    {
+      "id": "In_sDaCmPLhgFO5civLYD",
+      "name": "Vasu",
+      "phone": "",
+      "email": "",
+      "notes": "",
+      "source": "",
+      "referredBy": ""
+    },
+    {
+      "id": "97APXSl9qwIELiMNuhSOb",
+      "name": "Navneet",
+      "phone": "",
+      "email": "",
+      "notes": "",
+      "source": "",
+      "referredBy": ""
+    },
+    {
+      "id": "haN8EPo7Dnf3CmGrTRUcN",
+      "name": "Wai  linn Phyo (Kay Khaing's nephew)",
+      "phone": "",
+      "email": "",
+      "notes": "",
+      "source": "",
+      "referredBy": ""
+    },
+    {
+      "id": "j8HWZ_NL8k8w74ze4_Bwk",
+      "name": "Rajwinder Kaur 165",
+      "phone": "",
+      "email": "",
+      "notes": "",
+      "source": "",
+      "referredBy": ""
+    },
+    {
+      "id": "h6VWli-cup9mEdSsxKCZS",
+      "name": "No given name Vishal kumar",
+      "phone": "",
+      "email": "",
+      "notes": "",
+      "source": "",
+      "referredBy": ""
+    },
+    {
+      "id": "r6Fhbms_Mwn5mwxmlS_KE",
+      "name": "Sujeet Singh  (Mother Green card)",
+      "phone": "",
+      "email": "",
+      "notes": "",
+      "source": "",
+      "referredBy": ""
+    },
+    {
+      "id": "RsD9_-8N_ccc2mGAZOXJx",
+      "name": "Milan Preet Singh",
+      "phone": "",
+      "email": "",
+      "notes": "",
+      "source": "",
+      "referredBy": ""
+    },
+    {
+      "id": "xaWqfnS6ZBTRCnChX0mBj",
+      "name": "Balwant singh",
+      "phone": "",
+      "email": "",
+      "notes": "",
+      "source": "",
+      "referredBy": ""
+    },
+    {
+      "id": "ZcrosbxNFHfXSHH3w_-ik",
+      "name": "Gurjeet Singh 926",
+      "phone": "",
+      "email": "",
+      "notes": "",
+      "source": "",
+      "referredBy": ""
+    }
+  ],
+  "messages": [
+    "pru1K2nuNxej7UsJn0nJz\tVarun Sood\t\t\tConfirmed from attorney. we cant take this case. Closing this lead. ",
+    "Attorney comments: I don’t employment based Cases\t\t",
+    "P2HCcUgKjKxRzIANk_q-s\tMahak Mahak\t\t\tFull legal name: Mahak Mahak",
+    "A- number :A235337297",
+    "Date of birth: 10/21/2005",
+    "phone number 425-319(2491)",
+    "email address: mahakchoudhary021@gmail.com",
+    "physical address:3040 mammoth ave jurupa valley ca 92509",
+    "current immigration status:asylum\t\t"
+  ],
+  "stdout": "id\tname\tphone\temail\tnotes\tsource\treferredBy\njVGcI46zcJt2hJmc4whzQ\tMonika Sharma 177 (Sister Baljinder Singh 748)\t\t\t\t\t\nhEfaOcpCS0DahOJkGmB7a\tAntonia Hohensee\t\t\t\t\t\npru1K2nuNxej7UsJn0nJz\tVarun Sood\t\t\tConfirmed from attorney. we cant take this case. Closing this lead. \nAttorney comments: I don’t employment based Cases\t\t\n32MEkORWqjaAxgLI1sOlS\tDeepak Gautam\t\t\t\t\t\nMqDaN2JIB8wIK4BNn8e-W\tGurpreet Singh (name to be confirmed)\t\t\t\t\t\nh0dzs2vub66X8cxAVO54h\tRajninder Kaur\t\t\t\t\t\nSKxHtLKyTu80J8xxa4g6l\tNoime Cruz\t\t\t\t\t\nD_GyHTBybRYB7-zGONgCH\tTajinder Singh\t\t\t\t\t\n1pMi-iVTvhUVoBr7BsrYQ\tSahil Kalyan\t\t\t\t\t\nCnEwQa-qk6I0rUo1MJe6-\tSoni\t\t\t\t\t\n8eXxdH9S-tZKSjM0v3Kml\tSarah Sahota \t\t\t\t\t\nGaibNN5qq0p1x9cwlgG9f\tSharanpreet Singh 996\t\t\t\t\t\nMW959ff-YUx7IMK3bGHBm\tJaskaran \t\t\t\t\t\nZ4BVicKvWcJjh1fe3J0Yp\tTanvi (Minor) Vitek Vitek (Guardian)\t\t\t\t\t\ncQwfaiTVuBY2N1PJRji8F\tAbdul Adam\t\t\t\t\t\nfSMz4BnpXXvwoQWk_GcqR\tManpreet Singh \t\t\t\t\t\nqMG_lNSUr93-AFLf2PscW\tSatnam Singh Batth & Gurpreet Kaur Panesar\t\t\t\t\t\ninDZcWfZtCVQvlVuhGVmy\tRajesh Kumar 601\t\t\t\t\t\nhNM5AoXqCkBX_n3DhHVMH\tNavdeep Kaur and Harvinder Singh\t\t\t\t\t\nHrca7F8T4cwLHNv9iQPfF\tRajender Kumar\t\t\t\t\t\nIn_sDaCmPLhgFO5civLYD\tVasu\t\t\t\t\t\n97APXSl9qwIELiMNuhSOb\tNavneet\t\t\t\t\t\nhaN8EPo7Dnf3CmGrTRUcN\tWai  linn Phyo (Kay Khaing's nephew)\t\t\t\t\t\nj8HWZ_NL8k8w74ze4_Bwk\tRajwinder Kaur 165\t\t\t\t\t\nh6VWli-cup9mEdSsxKCZS\tNo given name Vishal kumar\t\t\t\t\t\nr6Fhbms_Mwn5mwxmlS_KE\tSujeet Singh  (Mother Green card)\t\t\t\t\t\nRsD9_-8N_ccc2mGAZOXJx\tMilan Preet Singh\t\t\t\t\t\nxaWqfnS6ZBTRCnChX0mBj\tBalwant singh\t\t\t\t\t\nP2HCcUgKjKxRzIANk_q-s\tMahak Mahak\t\t\tFull legal name: Mahak Mahak\nA- number :A235337297\nDate of birth: 10/21/2005\nphone number 425-319(2491)\nemail address: mahakchoudhary021@gmail.com\nphysical address:3040 mammoth ave jurupa valley ca 92509\ncurrent immigration status:asylum\t\t\nZcrosbxNFHfXSHH3w_-ik\tGurjeet Singh 926\t\t\t\t\t\n",
+  "stderr": "",
+  "execution_time_ms": 281
+}
