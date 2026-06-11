@@ -1,0 +1,9 @@
+{
+  "query": "\n-- Step 1: Update all leads in \"Consultation\" stage to \"Consultation Scheduled\"\nUPDATE leads SET stage = 'Consultation Scheduled' WHERE stage = 'Consultation';\n\n-- Step 2: Rename the pipeline_stages entry\nUPDATE pipeline_stages SET name = 'Consultation Scheduled', color = 'oklch(0.72 0.15 80)' WHERE id = 'SGlzJ_IASsfPM_T-IgqhX';\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute \n-- Step 1: Update all leads in \"Consultation\" stage to \"Consultation Scheduled\"\nUPDATE leads SET stage = 'Consultation Scheduled' WHERE stage = 'Consultation';\n\n-- Step 2: Rename the pipeline_stages entry\nUPDATE pipeline_stages SET name = 'Consultation Scheduled', color = 'oklch(0.72 0.15 80)' WHERE id = 'SGlzJ_IASsfPM_T-IgqhX';\n",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 276
+}

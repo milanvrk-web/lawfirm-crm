@@ -43,7 +43,7 @@ export const leads = mysqlTable("leads", {
   caseType: varchar("caseType", { length: 50 }).notNull(),
   caseNumber: varchar("caseNumber", { length: 100 }).default("").notNull(),
   source: varchar("source", { length: 100 }).default("").notNull(),
-  stage: mysqlEnum("stage", ["New Lead", "Consultation", "Follow-Up", "Retained", "Onboarding", "Lost"]).default("New Lead").notNull(),
+  stage: varchar("stage", { length: 100 }).default("New Lead").notNull(),
   notes: text("notes").notNull(),
   date: varchar("date", { length: 10 }).notNull(),
   retainerBooked: decimal("retainerBooked", { precision: 10, scale: 2 }).default("0").notNull(),

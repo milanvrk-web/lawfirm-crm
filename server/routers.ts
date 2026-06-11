@@ -9,7 +9,8 @@ import { ENV } from "./_core/env";
 
 // ─── Shared Zod schemas ──────────────────────────────────────
 
-const LeadStageEnum = z.enum(["New Lead", "Consultation", "Follow-Up", "Retained", "Onboarding", "Lost"]);
+// Stage is now a dynamic string — no longer a fixed enum, since stages can be added/renamed via the pipeline manager
+const LeadStageEnum = z.string().min(1);
 const CaseTypeEnum = z.enum(["DA", "SIJS", "AOS", "AO", "K1/K2", "U-Visa", "Green Card", "BIA", "Other"]);
 const PaymentTypeEnum = z.enum(["New Client", "Existing Client"]);
 const FollowUpStatusEnum = z.enum(["Pending", "Done", "Snoozed"]);
@@ -22,7 +23,7 @@ const LeadInput = z.object({
   caseType: CaseTypeEnum,
   caseNumber: z.string().default(""),
   source: z.string().default(""),
-  stage: LeadStageEnum.default("New Lead"),
+  stage: LeadStageEnum.default("New Lead").optional(),
   notes: z.string().default(""),
   date: z.string(),
   retainerBooked: z.number().default(0),
@@ -45,7 +46,7 @@ const LeadUpdateInput = z.object({
   caseType: CaseTypeEnum.optional(),
   caseNumber: z.string().optional(),
   source: z.string().optional(),
-  stage: LeadStageEnum.optional(),
+  stage: z.string().min(1).optional(),
   notes: z.string().optional(),
   date: z.string().optional(),
   retainerBooked: z.number().optional(),
@@ -796,8 +797,22 @@ export const appRouter = router({
         order: z.number().int().optional(),
       }))
       .mutation(async ({ input }) => {
-        const { id, ...updates } = input;
-        await db.updatePipelineStage(id, updates);
+        const { id, name, ...otherUpdates } = input;
+        // If renaming a stage, we MUST also update all leads that have the old stage name.
+        // Failure to do this causes leads to "disappear" from the Kanban board because
+        // their stage field no longer matches any pipeline_stages entry.
+        if (name !== undefined) {
+          // Get the current stage name before updating
+          const stages = await db.getPipelineStages();
+          const currentStage = stages.find(s => s.id === id);
+          if (currentStage && currentStage.name !== name) {
+            // Update all leads with the old stage name to the new stage name
+            await db.updateLeadsStage(currentStage.name, name);
+          }
+          await db.updatePipelineStage(id, { name, ...otherUpdates });
+        } else {
+          await db.updatePipelineStage(id, otherUpdates);
+        }
         return { ok: true };
       }),
 

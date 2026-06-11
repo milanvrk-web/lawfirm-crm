@@ -473,3 +473,13 @@
 - [x] Remove random/generic pipeline stats from briefing that don't map to a specific person's action
 - [x] Hot leads with no activity 3+ days flagged as suggested escalations to Sachin (not auto-reassigned)
 - [x] Unassigned leads flagged with Khushi as suggested owner
+
+## Pipeline Stage Management Bug Fixes
+
+- [x] Change leads.stage from MySQL ENUM to VARCHAR to support dynamic stage names
+- [x] Update Zod LeadStageEnum to accept any string (z.string()) for stage field
+- [x] Fix updateStage server procedure: when renaming a stage, also UPDATE all leads with old stage name to new name
+- [x] Update LeadStage type in store.ts to be a string type (not hardcoded union)
+- [x] Update all hardcoded STAGES arrays in Leads.tsx, LeadDetailPanel.tsx to use dynamic stages from DB
+- [x] Rename "Consultation" → "Consultation Scheduled" via DB update (3 leads migrated)
+- [x] Add "Consultation Booked" as a new pipeline stage (order 3, between Consultation Scheduled and Retained)

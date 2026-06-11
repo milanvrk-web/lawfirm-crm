@@ -574,6 +574,16 @@ export async function deletePipelineStage(id: string) {
   await db.delete(pipelineStages).where(eq(pipelineStages.id, id));
 }
 
+/**
+ * When a pipeline stage is renamed, update all leads that still reference the old stage name.
+ * This prevents leads from "disappearing" off the Kanban board after a rename.
+ */
+export async function updateLeadsStage(oldName: string, newName: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(leads).set({ stage: newName }).where(eq(leads.stage, oldName));
+}
+
 // ─── Stage Checklist Templates ───────────────────────────────────────────────
 export async function getStageChecklistTemplates(stageId: string) {
   const db = await getDb();

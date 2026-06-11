@@ -9,7 +9,10 @@ import { nanoid } from "nanoid";
 
 // ─── Types ──────────────────────────────────────────────────
 
-export type LeadStage = "New Lead" | "Consultation" | "Follow-Up" | "Retained" | "Onboarding" | "Lost";
+// LeadStage is now a string alias — stages are dynamic and managed via the pipeline manager.
+// The old hardcoded union is kept as a comment for reference only.
+// Old: "New Lead" | "Consultation" | "Follow-Up" | "Retained" | "Onboarding" | "Lost"
+export type LeadStage = string;
 export type FollowUpStatus = "Pending" | "Done" | "Snoozed";
 
 export interface FollowUpComment {

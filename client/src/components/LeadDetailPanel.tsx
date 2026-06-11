@@ -347,15 +347,19 @@ function RescheduleModal({
 }
 
 // ── Helpers ──────────────────────────────────────────
-const ALL_STAGES: LeadStage[] = ["New Lead", "Consultation", "Follow-Up", "Retained", "Onboarding", "Lost"];
+// ALL_STAGES is now loaded dynamically from the pipeline_stages table.
+// The fallback below is used only if the DB hasn't loaded yet.
+const FALLBACK_STAGES: LeadStage[] = ["New Lead", "Consultation", "Follow-Up", "Retained", "Onboarding", "Lost"];
 
-const stageColor: Record<string, string> = {
-  "New Lead":     "oklch(0.55 0.18 250)",
-  "Consultation": "oklch(0.72 0.15 80)",
-  "Follow-Up":    "oklch(0.65 0.15 60)",
-  "Retained":     "oklch(0.55 0.18 145)",
-  "Onboarding":   "oklch(0.55 0.18 200)",
-  "Lost":         "oklch(0.60 0.22 25)",
+const DEFAULT_STAGE_COLORS: Record<string, string> = {
+  "New Lead":                "oklch(0.55 0.18 250)",
+  "Consultation":            "oklch(0.72 0.15 80)",
+  "Consultation Scheduled":  "oklch(0.72 0.15 80)",
+  "Consultation Booked":     "oklch(0.68 0.18 60)",
+  "Follow-Up":               "oklch(0.65 0.15 60)",
+  "Retained":                "oklch(0.55 0.18 145)",
+  "Onboarding":              "oklch(0.55 0.18 200)",
+  "Lost":                    "oklch(0.60 0.22 25)",
 };
 
 function formatTimestamp(iso: string) {
@@ -389,6 +393,18 @@ export default function LeadDetailPanel({
 
   const utils = trpc.useUtils();
   const { activeMember } = useActiveMember();
+
+  // Dynamic pipeline stages from DB
+  const { data: dbStages = [] } = trpc.pipeline.getStages.useQuery();
+  const allStages: LeadStage[] = dbStages.length > 0
+    ? [...dbStages].sort((a, b) => a.order - b.order).map(s => s.name)
+    : FALLBACK_STAGES;
+  // Build a color map from DB stage colors, falling back to defaults
+  const stageColor = useMemo(() => {
+    const map: Record<string, string> = { ...DEFAULT_STAGE_COLORS };
+    dbStages.forEach(s => { map[s.name] = s.color; });
+    return map;
+  }, [dbStages]);
 
   // UI state
   const [stageDropdownOpen, setStageDropdownOpen] = useState(false);
@@ -630,7 +646,7 @@ export default function LeadDetailPanel({
                     className="absolute left-0 top-full mt-1 z-50 rounded-lg shadow-xl py-1 min-w-[160px]"
                     style={{ background: "oklch(0.20 0.03 250)", border: "1px solid oklch(1 0 0 / 15%)" }}
                   >
-                    {ALL_STAGES.map(s => (
+                    {allStages.map(s => (
                       <button
                         key={s}
                         onClick={() => handleStageChange(s)}

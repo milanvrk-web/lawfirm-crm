@@ -504,7 +504,7 @@ export default function Leads() {
           </SelectTrigger>
           <SelectContent style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)" }}>
             <SelectItem value="All">All Stages</SelectItem>
-            {STAGES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+            {pipelineStageNames.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
@@ -866,7 +866,7 @@ export default function Leads() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)" }}>
-                  {STAGES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  {pipelineStageNames.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

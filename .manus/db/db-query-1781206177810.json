@@ -1,0 +1,53 @@
+{
+  "query": "\n-- Verify pipeline stages\nSELECT name, `order`, color FROM pipeline_stages ORDER BY `order`;\n\n-- Verify leads in each stage\nSELECT stage, COUNT(*) as lead_count FROM leads GROUP BY stage ORDER BY stage;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute \n-- Verify pipeline stages\nSELECT name, `order`, color FROM pipeline_stages ORDER BY `order`;\n\n-- Verify leads in each stage\nSELECT stage, COUNT(*) as lead_count FROM leads GROUP BY stage ORDER BY stage;\n",
+  "rows": [
+    {
+      "name": "New Lead",
+      "order": "0",
+      "color": "oklch(0.55 0.18 250)"
+    },
+    {
+      "name": "Follow-Up",
+      "order": "1",
+      "color": "oklch(0.65 0.20 300)"
+    },
+    {
+      "name": "Consultation Scheduled",
+      "order": "2",
+      "color": "oklch(0.72 0.15 80)"
+    },
+    {
+      "name": "Consultation Booked",
+      "order": "3",
+      "color": "oklch(0.68 0.18 60)"
+    },
+    {
+      "name": "Retained",
+      "order": "4",
+      "color": "oklch(0.55 0.18 145)"
+    },
+    {
+      "name": "Onboarding",
+      "order": "6",
+      "color": "oklch(0.65 0.18 200)"
+    },
+    {
+      "name": "Lost",
+      "order": "7",
+      "color": "oklch(0.60 0.22 25)"
+    }
+  ],
+  "messages": [
+    "stage\tlead_count",
+    "Consultation Scheduled\t3",
+    "Follow-Up\t21",
+    "Lost\t10",
+    "New Lead\t1",
+    "Onboarding\t2",
+    "Retained\t9"
+  ],
+  "stdout": "name\torder\tcolor\nNew Lead\t0\toklch(0.55 0.18 250)\nFollow-Up\t1\toklch(0.65 0.20 300)\nConsultation Scheduled\t2\toklch(0.72 0.15 80)\nConsultation Booked\t3\toklch(0.68 0.18 60)\nRetained\t4\toklch(0.55 0.18 145)\nOnboarding\t6\toklch(0.65 0.18 200)\nLost\t7\toklch(0.60 0.22 25)\nstage\tlead_count\nConsultation Scheduled\t3\nFollow-Up\t21\nLost\t10\nNew Lead\t1\nOnboarding\t2\nRetained\t9\n",
+  "stderr": "",
+  "execution_time_ms": 265
+}

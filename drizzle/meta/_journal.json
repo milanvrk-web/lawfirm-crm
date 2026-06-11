@@ -127,6 +127,13 @@
       "when": 1780637138466,
       "tag": "0017_certain_zaran",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "5",
+      "when": 1781205794706,
+      "tag": "0018_simple_husk",
+      "breakpoints": true
     }
   ]
 }

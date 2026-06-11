@@ -1,0 +1,1 @@
+ALTER TABLE `leads` MODIFY COLUMN `stage` varchar(100) NOT NULL DEFAULT 'New Lead';

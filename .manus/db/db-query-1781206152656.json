@@ -1,0 +1,59 @@
+{
+  "query": "SELECT id, name, `order`, color, isDefault FROM pipeline_stages ORDER BY `order`;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute SELECT id, name, `order`, color, isDefault FROM pipeline_stages ORDER BY `order`;",
+  "rows": [
+    {
+      "id": "UAmpGAtvu-cS5RFpiEf2F",
+      "name": "New Lead",
+      "order": "0",
+      "color": "oklch(0.55 0.18 250)",
+      "isDefault": "1"
+    },
+    {
+      "id": "uHWksD4rU_MDofbs3YhvB",
+      "name": "Follow-Up",
+      "order": "1",
+      "color": "oklch(0.65 0.20 300)",
+      "isDefault": "1"
+    },
+    {
+      "id": "SGlzJ_IASsfPM_T-IgqhX",
+      "name": "Consultation",
+      "order": "2",
+      "color": "oklch(0.72 0.15 80)",
+      "isDefault": "1"
+    },
+    {
+      "id": "mCTlmi0i6ZVHjDPExQ0Vt",
+      "name": "Consultation Done",
+      "order": "3",
+      "color": "oklch(0.55 0.18 250)",
+      "isDefault": "0"
+    },
+    {
+      "id": "lOl0DC0pNku5HCEycWIOC",
+      "name": "Retained",
+      "order": "4",
+      "color": "oklch(0.55 0.18 145)",
+      "isDefault": "1"
+    },
+    {
+      "id": "Rn6QoQ6UypTHYmdiCaSxp",
+      "name": "Onboarding",
+      "order": "6",
+      "color": "oklch(0.65 0.18 200)",
+      "isDefault": "1"
+    },
+    {
+      "id": "gPSYP8XAbBgidfaft2eQp",
+      "name": "Lost",
+      "order": "7",
+      "color": "oklch(0.60 0.22 25)",
+      "isDefault": "1"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\torder\tcolor\tisDefault\nUAmpGAtvu-cS5RFpiEf2F\tNew Lead\t0\toklch(0.55 0.18 250)\t1\nuHWksD4rU_MDofbs3YhvB\tFollow-Up\t1\toklch(0.65 0.20 300)\t1\nSGlzJ_IASsfPM_T-IgqhX\tConsultation\t2\toklch(0.72 0.15 80)\t1\nmCTlmi0i6ZVHjDPExQ0Vt\tConsultation Done\t3\toklch(0.55 0.18 250)\t0\nlOl0DC0pNku5HCEycWIOC\tRetained\t4\toklch(0.55 0.18 145)\t1\nRn6QoQ6UypTHYmdiCaSxp\tOnboarding\t6\toklch(0.65 0.18 200)\t1\ngPSYP8XAbBgidfaft2eQp\tLost\t7\toklch(0.60 0.22 25)\t1\n",
+  "stderr": "",
+  "execution_time_ms": 267
+}

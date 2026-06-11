@@ -1,0 +1,9 @@
+{
+  "query": "\n-- Add \"Consultation Booked\" as a new stage between Consultation Scheduled (order 2) and Retained (order 4)\n-- We'll place it at order 3 (where \"Consultation Done\" currently sits — we'll remove that)\n-- First, delete the leftover \"Consultation Done\" stage (no leads are in it)\nDELETE FROM pipeline_stages WHERE id = 'mCTlmi0i6ZVHjDPExQ0Vt';\n\n-- Now insert \"Consultation Booked\" at order 3\nINSERT INTO pipeline_stages (id, name, color, `order`, isDefault) \nVALUES ('consultation-booked-stage', 'Consultation Booked', 'oklch(0.68 0.18 60)', 3, 0);\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute \n-- Add \"Consultation Booked\" as a new stage between Consultation Scheduled (order 2) and Retained (order 4)\n-- We'll place it at order 3 (where \"Consultation Done\" currently sits — we'll remove that)\n-- First, delete the leftover \"Consultation Done\" stage (no leads are in it)\nDELETE FROM pipeline_stages WHERE id = 'mCTlmi0i6ZVHjDPExQ0Vt';\n\n-- Now insert \"Consultation Booked\" at order 3\nINSERT INTO pipeline_stages (id, name, color, `order`, isDefault) \nVALUES ('consultation-booked-stage', 'Consultation Booked', 'oklch(0.68 0.18 60)', 3, 0);\n",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 274
+}
