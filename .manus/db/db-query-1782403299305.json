@@ -1,0 +1,178 @@
+{
+  "query": "\nSELECT stage, name, retainerBooked, downpayment, convertedDate, caseNumber\nFROM leads\nWHERE stage IN ('Retained', 'Onboarding')\nORDER BY stage, name;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute \nSELECT stage, name, retainerBooked, downpayment, convertedDate, caseNumber\nFROM leads\nWHERE stage IN ('Retained', 'Onboarding')\nORDER BY stage, name;\n",
+  "rows": [
+    {
+      "stage": "Onboarding",
+      "name": " Arvinsh Dhillon",
+      "retainerBooked": "8000.00",
+      "downpayment": "1000.00",
+      "convertedDate": "2026-06-17",
+      "caseNumber": ""
+    },
+    {
+      "stage": "Onboarding",
+      "name": "Ankit Kumar 123",
+      "retainerBooked": "8000.00",
+      "downpayment": "1000.00",
+      "convertedDate": "2026-05-26",
+      "caseNumber": ""
+    },
+    {
+      "stage": "Onboarding",
+      "name": "Deepak Gautam",
+      "retainerBooked": "5000.00",
+      "downpayment": "2500.00",
+      "convertedDate": "2026-06-12",
+      "caseNumber": ""
+    },
+    {
+      "stage": "Onboarding",
+      "name": "Gurlal Singh Dhillon 595",
+      "retainerBooked": "8000.00",
+      "downpayment": "1500.00",
+      "convertedDate": "2026-05-21",
+      "caseNumber": ""
+    },
+    {
+      "stage": "Onboarding",
+      "name": "Gurpreet Singh 178",
+      "retainerBooked": "12000.00",
+      "downpayment": "2000.00",
+      "convertedDate": "2026-06-19",
+      "caseNumber": ""
+    },
+    {
+      "stage": "Onboarding",
+      "name": "Jasvir Singh",
+      "retainerBooked": "8000.00",
+      "downpayment": "1500.00",
+      "convertedDate": "2026-06-16",
+      "caseNumber": ""
+    },
+    {
+      "stage": "Onboarding",
+      "name": "Khushdeep Kaur",
+      "retainerBooked": "11000.00",
+      "downpayment": "1500.00",
+      "convertedDate": "2026-06-22",
+      "caseNumber": ""
+    },
+    {
+      "stage": "Onboarding",
+      "name": "Mahak Mahak",
+      "retainerBooked": "9000.00",
+      "downpayment": "2000.00",
+      "convertedDate": "2026-05-22",
+      "caseNumber": ""
+    },
+    {
+      "stage": "Onboarding",
+      "name": "Mandeep Singh",
+      "retainerBooked": "8000.00",
+      "downpayment": "2000.00",
+      "convertedDate": "2026-05-12",
+      "caseNumber": ""
+    },
+    {
+      "stage": "Onboarding",
+      "name": "Manjit Kumar",
+      "retainerBooked": "10000.00",
+      "downpayment": "2000.00",
+      "convertedDate": "2026-05-05",
+      "caseNumber": "515"
+    },
+    {
+      "stage": "Onboarding",
+      "name": "Milan Preet Singh",
+      "retainerBooked": "0.00",
+      "downpayment": "0.00",
+      "convertedDate": "NULL",
+      "caseNumber": ""
+    },
+    {
+      "stage": "Onboarding",
+      "name": "Rajwinder Kaur 165",
+      "retainerBooked": "8000.00",
+      "downpayment": "1000.00",
+      "convertedDate": "2026-06-09",
+      "caseNumber": "448"
+    },
+    {
+      "stage": "Onboarding",
+      "name": "Sona Devi",
+      "retainerBooked": "4500.00",
+      "downpayment": "2000.00",
+      "convertedDate": "2026-06-15",
+      "caseNumber": ""
+    },
+    {
+      "stage": "Retained",
+      "name": "Daljeet Romana",
+      "retainerBooked": "13000.00",
+      "downpayment": "2000.00",
+      "convertedDate": "2026-06-23",
+      "caseNumber": ""
+    },
+    {
+      "stage": "Retained",
+      "name": "Gurjeet Singh 926",
+      "retainerBooked": "7000.00",
+      "downpayment": "2000.00",
+      "convertedDate": "2026-05-22",
+      "caseNumber": "442"
+    },
+    {
+      "stage": "Retained",
+      "name": "Jaspal Singh 497",
+      "retainerBooked": "13000.00",
+      "downpayment": "5000.00",
+      "convertedDate": "2026-06-23",
+      "caseNumber": ""
+    },
+    {
+      "stage": "Retained",
+      "name": "Maninder Singh",
+      "retainerBooked": "1500.00",
+      "downpayment": "1500.00",
+      "convertedDate": "2026-05-05",
+      "caseNumber": "A# 215-550-409"
+    },
+    {
+      "stage": "Retained",
+      "name": "No given name Vishal kumar",
+      "retainerBooked": "8000.00",
+      "downpayment": "1000.00",
+      "convertedDate": "2026-06-22",
+      "caseNumber": ""
+    },
+    {
+      "stage": "Retained",
+      "name": "Tanvi (Minor) Vitek Vitek (Guardian)",
+      "retainerBooked": "8000.00",
+      "downpayment": "2000.00",
+      "convertedDate": "2026-06-17",
+      "caseNumber": ""
+    },
+    {
+      "stage": "Retained",
+      "name": "Vinit Kumar",
+      "retainerBooked": "8000.00",
+      "downpayment": "3000.00",
+      "convertedDate": "2026-05-11",
+      "caseNumber": "A# A232-687-767"
+    },
+    {
+      "stage": "Retained",
+      "name": "Wai  linn Phyo (Kay Khaing's nephew)",
+      "retainerBooked": "8000.00",
+      "downpayment": "2000.00",
+      "convertedDate": "2026-06-23",
+      "caseNumber": ""
+    }
+  ],
+  "messages": [],
+  "stdout": "stage\tname\tretainerBooked\tdownpayment\tconvertedDate\tcaseNumber\nOnboarding\t Arvinsh Dhillon\t8000.00\t1000.00\t2026-06-17\t\nOnboarding\tAnkit Kumar 123\t8000.00\t1000.00\t2026-05-26\t\nOnboarding\tDeepak Gautam\t5000.00\t2500.00\t2026-06-12\t\nOnboarding\tGurlal Singh Dhillon 595\t8000.00\t1500.00\t2026-05-21\t\nOnboarding\tGurpreet Singh 178\t12000.00\t2000.00\t2026-06-19\t\nOnboarding\tJasvir Singh\t8000.00\t1500.00\t2026-06-16\t\nOnboarding\tKhushdeep Kaur\t11000.00\t1500.00\t2026-06-22\t\nOnboarding\tMahak Mahak\t9000.00\t2000.00\t2026-05-22\t\nOnboarding\tMandeep Singh\t8000.00\t2000.00\t2026-05-12\t\nOnboarding\tManjit Kumar\t10000.00\t2000.00\t2026-05-05\t515\nOnboarding\tMilan Preet Singh\t0.00\t0.00\tNULL\t\nOnboarding\tRajwinder Kaur 165\t8000.00\t1000.00\t2026-06-09\t448\nOnboarding\tSona Devi\t4500.00\t2000.00\t2026-06-15\t\nRetained\tDaljeet Romana\t13000.00\t2000.00\t2026-06-23\t\nRetained\tGurjeet Singh 926\t7000.00\t2000.00\t2026-05-22\t442\nRetained\tJaspal Singh 497\t13000.00\t5000.00\t2026-06-23\t\nRetained\tManinder Singh\t1500.00\t1500.00\t2026-05-05\tA# 215-550-409\nRetained\tNo given name Vishal kumar\t8000.00\t1000.00\t2026-06-22\t\nRetained\tTanvi (Minor) Vitek Vitek (Guardian)\t8000.00\t2000.00\t2026-06-17\t\nRetained\tVinit Kumar\t8000.00\t3000.00\t2026-05-11\tA# A232-687-767\nRetained\tWai  linn Phyo (Kay Khaing's nephew)\t8000.00\t2000.00\t2026-06-23\t\n",
+  "stderr": "",
+  "execution_time_ms": 263
+}

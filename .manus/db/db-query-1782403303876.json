@@ -1,0 +1,34 @@
+{
+  "query": "\n-- Total active leads (everything except Lost)\nSELECT COUNT(*) as active_leads FROM leads WHERE stage != 'Lost';\n\n-- All leads by stage\nSELECT stage, COUNT(*) as count FROM leads GROUP BY stage ORDER BY count DESC;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute \n-- Total active leads (everything except Lost)\nSELECT COUNT(*) as active_leads FROM leads WHERE stage != 'Lost';\n\n-- All leads by stage\nSELECT stage, COUNT(*) as count FROM leads GROUP BY stage ORDER BY count DESC;\n",
+  "rows": [
+    {
+      "active_leads": "41"
+    },
+    {
+      "active_leads": "stage\tcount"
+    },
+    {
+      "active_leads": "Lost\t25"
+    },
+    {
+      "active_leads": "Onboarding\t13"
+    },
+    {
+      "active_leads": "New Lead\t11"
+    },
+    {
+      "active_leads": "Retained\t8"
+    },
+    {
+      "active_leads": "Follow-Up\t8"
+    },
+    {
+      "active_leads": "Consultation Scheduled\t1"
+    }
+  ],
+  "messages": [],
+  "stdout": "active_leads\n41\nstage\tcount\nLost\t25\nOnboarding\t13\nNew Lead\t11\nRetained\t8\nFollow-Up\t8\nConsultation Scheduled\t1\n",
+  "stderr": "",
+  "execution_time_ms": 267
+}

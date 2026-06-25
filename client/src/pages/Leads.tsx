@@ -30,6 +30,7 @@ import LeadDetailPanel from "@/components/LeadDetailPanel";
 import { useActiveMember } from "@/contexts/ActiveMemberContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { trpc } from "@/lib/trpc";
+import { isConvertedStage } from "@shared/const";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -316,8 +317,9 @@ export default function Leads() {
       setLostLeadPending(lead);
       setLostReason("");
       setLostReasonCustom("");
-    } else if (targetStage === "Retained" && lead.stage !== "Retained") {
-      // Open the Convert modal — same as clicking the Convert button
+    } else if (targetStage === "Retained" && !isConvertedStage(lead.stage)) {
+      // Only trigger Convert modal if the lead is NOT already a converted client.
+      // If it's already Retained/Onboarding, just move it without re-converting.
       setConvertLead(lead);
       setConvertForm({ retainerBooked: "", downpayment: "", caseNumber: lead.caseNumber || "", notes: "" });
     } else {
@@ -1427,7 +1429,7 @@ function LeadCard({
 
       {/* Action row */}
       <div className="flex items-center gap-2 mt-2.5">
-        {lead.stage !== "Retained" && lead.stage !== "Lost" && (
+        {!isConvertedStage(lead.stage) && lead.stage !== "Lost" && (
           <button onClick={e => { e.stopPropagation(); onConvert(); }} className="flex items-center gap-1 text-xs px-2 py-1 rounded font-medium transition-colors"
             style={{ background: "oklch(0.55 0.18 145 / 15%)", color: "oklch(0.55 0.18 145)", border: "1px solid oklch(0.55 0.18 145 / 30%)" }}>
             <CheckCircle className="w-3 h-3" /> Convert

@@ -68,6 +68,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { isConvertedStage } from "@shared/const";
 
 
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
@@ -112,21 +113,22 @@ export default function Dashboard() {
 
   // Stats
   const totalLeads = monthLeads.length;
-  // Converted: leads that were converted in this month (by convertedDate or date)
+  // Converted: leads that were converted in this month (by convertedDate or date).
+  // Both Retained AND Onboarding are converted clients — include both.
   const converted = useMemo(() => {
     return leads.filter(l => {
-      if (l.stage !== "Retained") return false;
+      if (!isConvertedStage(l.stage)) return false;
       const dateToCheck = l.convertedDate || l.date;
       const d = new Date(dateToCheck + "T12:00:00");
       return d.getFullYear() === selectedYear && d.getMonth() + 1 === selectedMonth;
     }).length;
   }, [leads, selectedYear, selectedMonth]);
   const convRate = totalLeads > 0 ? Math.round((converted / totalLeads) * 100) : 0;
-  // Revenue Booked: sum retainerBooked for leads converted in the selected month
-  // Use convertedDate if available, otherwise fall back to lead intake date
+  // Revenue Booked: sum retainerBooked for leads converted in the selected month.
+  // Both Retained AND Onboarding are converted clients — include both.
   const revenueBooked = useMemo(() => {
     return leads.filter(l => {
-      if (l.stage !== "Retained") return false;
+      if (!isConvertedStage(l.stage)) return false;
       const dateToCheck = l.convertedDate || l.date;
       const d = new Date(dateToCheck + "T12:00:00");
       return d.getFullYear() === selectedYear && d.getMonth() + 1 === selectedMonth;
@@ -259,8 +261,11 @@ export default function Dashboard() {
     refetchInterval: 60_000,
   });
 
+  // Dynamic pipeline stages from DB
+  const { data: pipelineStages } = trpc.pipeline.getStages.useQuery();
+
   // ── Inline modal state ──────────────────────────────────
-  const LEAD_STAGES: LeadStage[] = ["New Lead", "Consultation", "Follow-Up", "Retained", "Onboarding", "Lost"];
+  const LEAD_STAGES: LeadStage[] = (pipelineStages ?? []).map(s => s.name as LeadStage);
   const CASE_TYPES: CaseType[] = ["DA", "SIJS", "AOS", "AO", "K1/K2", "U-Visa", "Green Card", "BIA", "Other"];
   const emptyLeadForm: Omit<Lead, "id"> = {
     name: "", phone: "", email: "", caseType: "DA", caseNumber: "", source: "",
@@ -355,7 +360,8 @@ export default function Dashboard() {
   // Drill-down data
   const drillLeads = useMemo(() => monthLeads, [monthLeads]);
   const drillConverted = useMemo(() => leads.filter(l => {
-    if (l.stage !== "Retained") return false;
+    // Both Retained AND Onboarding are converted clients
+    if (!isConvertedStage(l.stage)) return false;
     const dateToCheck = l.convertedDate || l.date;
     const d = new Date(dateToCheck + "T12:00:00");
     return d.getFullYear() === selectedYear && d.getMonth() + 1 === selectedMonth;
@@ -563,8 +569,9 @@ export default function Dashboard() {
         const navNew = navPayments.filter(p => p.paymentType === "New Client").reduce((s, p) => s + p.amount, 0);
         const navExisting = navPayments.filter(p => p.paymentType === "Existing Client").reduce((s, p) => s + p.amount, 0);
         const navTotal = navNew + navExisting;
+        // Both Retained AND Onboarding are converted clients
         const navConverted = leads.filter(l =>
-          l.stage === "Retained" && (l.convertedDate === dayNavDate || (!l.convertedDate && l.date === dayNavDate))
+          isConvertedStage(l.stage) && (l.convertedDate === dayNavDate || (!l.convertedDate && l.date === dayNavDate))
         ).length;
         const navDayLabel = new Date(dayNavDate + "T12:00:00").toLocaleDateString("en-US", {
           timeZone: "America/Los_Angeles", weekday: "long", month: "long", day: "numeric", year: "numeric"
@@ -1333,7 +1340,8 @@ export default function Dashboard() {
               const src = l.source || "Unknown";
               if (!sourceMap[src]) sourceMap[src] = { leads: 0, converted: 0, revenue: 0 };
               sourceMap[src].leads += 1;
-              if (l.stage === "Retained") {
+              // Both Retained AND Onboarding are converted clients
+              if (isConvertedStage(l.stage)) {
                 sourceMap[src].converted += 1;
                 sourceMap[src].revenue += l.retainerBooked || 0;
               }
@@ -1376,39 +1384,47 @@ export default function Dashboard() {
             <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "oklch(0.72 0.12 75)" }}>Pipeline Value</h2>
             <span className="text-xs" style={{ color: "oklch(0.45 0.01 250)" }}>active leads</span>
           </div>
-          {(() => {
-            // Pipeline = hot leads only (pre-retained). Exclude Retained, Onboarding, and Lost.
-            const PIPELINE_STAGES = ["New Lead", "Consultation", "Follow-Up"];
-            const activeLeads = leads.filter(l => PIPELINE_STAGES.includes(l.stage));
+{(() => {
+            // Active pipeline = all stages except Retained, Onboarding, and Lost.
+            // Use dynamic stages from DB so new stages added via pipeline manager are included.
+            const activePipelineStages = (pipelineStages ?? []).filter(
+              s => !isConvertedStage(s.name) && s.name !== "Lost"
+            );
+            const activeStageName = activePipelineStages.map(s => s.name);
+            const activeLeads = leads.filter(l => activeStageName.includes(l.stage));
             const totalPipeline = activeLeads.reduce((s, l) => s + (l.quotedAmount || 0), 0);
-            const stageBreakdown = PIPELINE_STAGES.map(stage => {
-              const stageLeads = activeLeads.filter(l => l.stage === stage);
-              const value = stageLeads.reduce((s, l) => s + (l.quotedAmount || 0), 0);
-              return { stage, count: stageLeads.length, value };
+            const stageBreakdown = activePipelineStages.map(s => {
+              const stageLeads = activeLeads.filter(l => l.stage === s.name);
+              const value = stageLeads.reduce((acc, l) => acc + (l.quotedAmount || 0), 0);
+              return { stage: s.name, count: stageLeads.length, value };
             });
-            const stageColors: Record<string, string> = {
-              "New Lead": "oklch(0.65 0.15 250)",
-              "Consultation": "oklch(0.72 0.12 75)",
-              "Follow-Up": "oklch(0.72 0.12 40)",
-            };
+            // Cycle through a palette of colors for dynamic stages
+            const palette = [
+              "oklch(0.65 0.15 250)",
+              "oklch(0.72 0.12 75)",
+              "oklch(0.72 0.12 40)",
+              "oklch(0.65 0.18 300)",
+              "oklch(0.65 0.15 200)",
+              "oklch(0.72 0.12 160)",
+            ];
             return (
               <div className="space-y-4">
                 <div className="text-center">
                   <div className="text-3xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.72 0.12 75)" }}>
                     {formatCurrency(totalPipeline)}
                   </div>
-                  <div className="text-xs mt-1" style={{ color: "oklch(0.45 0.01 250)" }}>{activeLeads.length} hot leads (excl. retained &amp; onboarding)</div>
+                  <div className="text-xs mt-1" style={{ color: "oklch(0.45 0.01 250)" }}>{activeLeads.length} active leads (excl. converted &amp; lost)</div>
                 </div>
                 <div className="space-y-2">
-                  {stageBreakdown.map(({ stage, count, value }) => (
+                  {stageBreakdown.map(({ stage, count, value }: { stage: string; count: number; value: number }, idx: number) => (
                     <div key={stage} className="flex items-center gap-3">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs font-medium" style={{ color: stageColors[stage] }}>{stage}</span>
+                          <span className="text-xs font-medium" style={{ color: palette[idx % palette.length] }}>{stage}</span>
                           <span className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>{count} leads</span>
                         </div>
                         <div className="relative h-1.5 rounded-full overflow-hidden" style={{ background: "oklch(0.22 0.025 250)" }}>
-                          <div className="h-full rounded-full" style={{ width: totalPipeline > 0 ? `${Math.round((value / totalPipeline) * 100)}%` : "0%", background: stageColors[stage] }} />
+                          <div className="h-full rounded-full" style={{ width: totalPipeline > 0 ? `${Math.round((value / totalPipeline) * 100)}%` : "0%", background: palette[idx % palette.length] }} />
                         </div>
                       </div>
                       <span className="text-xs font-semibold flex-shrink-0" style={{ color: "oklch(0.80 0.005 250)" }}>{formatCurrency(value)}</span>

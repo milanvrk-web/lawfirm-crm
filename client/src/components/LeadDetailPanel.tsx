@@ -27,6 +27,7 @@ import { PSTDatePicker } from "@/components/PSTDatePicker";
    ============================================================ */
 import { useState, useMemo, useRef, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
+import { isConvertedStage } from "@shared/const";
 import { useCRM } from "@/contexts/CRMContext";
 import { useActiveMember } from "@/contexts/ActiveMemberContext";
 import {
@@ -475,7 +476,10 @@ export default function LeadDetailPanel({
   const handleStageChange = async (newStage: LeadStage) => {
     setStageDropdownOpen(false);
     if (!lead || newStage === lead.stage) return;
-    if (newStage === "Retained") {
+    // Only trigger the Convert flow when moving a non-converted lead TO Retained.
+    // If the lead is already Retained or Onboarding (already a client), just update
+    // the stage directly without re-running the conversion flow.
+    if (newStage === "Retained" && !isConvertedStage(lead.stage)) {
       if (onConvertLead) {
         onConvertLead(lead);
       } else {

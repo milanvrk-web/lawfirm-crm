@@ -483,3 +483,25 @@
 - [x] Update all hardcoded STAGES arrays in Leads.tsx, LeadDetailPanel.tsx to use dynamic stages from DB
 - [x] Rename "Consultation" → "Consultation Scheduled" via DB update (3 leads migrated)
 - [x] Add "Consultation Booked" as a new pipeline stage (order 3, between Consultation Scheduled and Retained)
+
+## Active Lead Definition Fix (Retained/Onboarding = Converted Clients)
+
+- [ ] Define ACTIVE_STAGES constant (New Lead, Follow-Up, Consultation Scheduled, Consultation Booked) and CONVERTED_STAGES (Retained, Onboarding) in shared/const.ts
+- [ ] Fix Dashboard: "Active Leads" stat card to exclude Retained and Onboarding
+- [ ] Fix Dashboard: Pipeline Value summary to only show active stages (not Retained/Onboarding)
+- [ ] Fix Dashboard: Stale Leads count to exclude Retained/Onboarding
+- [ ] Fix Dashboard: Lead Source ROI and other stats to separate active vs converted
+- [ ] Fix Leads.tsx: "Convert" button hidden for Retained and Onboarding stages
+- [ ] Fix LeadDetailPanel: "Convert" action hidden when stage is Retained or Onboarding
+- [ ] Fix server-side getLeadStats / active lead queries to exclude Retained/Onboarding
+
+## Critical: Retained → Onboarding Flow Fix
+
+- [x] Define CONVERTED_STAGES = ["Retained", "Onboarding"] constant — these are post-conversion stages
+- [x] Fix handleDrop in Leads.tsx: dragging to Onboarding from Retained must NOT trigger Convert modal — just update stage
+- [x] Fix handleStageChange in LeadDetailPanel.tsx: moving to Onboarding must NOT trigger Convert flow
+- [x] Fix handleSave in Leads.tsx edit form: changing stage to Onboarding must NOT trigger Lost/Convert flow
+- [x] Hide "Convert" button on lead cards when stage is already Retained or Onboarding
+- [x] Fix Dashboard converted count: include both Retained AND Onboarding leads converted this month
+- [x] Fix Dashboard active leads count: exclude Retained and Onboarding from active pipeline counts
+- [x] Fix Pipeline Value section: use dynamic active stages from DB instead of hardcoded ["New Lead", "Consultation", "Follow-Up"]
