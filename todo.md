@@ -530,3 +530,9 @@
 ## Remove Duplicate Onboarding Checklist from Lead Detail Panel
 
 - [x] Remove the "ONBOARDING CHECKLIST" collapsible section from LeadDetailPanel.tsx (keep only the Kanban card checklist)
+
+## Lead Status Overview — Monthly View on Dashboard
+
+- [x] Make Lead Status Overview card month-aware: show leads added, converted, and lost in the selected month
+- [x] Add month navigator (prev/next arrows + month label) to the card, synced with the existing Dashboard month selector
+- [x] Show all-time totals as a secondary row below the monthly numbers
