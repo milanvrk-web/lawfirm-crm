@@ -1000,8 +1000,16 @@ export default function Leads() {
             </div>
             <div>
               <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Source</Label>
-              <Input value={form.source} onChange={e => setForm(f => ({ ...f, source: e.target.value }))} placeholder="e.g. Referral, Google"
-                style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
+              <Select value={form.source || ""} onValueChange={val => setForm(f => ({ ...f, source: val === "__other__" ? "" : val }))}>
+                <SelectTrigger style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: form.source ? "oklch(0.93 0.005 250)" : "oklch(0.45 0.01 250)" }}>
+                  <SelectValue placeholder="Select source..." />
+                </SelectTrigger>
+                <SelectContent style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }}>
+                  {["Referral", "Existing Client", "Google", "Facebook", "Instagram", "Website", "Walk-In", "Handler", "Other"].map(opt => (
+                    <SelectItem key={opt} value={opt} style={{ color: "oklch(0.93 0.005 250)" }}>{opt}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Referred By</Label>

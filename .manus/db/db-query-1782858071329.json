@@ -1,0 +1,38 @@
+{
+  "query": "SELECT source, COUNT(*) as count FROM leads WHERE source IS NOT NULL AND source != '' GROUP BY source ORDER BY count DESC;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute SELECT source, COUNT(*) as count FROM leads WHERE source IS NOT NULL AND source != '' GROUP BY source ORDER BY count DESC;",
+  "rows": [
+    {
+      "source": "Referral",
+      "count": "25"
+    },
+    {
+      "source": "Google",
+      "count": "9"
+    },
+    {
+      "source": "existing client",
+      "count": "4"
+    },
+    {
+      "source": "website",
+      "count": "2"
+    },
+    {
+      "source": "Referra",
+      "count": "1"
+    },
+    {
+      "source": "Handler",
+      "count": "1"
+    },
+    {
+      "source": "Tajinder",
+      "count": "1"
+    }
+  ],
+  "messages": [],
+  "stdout": "source\tcount\nReferral\t25\nGoogle\t9\nexisting client\t4\nwebsite\t2\nReferra\t1\nHandler\t1\nTajinder\t1\n",
+  "stderr": "",
+  "execution_time_ms": 278
+}

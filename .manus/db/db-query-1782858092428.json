@@ -1,0 +1,9 @@
+{
+  "query": "UPDATE leads SET source = 'Referral' WHERE source = 'Referra';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute UPDATE leads SET source = 'Referral' WHERE source = 'Referra';",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 265
+}

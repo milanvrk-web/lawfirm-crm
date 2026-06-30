@@ -536,3 +536,10 @@
 - [x] Make Lead Status Overview card month-aware: show leads added, converted, and lost in the selected month
 - [x] Add month navigator (prev/next arrows + month label) to the card, synced with the existing Dashboard month selector
 - [x] Show all-time totals as a secondary row below the monthly numbers
+
+## Source Dropdown in Add Lead Form
+
+- [x] Replace free-text Source input in Add Lead form with a dropdown (Referral, Existing Client, Google, Facebook, Instagram, Website, Walk-In, Handler, Other)
+- [x] Fix typo in DB: "Referra" → "Referral" for the 1 affected lead
+- [x] Also update Source dropdown in Edit Lead form (same modal reused for Add and Edit)
+- [x] LeadDetailPanel shows source as read-only info field (no inline edit needed)
