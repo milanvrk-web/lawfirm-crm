@@ -9,6 +9,7 @@ import { PSTDatePicker } from "@/components/PSTDatePicker";
 import { useState, useMemo } from "react";
 import { useCRM } from "@/contexts/CRMContext";
 import { type Payment, type CaseType, type PaymentType, formatCurrency, formatDate } from "@/lib/store";
+import { isConvertedStage } from "@shared/const";
 import { toast } from "sonner";
 import { DollarSign, Plus, Search, Filter, Edit2, Trash2, X, Users, Building } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -44,8 +45,8 @@ export default function Payments() {
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<PaymentType | "All">("All");
 
-  // Retained clients for search
-  const retainedLeads = useMemo(() => leads.filter(l => l.stage === "Retained"), [leads]);
+  // Converted clients for search (Retained & Onboarding)
+  const retainedLeads = useMemo(() => leads.filter(l => isConvertedStage(l.stage)), [leads]);
   const clientMatches = useMemo(() => {
     if (clientSearch.length < 2) return [];
     return retainedLeads.filter(l => l.name.toLowerCase().includes(clientSearch.toLowerCase())).slice(0, 6);

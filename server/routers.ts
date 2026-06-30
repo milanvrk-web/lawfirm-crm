@@ -1,4 +1,4 @@
-import { COOKIE_NAME } from "@shared/const";
+import { COOKIE_NAME, isConvertedStage } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
@@ -1224,7 +1224,7 @@ For unassignedLeads: list any lead from UNASSIGNED LEADS above, suggest Khushi a
     /** Analyze all active (non-Lost) leads in batch */
     analyzeAll: publicProcedure.mutation(async () => {
       const allLeads = await db.getAllLeads();
-      const activeLeads = allLeads.filter(l => l.stage !== "Lost" && l.stage !== "Retained");
+      const activeLeads = allLeads.filter(l => l.stage !== "Lost" && !isConvertedStage(l.stage));
       const results: { leadId: string; ok: boolean; error?: string }[] = [];
 
       // Process in small batches to avoid overwhelming the LLM

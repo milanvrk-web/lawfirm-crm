@@ -1,0 +1,52 @@
+{
+  "query": "SELECT id, name, `order`, color FROM pipeline_stages ORDER BY `order`;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute SELECT id, name, `order`, color FROM pipeline_stages ORDER BY `order`;",
+  "rows": [
+    {
+      "id": "UAmpGAtvu-cS5RFpiEf2F",
+      "name": "New Lead",
+      "order": "0",
+      "color": "oklch(0.55 0.18 250)"
+    },
+    {
+      "id": "uHWksD4rU_MDofbs3YhvB",
+      "name": "Follow-Up",
+      "order": "1",
+      "color": "oklch(0.65 0.20 300)"
+    },
+    {
+      "id": "SGlzJ_IASsfPM_T-IgqhX",
+      "name": "Consultation Scheduled",
+      "order": "2",
+      "color": "oklch(0.72 0.15 80)"
+    },
+    {
+      "id": "consultation-booked-stage",
+      "name": "Consultation Booked",
+      "order": "3",
+      "color": "oklch(0.68 0.18 60)"
+    },
+    {
+      "id": "lOl0DC0pNku5HCEycWIOC",
+      "name": "Retained",
+      "order": "4",
+      "color": "oklch(0.55 0.18 145)"
+    },
+    {
+      "id": "Rn6QoQ6UypTHYmdiCaSxp",
+      "name": "Onboarding",
+      "order": "6",
+      "color": "oklch(0.65 0.18 200)"
+    },
+    {
+      "id": "gPSYP8XAbBgidfaft2eQp",
+      "name": "Lost",
+      "order": "7",
+      "color": "oklch(0.60 0.22 25)"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\torder\tcolor\nUAmpGAtvu-cS5RFpiEf2F\tNew Lead\t0\toklch(0.55 0.18 250)\nuHWksD4rU_MDofbs3YhvB\tFollow-Up\t1\toklch(0.65 0.20 300)\nSGlzJ_IASsfPM_T-IgqhX\tConsultation Scheduled\t2\toklch(0.72 0.15 80)\nconsultation-booked-stage\tConsultation Booked\t3\toklch(0.68 0.18 60)\nlOl0DC0pNku5HCEycWIOC\tRetained\t4\toklch(0.55 0.18 145)\nRn6QoQ6UypTHYmdiCaSxp\tOnboarding\t6\toklch(0.65 0.18 200)\ngPSYP8XAbBgidfaft2eQp\tLost\t7\toklch(0.60 0.22 25)\n",
+  "stderr": "",
+  "execution_time_ms": 273
+}

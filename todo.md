@@ -513,3 +513,16 @@
 - [x] Active Leads count must exclude Lost, Retained, Onboarding
 - [x] Show conversion rate = Converted / (Active + Converted)
 - [x] Lost count shown separately
+
+## Merge Retained + Onboarding → "Retained & Onboarding"
+
+- [x] DB: Rename "Retained" pipeline stage to "Retained & Onboarding"
+- [x] DB: Update all leads with stage="Retained" to "Retained & Onboarding"
+- [x] DB: Update all leads with stage="Onboarding" to "Retained & Onboarding"
+- [x] DB: Delete the "Onboarding" pipeline stage row
+- [x] shared/const.ts: Update CONVERTED_STAGES to ["Retained & Onboarding"]
+- [x] server/routers.ts: Update any hardcoded "Retained"/"Onboarding" stage references
+- [x] client: Update STAGES array, stageColor map, and all hardcoded "Retained"/"Onboarding" strings
+- [x] client: Update Convert button label to "Convert → Retained & Onboarding"
+- [x] client: Update handleDrop/handleStageChange to use new stage name
+- [x] client: Update Convert modal success toast message

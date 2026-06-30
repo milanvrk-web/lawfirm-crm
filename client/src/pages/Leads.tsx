@@ -37,15 +37,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 
-const STAGES: LeadStage[] = ["New Lead", "Consultation", "Follow-Up", "Retained", "Onboarding", "Lost"];
+const STAGES: LeadStage[] = ["New Lead", "Consultation", "Follow-Up", "Retained & Onboarding", "Lost"];
 const CASE_TYPES: CaseType[] = ["DA", "SIJS", "AOS", "AO", "K1/K2", "U-Visa", "Green Card", "BIA", "Other"];
 
 const stageColor: Record<LeadStage, string> = {
   "New Lead": "oklch(0.55 0.18 250)",
   "Consultation": "oklch(0.72 0.15 80)",
   "Follow-Up": "oklch(0.65 0.20 300)",  // purple — needs follow-up
-  "Retained": "oklch(0.55 0.18 145)",
-  "Onboarding": "oklch(0.65 0.18 200)",  // teal — active onboarding
+  "Retained & Onboarding": "oklch(0.55 0.18 145)",
   "Lost": "oklch(0.60 0.22 25)",
 };
 
@@ -347,9 +346,8 @@ export default function Leads() {
       setLostLeadPending(lead);
       setLostReason("");
       setLostReasonCustom("");
-    } else if (targetStage === "Retained" && !isConvertedStage(lead.stage)) {
+    } else if (targetStage === "Retained & Onboarding" && !isConvertedStage(lead.stage)) {
       // Only trigger Convert modal if the lead is NOT already a converted client.
-      // If it's already Retained/Onboarding, just move it without re-converting.
       setConvertLead(lead);
       setConvertForm({ retainerBooked: "", downpayment: "", caseNumber: lead.caseNumber || "", notes: "" });
     } else {
@@ -456,7 +454,7 @@ export default function Leads() {
     const dp = parseFloat(convertForm.downpayment) || 0;
     if (retainer <= 0) { toast.error("Enter retainer amount"); return; }
     updateLead(convertLead.id, {
-      stage: "Retained",
+      stage: "Retained & Onboarding",
       retainerBooked: retainer,
       downpayment: dp,
       caseNumber: convertForm.caseNumber || convertLead.caseNumber,
@@ -850,7 +848,7 @@ export default function Leads() {
                 </div>
 
                 {/* Pipeline value — only shown for pre-retained stages */}
-                {(stageValue[stage] ?? 0) > 0 && !["Retained", "Onboarding"].includes(stage) && (
+                {(stageValue[stage] ?? 0) > 0 && !isConvertedStage(stage) && (
                   <div className="text-xs mt-1 font-medium" style={{ color: "oklch(0.72 0.12 75)" }}>
                     {formatCurrency(stageValue[stage])} pipeline
                   </div>
@@ -1210,7 +1208,7 @@ function LeadCard({
   // Legacy Onboarding checklist (for leads using the old onboarding_checklist table)
   const { data: legacyChecklistData, refetch: refetchLegacy } = trpc.onboarding.getByLead.useQuery(
     { leadId: lead.id },
-    { enabled: lead.stage === "Onboarding" && !hasTemplates }
+    { enabled: isConvertedStage(lead.stage) && !hasTemplates }
   );
   const ONBOARDING_STEPS = [
     { key: "consultation_booked" as const, label: "Consultation Booked" },
@@ -1500,8 +1498,8 @@ function LeadCard({
         </div>
       )}
 
-      {/* Legacy Onboarding Checklist (Onboarding stage, no templates yet) */}
-      {lead.stage === "Onboarding" && !hasTemplates && (
+      {/* Legacy Onboarding Checklist (Retained & Onboarding stage, no templates yet) */}
+      {isConvertedStage(lead.stage) && !hasTemplates && (
         <div className="mt-2.5 rounded-lg p-2.5" style={{ background: "oklch(0.22 0.03 200 / 40%)", border: "1px solid oklch(0.65 0.18 200 / 25%)" }}>
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold" style={{ color: "oklch(0.65 0.18 200)" }}>Onboarding Checklist</span>
@@ -1540,8 +1538,8 @@ function LeadCard({
         </div>
       )}
 
-      {/* Retainer progress (Retained only) */}
-      {lead.stage === "Retained" && lead.retainerBooked > 0 && (
+      {/* Retainer progress (converted clients) */}
+      {isConvertedStage(lead.stage) && lead.retainerBooked > 0 && (
         <div className="mt-2">
           <div className="flex justify-between text-xs mb-1" style={{ color: "oklch(0.55 0.01 250)" }}>
             <span>Booked: {formatCurrency(lead.retainerBooked)}</span>

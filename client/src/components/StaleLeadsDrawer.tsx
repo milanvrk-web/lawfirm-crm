@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { useCRM } from "@/contexts/CRMContext";
 import { useActiveMember } from "@/contexts/ActiveMemberContext";
 import type { Lead } from "@/lib/store";
+import { isConvertedStage } from "@shared/const";
 import { todayPST, tomorrowPST } from "@/lib/timezone";
 import { PSTDatePicker } from "@/components/PSTDatePicker";
 
@@ -42,7 +43,7 @@ function stageColor(stage: string): string {
   switch (stage) {
     case "New Lead": return "oklch(0.65 0.18 250)";
     case "Consulted": return "oklch(0.72 0.12 75)";
-    case "Retained": return "oklch(0.65 0.18 145)";
+    case "Retained & Onboarding": return "oklch(0.65 0.18 145)";    
     default: return "oklch(0.55 0.01 250)";
   }
 }
@@ -71,7 +72,7 @@ export default function StaleLeadsDrawer({ open, onClose }: StaleLeadsDrawerProp
   const staleLeadList: StaleLead[] = (() => {
     const cutoffMs = Date.now() - 14 * 24 * 60 * 60 * 1000;
     return leads
-      .filter(l => l.stage !== "Lost" && l.stage !== "Retained" && l.stage !== "Onboarding")
+      .filter(l => l.stage !== "Lost" && !isConvertedStage(l.stage))
       .map(l => {
         const lastPaymentMs = payments
           .filter(p => p.leadId === l.id)

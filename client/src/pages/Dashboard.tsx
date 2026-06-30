@@ -292,7 +292,7 @@ export default function Dashboard() {
   const [paymentClientSearch, setPaymentClientSearch] = useState("");
   const [showPaymentClientDrop, setShowPaymentClientDrop] = useState(false);
 
-  const retainedLeads = useMemo(() => leads.filter(l => l.stage === "Retained" || l.stage === "Onboarding"), [leads]);
+  const retainedLeads = useMemo(() => leads.filter(l => isConvertedStage(l.stage)), [leads]);
   const paymentClientMatches = useMemo(() => {
     if (paymentClientSearch.length < 2) return [];
     return retainedLeads.filter(l => l.name.toLowerCase().includes(paymentClientSearch.toLowerCase())).slice(0, 6);
@@ -349,7 +349,7 @@ export default function Dashboard() {
   const staleLeads = useMemo(() => {
     const cutoffMs = Date.now() - 14 * 24 * 60 * 60 * 1000;
     return leads.filter(l => {
-      if (l.stage === "Lost" || l.stage === "Retained" || l.stage === "Onboarding") return false;
+      if (l.stage === "Lost" || isConvertedStage(l.stage)) return false;
       const lastPaymentMs = payments
         .filter(p => p.leadId === l.id)
         .map(p => new Date(p.date + "T12:00:00").getTime())
@@ -1675,8 +1675,8 @@ export default function Dashboard() {
                           </div>
                           <div className="flex-shrink-0 text-right">
                             <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{
-                              background: l.stage === "Retained" ? "oklch(0.55 0.18 145 / 12%)" : l.stage === "Lost" ? "oklch(0.60 0.22 25 / 12%)" : "oklch(0.60 0.15 250 / 12%)",
-                              color: l.stage === "Retained" ? "oklch(0.65 0.18 145)" : l.stage === "Lost" ? "oklch(0.70 0.22 25)" : "oklch(0.65 0.15 250)",
+                              background: isConvertedStage(l.stage) ? "oklch(0.55 0.18 145 / 12%)" : l.stage === "Lost" ? "oklch(0.60 0.22 25 / 12%)" : "oklch(0.60 0.15 250 / 12%)",
+                              color: isConvertedStage(l.stage) ? "oklch(0.65 0.18 145)" : l.stage === "Lost" ? "oklch(0.70 0.22 25)" : "oklch(0.65 0.15 250)",
                             }}>{l.stage}</span>
                           </div>
                         </div>

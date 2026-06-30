@@ -350,7 +350,7 @@ function RescheduleModal({
 // ── Helpers ──────────────────────────────────────────
 // ALL_STAGES is now loaded dynamically from the pipeline_stages table.
 // The fallback below is used only if the DB hasn't loaded yet.
-const FALLBACK_STAGES: LeadStage[] = ["New Lead", "Consultation", "Follow-Up", "Retained", "Onboarding", "Lost"];
+const FALLBACK_STAGES: LeadStage[] = ["New Lead", "Consultation", "Follow-Up", "Retained & Onboarding", "Lost"];
 
 const DEFAULT_STAGE_COLORS: Record<string, string> = {
   "New Lead":                "oklch(0.55 0.18 250)",
@@ -358,8 +358,7 @@ const DEFAULT_STAGE_COLORS: Record<string, string> = {
   "Consultation Scheduled":  "oklch(0.72 0.15 80)",
   "Consultation Booked":     "oklch(0.68 0.18 60)",
   "Follow-Up":               "oklch(0.65 0.15 60)",
-  "Retained":                "oklch(0.55 0.18 145)",
-  "Onboarding":              "oklch(0.55 0.18 200)",
+  "Retained & Onboarding":   "oklch(0.55 0.18 145)",
   "Lost":                    "oklch(0.60 0.22 25)",
 };
 
@@ -479,7 +478,7 @@ export default function LeadDetailPanel({
     // Only trigger the Convert flow when moving a non-converted lead TO Retained.
     // If the lead is already Retained or Onboarding (already a client), just update
     // the stage directly without re-running the conversion flow.
-    if (newStage === "Retained" && !isConvertedStage(lead.stage)) {
+    if (newStage === "Retained & Onboarding" && !isConvertedStage(lead.stage)) {
       if (onConvertLead) {
         onConvertLead(lead);
       } else {
@@ -498,7 +497,7 @@ export default function LeadDetailPanel({
     const dp = parseFloat(inlineConvertForm.downpayment) || 0;
     if (retainer <= 0) { toast.error("Enter retainer amount"); return; }
     await updateLead(lead.id, {
-      stage: "Retained",
+      stage: "Retained & Onboarding",
       retainerBooked: retainer,
       downpayment: dp,
       caseNumber: inlineConvertForm.caseNumber || lead.caseNumber,
@@ -724,7 +723,7 @@ export default function LeadDetailPanel({
         </div>
 
         {/* ── Retainer bar (Retained leads only) ── */}
-        {lead.stage === "Retained" && lead.retainerBooked > 0 && (() => {
+        {isConvertedStage(lead.stage) && lead.retainerBooked > 0 && (() => {
           const pct = Math.min(100, (totalReceived / lead.retainerBooked) * 100);
           const outstanding = lead.retainerBooked - totalReceived;
           return (
@@ -1385,7 +1384,7 @@ export default function LeadDetailPanel({
           {/* ══════════════════════════════════════════════════
               SECTION 4 — ONBOARDING CHECKLIST (collapsible)
               ══════════════════════════════════════════════════ */}
-          {lead.stage === "Onboarding" && leadId && (
+          {isConvertedStage(lead.stage) && leadId && (
             <div style={{ borderBottom: "1px solid oklch(1 0 0 / 8%)" }}>
               <button
                 onClick={() => setOnboardingExpanded(v => !v)}

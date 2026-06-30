@@ -1,0 +1,9 @@
+{
+  "query": "\n-- Step 1: Rename \"Retained\" stage to \"Retained & Onboarding\"\nUPDATE pipeline_stages SET name = 'Retained & Onboarding' WHERE id = 'lOl0DC0pNku5HCEycWIOC';\n\n-- Step 2: Move all leads in \"Retained\" to \"Retained & Onboarding\"\nUPDATE leads SET stage = 'Retained & Onboarding' WHERE stage = 'Retained';\n\n-- Step 3: Move all leads in \"Onboarding\" to \"Retained & Onboarding\"\nUPDATE leads SET stage = 'Retained & Onboarding' WHERE stage = 'Onboarding';\n\n-- Step 4: Delete the now-redundant \"Onboarding\" stage\nDELETE FROM pipeline_stages WHERE id = 'Rn6QoQ6UypTHYmdiCaSxp';\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute \n-- Step 1: Rename \"Retained\" stage to \"Retained & Onboarding\"\nUPDATE pipeline_stages SET name = 'Retained & Onboarding' WHERE id = 'lOl0DC0pNku5HCEycWIOC';\n\n-- Step 2: Move all leads in \"Retained\" to \"Retained & Onboarding\"\nUPDATE leads SET stage = 'Retained & Onboarding' WHERE stage = 'Retained';\n\n-- Step 3: Move all leads in \"Onboarding\" to \"Retained & Onboarding\"\nUPDATE leads SET stage = 'Retained & Onboarding' WHERE stage = 'Onboarding';\n\n-- Step 4: Delete the now-redundant \"Onboarding\" stage\nDELETE FROM pipeline_stages WHERE id = 'Rn6QoQ6UypTHYmdiCaSxp';\n",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 329
+}

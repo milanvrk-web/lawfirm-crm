@@ -8,6 +8,7 @@ import { useState, useMemo } from "react";
 import { useCRM } from "@/contexts/CRMContext";
 import { useActiveMember } from "@/contexts/ActiveMemberContext";
 import { formatCurrency, formatDate } from "@/lib/store";
+import { isConvertedStage } from "@shared/const";
 import { todayPST, addDaysPST } from "@/lib/timezone";
 import { PSTDatePicker } from "@/components/PSTDatePicker";
 import { CalendarCheck, Lock, CheckCircle, ChevronLeft, ChevronRight, User, Trash2 } from "lucide-react";
@@ -211,7 +212,7 @@ export default function CloseDay() {
                     <span className="px-1.5 py-0.5 rounded" style={{ background: "oklch(0.72 0.12 75 / 15%)", color: "oklch(0.72 0.12 75)" }}>{l.caseType}</span>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${l.stage === "Retained" ? "badge-retained" : l.stage === "Lost" ? "badge-lost" : l.stage === "Consultation" ? "badge-consultation" : l.stage === "Follow-Up" ? "badge-follow-up" : "badge-new"}`}>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${isConvertedStage(l.stage) ? "badge-retained" : l.stage === "Lost" ? "badge-lost" : l.stage === "Consultation" ? "badge-consultation" : l.stage === "Follow-Up" ? "badge-follow-up" : "badge-new"}`}>
                       {l.stage}
                     </span>
                   </td>

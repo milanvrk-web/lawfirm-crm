@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 
-const STAGES: LeadStage[] = ["New Lead", "Consultation", "Follow-Up", "Retained", "Onboarding", "Lost"];
+const STAGES: LeadStage[] = ["New Lead", "Consultation", "Follow-Up", "Retained & Onboarding", "Lost"];
 
 export default function AllData() {
   const { leads, payments, deleteLead, deletePayment } = useCRM();
@@ -59,8 +59,7 @@ export default function AllData() {
     "New Lead": "badge-new",
     "Consultation": "badge-consultation",
     "Follow-Up": "badge-consultation",
-    "Retained": "badge-retained",
-    "Onboarding": "badge-retained",
+    "Retained & Onboarding": "badge-retained",
     "Lost": "badge-lost",
   };
 

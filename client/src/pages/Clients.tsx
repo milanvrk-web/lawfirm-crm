@@ -8,6 +8,7 @@ import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useCRM } from "@/contexts/CRMContext";
 import { formatCurrency, formatDate } from "@/lib/store";
+import { isConvertedStage } from "@shared/const";
 import { BookOpen, ChevronDown, ChevronUp, Search, Trash2, ExternalLink } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -29,7 +30,7 @@ export default function Clients() {
     }
   };
 
-  const retainedLeads = useMemo(() => leads.filter(l => l.stage === "Retained"), [leads]);
+  const retainedLeads = useMemo(() => leads.filter(l => isConvertedStage(l.stage)), [leads]);
 
   const clientsWithData = useMemo(() => {
     return retainedLeads.map(lead => {

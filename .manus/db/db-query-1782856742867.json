@@ -1,0 +1,46 @@
+{
+  "query": "\nSELECT name, `order`, color FROM pipeline_stages ORDER BY `order`;\nSELECT stage, COUNT(*) as count FROM leads GROUP BY stage ORDER BY count DESC;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute \nSELECT name, `order`, color FROM pipeline_stages ORDER BY `order`;\nSELECT stage, COUNT(*) as count FROM leads GROUP BY stage ORDER BY count DESC;\n",
+  "rows": [
+    {
+      "name": "New Lead",
+      "order": "0",
+      "color": "oklch(0.55 0.18 250)"
+    },
+    {
+      "name": "Follow-Up",
+      "order": "1",
+      "color": "oklch(0.65 0.20 300)"
+    },
+    {
+      "name": "Consultation Scheduled",
+      "order": "2",
+      "color": "oklch(0.72 0.15 80)"
+    },
+    {
+      "name": "Consultation Booked",
+      "order": "3",
+      "color": "oklch(0.68 0.18 60)"
+    },
+    {
+      "name": "Retained & Onboarding",
+      "order": "4",
+      "color": "oklch(0.55 0.18 145)"
+    },
+    {
+      "name": "Lost",
+      "order": "7",
+      "color": "oklch(0.60 0.22 25)"
+    }
+  ],
+  "messages": [
+    "stage\tcount",
+    "Lost\t28",
+    "Retained & Onboarding\t23",
+    "Follow-Up\t20",
+    "Consultation Scheduled\t3"
+  ],
+  "stdout": "name\torder\tcolor\nNew Lead\t0\toklch(0.55 0.18 250)\nFollow-Up\t1\toklch(0.65 0.20 300)\nConsultation Scheduled\t2\toklch(0.72 0.15 80)\nConsultation Booked\t3\toklch(0.68 0.18 60)\nRetained & Onboarding\t4\toklch(0.55 0.18 145)\nLost\t7\toklch(0.60 0.22 25)\nstage\tcount\nLost\t28\nRetained & Onboarding\t23\nFollow-Up\t20\nConsultation Scheduled\t3\n",
+  "stderr": "",
+  "execution_time_ms": 271
+}

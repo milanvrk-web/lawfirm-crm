@@ -6,7 +6,7 @@ export const COOKIE_NAME = "app_session_id";
  * Any lead in these stages should be excluded from active lead counts,
  * pipeline value calculations, and stale lead checks.
  */
-export const CONVERTED_STAGES = ["Retained", "Onboarding"] as const;
+export const CONVERTED_STAGES = ["Retained & Onboarding"] as const;
 export type ConvertedStage = typeof CONVERTED_STAGES[number];
 
 /** Check if a stage is a post-conversion stage (client, not lead) */

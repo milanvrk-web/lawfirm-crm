@@ -30,6 +30,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useCRM } from "@/contexts/CRMContext";
 import { getDueTodayFollowUps, getOverdueFollowUps, formatCurrency } from "@/lib/store";
+import { isConvertedStage } from "@shared/const";
 import {
   CommandDialog,
   CommandInput,
@@ -136,7 +137,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const stalePipelineCount = useMemo(() => {
     const cutoffStr = addDaysPST(todayPST(), -7);
     return leads.filter(l => {
-      if (l.stage === "Lost" || l.stage === "Retained" || l.stage === "Onboarding") return false;
+      if (l.stage === "Lost" || isConvertedStage(l.stage)) return false;
       // Use followUpDate as a strong signal of recent activity
       if (l.followUpDate && l.followUpDate >= cutoffStr) return false;
       // Fall back to lead creation date

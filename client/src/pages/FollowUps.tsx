@@ -35,8 +35,7 @@ const stageColor: Record<string, string> = {
   "New Lead":     "oklch(0.55 0.18 250)",
   "Consultation": "oklch(0.72 0.15 80)",
   "Follow-Up":    "oklch(0.65 0.15 60)",
-  "Retained":     "oklch(0.55 0.18 145)",
-  "Onboarding":   "oklch(0.55 0.18 200)",
+  "Retained & Onboarding": "oklch(0.55 0.18 145)",
   "Lost":         "oklch(0.60 0.22 25)",
 };
 

@@ -9,6 +9,7 @@ import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useCRM } from "@/contexts/CRMContext";
 import { formatDate } from "@/lib/store";
+import { isConvertedStage } from "@shared/const";
 import {
   Brain, Zap, Flame, Snowflake, AlertTriangle, RefreshCw,
   ChevronDown, ChevronUp, ExternalLink, Clock, Target,
@@ -334,8 +335,8 @@ export default function Intelligence() {
     return map;
   }, [analyses]);
 
-  // Active leads (not Lost or Retained) that have been analyzed
-  const activeLeads = leads.filter(l => l.stage !== "Lost" && l.stage !== "Retained");
+  // Active leads (not Lost or Retained & Onboarding) that have been analyzed
+  const activeLeads = leads.filter(l => l.stage !== "Lost" && !isConvertedStage(l.stage));
   const analyzedLeads = activeLeads.filter(l => analysisMap.has(l.id));
   const unanalyzedCount = activeLeads.length - analyzedLeads.length;
 
