@@ -526,3 +526,7 @@
 - [x] client: Update Convert button label to "Convert → Retained & Onboarding"
 - [x] client: Update handleDrop/handleStageChange to use new stage name
 - [x] client: Update Convert modal success toast message
+
+## Remove Duplicate Onboarding Checklist from Lead Detail Panel
+
+- [x] Remove the "ONBOARDING CHECKLIST" collapsible section from LeadDetailPanel.tsx (keep only the Kanban card checklist)

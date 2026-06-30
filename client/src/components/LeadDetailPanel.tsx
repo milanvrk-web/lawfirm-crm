@@ -455,7 +455,6 @@ export default function LeadDetailPanel({
     toast.success(`${field === "phone" ? "Phone" : "Email"} updated`);
   };
   const [installmentsExpanded, setInstallmentsExpanded] = useState(false);
-  const [onboardingExpanded, setOnboardingExpanded] = useState(true);
   const [showInlineConvert, setShowInlineConvert] = useState(false);
   const [inlineConvertForm, setInlineConvertForm] = useState({ retainerBooked: "", downpayment: "", caseNumber: "", notes: "" });
   const stageDropdownRef = useRef<HTMLDivElement>(null);
@@ -1381,37 +1380,7 @@ export default function LeadDetailPanel({
             </div>
           )}
 
-          {/* ══════════════════════════════════════════════════
-              SECTION 4 — ONBOARDING CHECKLIST (collapsible)
-              ══════════════════════════════════════════════════ */}
-          {isConvertedStage(lead.stage) && leadId && (
-            <div style={{ borderBottom: "1px solid oklch(1 0 0 / 8%)" }}>
-              <button
-                onClick={() => setOnboardingExpanded(v => !v)}
-                className="w-full flex items-center justify-between px-5 py-3 hover:bg-white/5 transition-colors"
-              >
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-3.5 h-3.5" style={{ color: "oklch(0.65 0.18 145)" }} />
-                  <span
-                    className="text-xs font-bold uppercase tracking-wider"
-                    style={{ color: "oklch(0.65 0.18 145)" }}
-                  >
-                    Onboarding Checklist
-                  </span>
-                </div>
-                <ChevronDown
-                  className="w-4 h-4 transition-transform"
-                  style={{
-                    color: "oklch(0.45 0.01 250)",
-                    transform: onboardingExpanded ? "rotate(180deg)" : "rotate(0deg)",
-                  }}
-                />
-              </button>
-              {onboardingExpanded && (
-                <OnboardingTab leadId={leadId} activeMemberName={activeMember?.name ?? "Staff"} />
-              )}
-            </div>
-          )}
+          {/* Onboarding checklist is shown on the Kanban card — not duplicated here */}
 
         </div>
         {/* end scrollable body */}
