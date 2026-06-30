@@ -30,7 +30,7 @@ import LeadDetailPanel from "@/components/LeadDetailPanel";
 import { useActiveMember } from "@/contexts/ActiveMemberContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { trpc } from "@/lib/trpc";
-import { isConvertedStage } from "@shared/const";
+import { isConvertedStage, isActiveLeadStage } from "@shared/const";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -146,6 +146,12 @@ export default function Leads() {
     }
   }, [location]);
 
+  // ── Month selector for the summary card ─────────────────
+  const nowPST = new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
+  const [summaryMonth, setSummaryMonth] = useState(() => parseInt(nowPST.split("-")[1]));
+  const [summaryYear, setSummaryYear] = useState(() => parseInt(nowPST.split("-")[0]));
+  const MONTHS_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
   // ── Dynamic pipeline stages from DB ──────────────────────
   const { data: dbStages = [] } = trpc.pipeline.getStages.useQuery();
   const { data: allChecklistTemplates = [] } = trpc.pipeline.getAllChecklistTemplates.useQuery();
@@ -179,6 +185,30 @@ export default function Leads() {
     if (dbStages.length === 0) return STAGES as string[];
     return [...dbStages].sort((a, b) => a.order - b.order).map(s => s.name);
   }, [dbStages]);
+
+  // ── Bifurcation stats (all-time + monthly) ─────────────────────
+  const allTimeActive = useMemo(() => leads.filter(l => isActiveLeadStage(l.stage)).length, [leads]);
+  const allTimeConverted = useMemo(() => leads.filter(l => isConvertedStage(l.stage)).length, [leads]);
+  const allTimeLost = useMemo(() => leads.filter(l => l.stage === "Lost").length, [leads]);
+  const allTimeTotal = allTimeActive + allTimeConverted + allTimeLost;
+  const allTimeConvRate = allTimeTotal > 0 ? Math.round((allTimeConverted / allTimeTotal) * 100) : 0;
+
+  const monthLeadsIn = useMemo(() => leads.filter(l => {
+    const d = new Date(l.date + "T12:00:00");
+    return d.getFullYear() === summaryYear && d.getMonth() + 1 === summaryMonth;
+  }), [leads, summaryYear, summaryMonth]);
+  const monthConverted = useMemo(() => leads.filter(l => {
+    if (!isConvertedStage(l.stage)) return false;
+    const dateToCheck = l.convertedDate || l.date;
+    const d = new Date(dateToCheck + "T12:00:00");
+    return d.getFullYear() === summaryYear && d.getMonth() + 1 === summaryMonth;
+  }), [leads, summaryYear, summaryMonth]);
+  const monthLost = useMemo(() => leads.filter(l => {
+    if (l.stage !== "Lost") return false;
+    const d = new Date(l.date + "T12:00:00");
+    return d.getFullYear() === summaryYear && d.getMonth() + 1 === summaryMonth;
+  }), [leads, summaryYear, summaryMonth]);
+  const monthConvRate = monthLeadsIn.length > 0 ? Math.round((monthConverted.length / monthLeadsIn.length) * 100) : 0;
 
   const filtered = useMemo(() => {
     return leads.filter(l => {
@@ -483,7 +513,7 @@ export default function Leads() {
             Leads Pipeline
           </h1>
           <p className="text-sm mt-1" style={{ color: "oklch(0.55 0.01 250)" }}>
-            {leads.length} total · {leads.filter(l => l.stage === "Retained").length} retained
+            {allTimeTotal} total · {allTimeActive} active · {allTimeConverted} converted · {allTimeLost} lost
           </p>
         </div>
         <Button onClick={() => { setEditLead(null); setForm(emptyLead); setShowAdd(true); }}
@@ -531,6 +561,104 @@ export default function Leads() {
             )}
           </button>
         ))}
+      </div>
+
+      {/* ── Lead Bifurcation Summary Card ─────────────────────── */}
+      <div className="rounded-lg border overflow-hidden" style={{ background: "oklch(0.16 0.025 250)", borderColor: "oklch(0.72 0.12 75 / 25%)" }}>
+        {/* Header row with month navigator */}
+        <div className="flex items-center justify-between px-5 py-3 border-b" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "oklch(0.72 0.12 75)" }}>Pipeline Overview</span>
+          </div>
+          {/* Month navigator */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                if (summaryMonth === 1) { setSummaryMonth(12); setSummaryYear(y => y - 1); }
+                else setSummaryMonth(m => m - 1);
+              }}
+              className="p-1 rounded hover:bg-white/8 transition-colors"
+              style={{ color: "oklch(0.55 0.01 250)" }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+            <span className="text-xs font-medium w-20 text-center" style={{ color: "oklch(0.75 0.01 250)" }}>
+              {MONTHS_SHORT[summaryMonth - 1]} {summaryYear}
+            </span>
+            <button
+              onClick={() => {
+                if (summaryMonth === 12) { setSummaryMonth(1); setSummaryYear(y => y + 1); }
+                else setSummaryMonth(m => m + 1);
+              }}
+              className="p-1 rounded hover:bg-white/8 transition-colors"
+              style={{ color: "oklch(0.55 0.01 250)" }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Two-column layout: Monthly | All-Time */}
+        <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
+          {/* Monthly column */}
+          <div className="px-5 py-4" style={{ borderRight: "1px solid oklch(1 0 0 / 8%)" }}>
+            <div className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "oklch(0.55 0.01 250)" }}>
+              {MONTHS_SHORT[summaryMonth - 1]} {summaryYear} — This Month
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="rounded-lg px-3 py-2.5" style={{ background: "oklch(0.65 0.15 250 / 10%)", border: "1px solid oklch(0.65 0.15 250 / 20%)" }}>
+                <div className="text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.93 0.005 250)" }}>{monthLeadsIn.length}</div>
+                <div className="text-xs font-medium mt-0.5" style={{ color: "oklch(0.65 0.15 250)" }}>Leads In</div>
+                <div className="text-xs mt-0.5" style={{ color: "oklch(0.45 0.01 250)" }}>entered pipeline</div>
+              </div>
+              <div className="rounded-lg px-3 py-2.5" style={{ background: "oklch(0.55 0.18 145 / 10%)", border: "1px solid oklch(0.55 0.18 145 / 20%)" }}>
+                <div className="text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.93 0.005 250)" }}>{monthConverted.length}</div>
+                <div className="text-xs font-medium mt-0.5" style={{ color: "oklch(0.55 0.18 145)" }}>Converted</div>
+                <div className="text-xs mt-0.5" style={{ color: "oklch(0.45 0.01 250)" }}>{monthConvRate}% conv. rate</div>
+              </div>
+              <div className="rounded-lg px-3 py-2.5" style={{ background: "oklch(0.65 0.18 25 / 10%)", border: "1px solid oklch(0.65 0.18 25 / 20%)" }}>
+                <div className="text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.93 0.005 250)" }}>{monthLost.length}</div>
+                <div className="text-xs font-medium mt-0.5" style={{ color: "oklch(0.65 0.18 25)" }}>Lost</div>
+                <div className="text-xs mt-0.5" style={{ color: "oklch(0.45 0.01 250)" }}>did not convert</div>
+              </div>
+            </div>
+          </div>
+
+          {/* All-Time column */}
+          <div className="px-5 py-4">
+            <div className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "oklch(0.55 0.01 250)" }}>
+              All-Time — {allTimeTotal} Total Leads
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="rounded-lg px-3 py-2.5" style={{ background: "oklch(0.65 0.15 250 / 10%)", border: "1px solid oklch(0.65 0.15 250 / 20%)" }}>
+                <div className="text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.93 0.005 250)" }}>{allTimeActive}</div>
+                <div className="text-xs font-medium mt-0.5" style={{ color: "oklch(0.65 0.15 250)" }}>Active</div>
+                <div className="text-xs mt-0.5" style={{ color: "oklch(0.45 0.01 250)" }}>in pipeline now</div>
+              </div>
+              <div className="rounded-lg px-3 py-2.5" style={{ background: "oklch(0.55 0.18 145 / 10%)", border: "1px solid oklch(0.55 0.18 145 / 20%)" }}>
+                <div className="text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.93 0.005 250)" }}>{allTimeConverted}</div>
+                <div className="text-xs font-medium mt-0.5" style={{ color: "oklch(0.55 0.18 145)" }}>Converted</div>
+                <div className="text-xs mt-0.5" style={{ color: "oklch(0.45 0.01 250)" }}>{allTimeConvRate}% all-time rate</div>
+              </div>
+              <div className="rounded-lg px-3 py-2.5" style={{ background: "oklch(0.65 0.18 25 / 10%)", border: "1px solid oklch(0.65 0.18 25 / 20%)" }}>
+                <div className="text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.93 0.005 250)" }}>{allTimeLost}</div>
+                <div className="text-xs font-medium mt-0.5" style={{ color: "oklch(0.65 0.18 25)" }}>Lost</div>
+                <div className="text-xs mt-0.5" style={{ color: "oklch(0.45 0.01 250)" }}>{allTimeTotal > 0 ? Math.round((allTimeLost / allTimeTotal) * 100) : 0}% of total</div>
+              </div>
+            </div>
+            {/* Progress bar */}
+            <div className="flex rounded-full overflow-hidden h-1.5 mt-3">
+              <div style={{ width: `${allTimeTotal > 0 ? (allTimeActive / allTimeTotal) * 100 : 0}%`, background: "oklch(0.65 0.15 250)" }} />
+              <div style={{ width: `${allTimeTotal > 0 ? (allTimeConverted / allTimeTotal) * 100 : 0}%`, background: "oklch(0.55 0.18 145)" }} />
+              <div style={{ width: `${allTimeTotal > 0 ? (allTimeLost / allTimeTotal) * 100 : 0}%`, background: "oklch(0.65 0.18 25)" }} />
+            </div>
+            <div className="flex items-center gap-3 mt-1.5">
+              <span className="text-xs" style={{ color: "oklch(0.65 0.15 250)" }}>■ Active</span>
+              <span className="text-xs" style={{ color: "oklch(0.55 0.18 145)" }}>■ Converted</span>
+              <span className="text-xs" style={{ color: "oklch(0.65 0.18 25)" }}>■ Lost</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Pipeline columns — dynamic from DB */}
