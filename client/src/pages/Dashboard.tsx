@@ -68,7 +68,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { isConvertedStage } from "@shared/const";
+import { isConvertedStage, isActiveLeadStage } from "@shared/const";
 
 
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
@@ -138,6 +138,14 @@ export default function Dashboard() {
   const existingClientRev = monthPayments.filter(p => p.paymentType === "Existing Client").reduce((s, p) => s + p.amount, 0);
   const totalReceived = newClientRev + existingClientRev;
   const pctOfBooked = revenueBooked > 0 ? Math.round((totalReceived / revenueBooked) * 100) : 0;
+
+  // ── All-time pipeline bifurcation (for the lead status overview card) ──
+  // Active = not converted, not lost. Converted = Retained + Onboarding. Lost = Lost.
+  const allTimeActive = useMemo(() => leads.filter(l => isActiveLeadStage(l.stage)).length, [leads]);
+  const allTimeConverted = useMemo(() => leads.filter(l => isConvertedStage(l.stage)).length, [leads]);
+  const allTimeLost = useMemo(() => leads.filter(l => l.stage === "Lost").length, [leads]);
+  const allTimeTotal = allTimeActive + allTimeConverted + allTimeLost;
+  const allTimeConvRate = allTimeTotal > 0 ? Math.round((allTimeConverted / allTimeTotal) * 100) : 0;
 
   // Weekly data
   const weeks = useMemo(() => getWeeksInMonth(selectedYear, selectedMonth), [selectedYear, selectedMonth]);
@@ -236,7 +244,7 @@ export default function Dashboard() {
       return d.getFullYear() === prevY && d.getMonth() + 1 === prevM;
     }).length;
     const prevConverted = leads.filter(l => {
-      if (l.stage !== "Retained") return false;
+      if (!isConvertedStage(l.stage)) return false;
       const dateToCheck = l.convertedDate || l.date;
       const d = new Date(dateToCheck + "T12:00:00");
       return d.getFullYear() === prevY && d.getMonth() + 1 === prevM;
@@ -860,6 +868,66 @@ export default function Dashboard() {
           </div>
         );
       })()}
+
+      {/* ── Lead Status Overview (Active / Converted / Lost) ─────────── */}
+      <div className="rounded-lg border overflow-hidden" style={{ background: "oklch(0.18 0.025 250)", borderColor: "oklch(0.72 0.12 75 / 30%)" }}>
+        <div className="px-5 py-3 border-b flex items-center gap-2" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
+          <Users className="w-4 h-4" style={{ color: "oklch(0.72 0.12 75)" }} />
+          <span className="text-sm font-semibold uppercase tracking-wider" style={{ color: "oklch(0.72 0.12 75)" }}>Lead Status Overview</span>
+          <span className="text-xs ml-1" style={{ color: "oklch(0.45 0.01 250)" }}>all-time · {allTimeTotal} total</span>
+        </div>
+        <div className="grid grid-cols-3">
+          {/* Active Leads */}
+          <div className="px-5 py-4 flex flex-col gap-1" style={{ borderRight: "1px solid oklch(1 0 0 / 8%)" }}>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-2 h-2 rounded-full" style={{ background: "oklch(0.65 0.15 250)" }} />
+              <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "oklch(0.65 0.15 250)" }}>Active Leads</span>
+            </div>
+            <div className="text-3xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.93 0.005 250)" }}>{allTimeActive}</div>
+            <div className="text-xs" style={{ color: "oklch(0.45 0.01 250)" }}>Still in pipeline — not yet converted or lost</div>
+            <div className="text-xs mt-1 font-medium" style={{ color: "oklch(0.65 0.15 250)" }}>
+              {allTimeTotal > 0 ? Math.round((allTimeActive / allTimeTotal) * 100) : 0}% of all leads
+            </div>
+          </div>
+          {/* Converted Clients */}
+          <div className="px-5 py-4 flex flex-col gap-1" style={{ borderRight: "1px solid oklch(1 0 0 / 8%)" }}>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-2 h-2 rounded-full" style={{ background: "oklch(0.55 0.18 145)" }} />
+              <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "oklch(0.55 0.18 145)" }}>Converted Clients</span>
+            </div>
+            <div className="text-3xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.93 0.005 250)" }}>{allTimeConverted}</div>
+            <div className="text-xs" style={{ color: "oklch(0.45 0.01 250)" }}>Retained + Onboarding — signed retainer</div>
+            <div className="text-xs mt-1 font-medium" style={{ color: "oklch(0.55 0.18 145)" }}>
+              {allTimeConvRate}% conversion rate
+            </div>
+          </div>
+          {/* Lost */}
+          <div className="px-5 py-4 flex flex-col gap-1">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-2 h-2 rounded-full" style={{ background: "oklch(0.65 0.18 25)" }} />
+              <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "oklch(0.65 0.18 25)" }}>Lost</span>
+            </div>
+            <div className="text-3xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.93 0.005 250)" }}>{allTimeLost}</div>
+            <div className="text-xs" style={{ color: "oklch(0.45 0.01 250)" }}>Did not convert — marked as lost</div>
+            <div className="text-xs mt-1 font-medium" style={{ color: "oklch(0.65 0.18 25)" }}>
+              {allTimeTotal > 0 ? Math.round((allTimeLost / allTimeTotal) * 100) : 0}% of all leads
+            </div>
+          </div>
+        </div>
+        {/* Progress bar */}
+        <div className="px-5 pb-4">
+          <div className="flex rounded-full overflow-hidden h-2 mt-1">
+            <div style={{ width: `${allTimeTotal > 0 ? (allTimeActive / allTimeTotal) * 100 : 0}%`, background: "oklch(0.65 0.15 250)" }} />
+            <div style={{ width: `${allTimeTotal > 0 ? (allTimeConverted / allTimeTotal) * 100 : 0}%`, background: "oklch(0.55 0.18 145)" }} />
+            <div style={{ width: `${allTimeTotal > 0 ? (allTimeLost / allTimeTotal) * 100 : 0}%`, background: "oklch(0.65 0.18 25)" }} />
+          </div>
+          <div className="flex items-center gap-4 mt-2">
+            <span className="text-xs" style={{ color: "oklch(0.65 0.15 250)" }}>■ Active</span>
+            <span className="text-xs" style={{ color: "oklch(0.55 0.18 145)" }}>■ Converted</span>
+            <span className="text-xs" style={{ color: "oklch(0.65 0.18 25)" }}>■ Lost</span>
+          </div>
+        </div>
+      </div>
 
             {/* ── 7 Stat Cards ────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 xl:grid-cols-8 gap-3">

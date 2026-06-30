@@ -486,14 +486,14 @@
 
 ## Active Lead Definition Fix (Retained/Onboarding = Converted Clients)
 
-- [ ] Define ACTIVE_STAGES constant (New Lead, Follow-Up, Consultation Scheduled, Consultation Booked) and CONVERTED_STAGES (Retained, Onboarding) in shared/const.ts
-- [ ] Fix Dashboard: "Active Leads" stat card to exclude Retained and Onboarding
-- [ ] Fix Dashboard: Pipeline Value summary to only show active stages (not Retained/Onboarding)
-- [ ] Fix Dashboard: Stale Leads count to exclude Retained/Onboarding
-- [ ] Fix Dashboard: Lead Source ROI and other stats to separate active vs converted
-- [ ] Fix Leads.tsx: "Convert" button hidden for Retained and Onboarding stages
-- [ ] Fix LeadDetailPanel: "Convert" action hidden when stage is Retained or Onboarding
-- [ ] Fix server-side getLeadStats / active lead queries to exclude Retained/Onboarding
+- [x] Define ACTIVE_STAGES constant (New Lead, Follow-Up, Consultation Scheduled, Consultation Booked) and CONVERTED_STAGES (Retained, Onboarding) in shared/const.ts
+- [x] Fix Dashboard: "Active Leads" stat card to exclude Retained and Onboarding
+- [x] Fix Dashboard: Pipeline Value summary to only show active stages (not Retained/Onboarding)
+- [x] Fix Dashboard: Stale Leads count to exclude Retained/Onboarding
+- [x] Fix Dashboard: Lead Source ROI and other stats to separate active vs converted
+- [x] Fix Leads.tsx: "Convert" button hidden for Retained and Onboarding stages
+- [x] Fix LeadDetailPanel: "Convert" action hidden when stage is Retained or Onboarding
+- [x] Fix server-side getLeadStats / active lead queries to exclude Retained/Onboarding
 
 ## Critical: Retained → Onboarding Flow Fix
 
@@ -505,3 +505,11 @@
 - [x] Fix Dashboard converted count: include both Retained AND Onboarding leads converted this month
 - [x] Fix Dashboard active leads count: exclude Retained and Onboarding from active pipeline counts
 - [x] Fix Pipeline Value section: use dynamic active stages from DB instead of hardcoded ["New Lead", "Consultation", "Follow-Up"]
+
+## Convert Button & Dashboard Bifurcation Fix
+
+- [x] Find and remove Convert button/action from LeadDetailPanel when stage is Retained or Onboarding
+- [x] Redesign Dashboard stat section: Active Leads (pre-conversion only) | Converted Clients (Retained+Onboarding) | Lost — three clear buckets
+- [x] Active Leads count must exclude Lost, Retained, Onboarding
+- [x] Show conversion rate = Converted / (Active + Converted)
+- [x] Lost count shown separately

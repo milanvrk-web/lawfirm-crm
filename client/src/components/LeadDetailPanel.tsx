@@ -700,7 +700,7 @@ export default function LeadDetailPanel({
                 <Edit2 className="w-4 h-4" />
               </button>
             )}
-            {onConvertLead && lead.stage !== "Retained" && lead.stage !== "Lost" && (
+            {onConvertLead && !isConvertedStage(lead.stage) && lead.stage !== "Lost" && (
               <button
                 onClick={() => onConvertLead(lead)}
                 className="flex items-center gap-1 text-xs px-2 py-1 rounded font-medium transition-colors"

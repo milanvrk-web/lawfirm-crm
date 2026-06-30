@@ -13,6 +13,17 @@ export type ConvertedStage = typeof CONVERTED_STAGES[number];
 export function isConvertedStage(stage: string): boolean {
   return CONVERTED_STAGES.includes(stage as ConvertedStage);
 }
+
+/** The lost stage name */
+export const LOST_STAGE = "Lost";
+
+/**
+ * Check if a lead stage is an "active" lead —
+ * i.e. still in the pipeline, not yet converted and not lost.
+ */
+export function isActiveLeadStage(stage: string): boolean {
+  return !isConvertedStage(stage) && stage !== LOST_STAGE;
+}
 export const ONE_YEAR_MS = 1000 * 60 * 60 * 24 * 365;
 export const AXIOS_TIMEOUT_MS = 30_000;
 export const UNAUTHED_ERR_MSG = 'Please login (10001)';
