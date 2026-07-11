@@ -1,0 +1,13 @@
+{
+  "query": "INSERT INTO revenue_targets (key, value) VALUES\n  ('monthly_green', 125000),\n  ('monthly_yellow', 100000),\n  ('weekly_green', 31250),\n  ('weekly_yellow', 25000)\nON DUPLICATE KEY UPDATE value = VALUES(value);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute INSERT INTO revenue_targets (key, value) VALUES\n  ('monthly_green', 125000),\n  ('monthly_yellow', 100000),\n  ('weekly_green', 31250),\n  ('weekly_yellow', 25000)\nON DUPLICATE KEY UPDATE value = VALUES(value);",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1064 (42000) at line 1: You have an error in your SQL syntax; check the manual that corresponds to your TiDB version for the right syntax to use line 1 column 32 near \"key, value) VALUES",
+    "  ('monthly_green', 125000),",
+    "  ('monthly_yellow', 100000),",
+    "  ('weekly_green', 31250),",
+    "  ('weekly_yellow', 25000)",
+    "ON DUPLICATE KEY UPDATE value = VALUES(value)\""
+  ]
+}

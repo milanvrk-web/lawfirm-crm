@@ -764,3 +764,30 @@ export async function getBriefingHistory(limit = 14) {
   const { desc } = await import("drizzle-orm");
   return db.select().from(dailyBriefings).orderBy(desc(dailyBriefings.createdAt)).limit(limit);
 }
+
+// ─── Revenue Targets ─────────────────────────────────────────
+
+export async function getRevenueTargets(): Promise<Record<string, number>> {
+  const db = await getDb();
+  if (!db) return {};
+  const { revenueTargets } = await import("../drizzle/schema");
+  const rows = await db.select().from(revenueTargets);
+  const result: Record<string, number> = {};
+  for (const row of rows) {
+    result[row.key] = row.value;
+  }
+  return result;
+}
+
+export async function setRevenueTarget(key: string, value: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  const { revenueTargets } = await import("../drizzle/schema");
+  const { eq } = await import("drizzle-orm");
+  const existing = await db.select().from(revenueTargets).where(eq(revenueTargets.key, key)).limit(1);
+  if (existing.length > 0) {
+    await db.update(revenueTargets).set({ value }).where(eq(revenueTargets.key, key));
+  } else {
+    await db.insert(revenueTargets).values({ key, value });
+  }
+}

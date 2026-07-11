@@ -72,10 +72,40 @@ const PaymentInput = z.object({
   notes: z.string().default(""),
 });
 
+// ─── Revenue Targets Router ─────────────────────────────────
+const targetsRouter = router({
+  get: publicProcedure.query(async () => {
+    const raw = await db.getRevenueTargets();
+    return {
+      monthly: {
+        green: raw["monthly_green"] ?? 125000,
+        yellow: raw["monthly_yellow"] ?? 100000,
+      },
+      weekly: {
+        green: raw["weekly_green"] ?? 31250,
+        yellow: raw["weekly_yellow"] ?? 25000,
+      },
+    };
+  }),
+  set: publicProcedure
+    .input(z.object({
+      monthly: z.object({ green: z.number().int().min(1), yellow: z.number().int().min(1) }),
+      weekly: z.object({ green: z.number().int().min(1), yellow: z.number().int().min(1) }),
+    }))
+    .mutation(async ({ input }) => {
+      await db.setRevenueTarget("monthly_green", input.monthly.green);
+      await db.setRevenueTarget("monthly_yellow", input.monthly.yellow);
+      await db.setRevenueTarget("weekly_green", input.weekly.green);
+      await db.setRevenueTarget("weekly_yellow", input.weekly.yellow);
+      return { ok: true };
+    }),
+});
+
 // ─── Router ──────────────────────────────────────────────────
 
 export const appRouter = router({
   system: systemRouter,
+  targets: targetsRouter,
 
   // ─── Access Code ──────────────────────────────────────────
   access: router({

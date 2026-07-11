@@ -1,0 +1,61 @@
+{
+  "query": "SHOW TABLES;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute SHOW TABLES;",
+  "rows": [
+    {
+      "Tables_in_4rZsaze476Y7zwabXnFWJ2": "__drizzle_migrations"
+    },
+    {
+      "Tables_in_4rZsaze476Y7zwabXnFWJ2": "ai_lead_analysis"
+    },
+    {
+      "Tables_in_4rZsaze476Y7zwabXnFWJ2": "crm_members"
+    },
+    {
+      "Tables_in_4rZsaze476Y7zwabXnFWJ2": "daily_briefings"
+    },
+    {
+      "Tables_in_4rZsaze476Y7zwabXnFWJ2": "day_closes"
+    },
+    {
+      "Tables_in_4rZsaze476Y7zwabXnFWJ2": "follow_up_comments"
+    },
+    {
+      "Tables_in_4rZsaze476Y7zwabXnFWJ2": "follow_ups"
+    },
+    {
+      "Tables_in_4rZsaze476Y7zwabXnFWJ2": "installment_items"
+    },
+    {
+      "Tables_in_4rZsaze476Y7zwabXnFWJ2": "installment_plans"
+    },
+    {
+      "Tables_in_4rZsaze476Y7zwabXnFWJ2": "lead_notes"
+    },
+    {
+      "Tables_in_4rZsaze476Y7zwabXnFWJ2": "leads"
+    },
+    {
+      "Tables_in_4rZsaze476Y7zwabXnFWJ2": "onboarding_checklist"
+    },
+    {
+      "Tables_in_4rZsaze476Y7zwabXnFWJ2": "payments"
+    },
+    {
+      "Tables_in_4rZsaze476Y7zwabXnFWJ2": "pipeline_stages"
+    },
+    {
+      "Tables_in_4rZsaze476Y7zwabXnFWJ2": "stage_checklist_completions"
+    },
+    {
+      "Tables_in_4rZsaze476Y7zwabXnFWJ2": "stage_checklist_templates"
+    },
+    {
+      "Tables_in_4rZsaze476Y7zwabXnFWJ2": "users"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_4rZsaze476Y7zwabXnFWJ2\n__drizzle_migrations\nai_lead_analysis\ncrm_members\ndaily_briefings\nday_closes\nfollow_up_comments\nfollow_ups\ninstallment_items\ninstallment_plans\nlead_notes\nleads\nonboarding_checklist\npayments\npipeline_stages\nstage_checklist_completions\nstage_checklist_templates\nusers\n",
+  "stderr": "",
+  "execution_time_ms": 267
+}

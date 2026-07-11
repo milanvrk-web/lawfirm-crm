@@ -543,3 +543,13 @@
 - [x] Fix typo in DB: "Referra" → "Referral" for the 1 affected lead
 - [x] Also update Source dropdown in Edit Lead form (same modal reused for Add and Edit)
 - [x] LeadDetailPanel shows source as read-only info field (no inline edit needed)
+
+## Revenue Targets — Move to Database
+
+- [x] Add `revenue_targets` table to drizzle schema (id, key varchar, value int, updatedAt)
+- [x] Run db:push migration
+- [x] Add getTargets and setTarget tRPC procedures (public — no auth needed for internal tool)
+- [x] Seed default targets: monthly_green=125000, monthly_yellow=100000, weekly_green=31250, weekly_yellow=25000
+- [x] Update CRMContext: fetch targets from DB via tRPC instead of localStorage
+- [x] Update Dashboard targets editor: save to DB via tRPC mutation instead of localStorage
+- [x] Update DEFAULT_TARGETS in store.ts to $125,000 monthly as fallback

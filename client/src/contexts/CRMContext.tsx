@@ -148,6 +148,7 @@ function normalizeDayClose(r: DbDayClose): DayClose {
 // ─── Provider ────────────────────────────────────────────────
 
 export function CRMProvider({ children }: { children: React.ReactNode }) {
+  // Targets: start from localStorage fallback, then sync from DB
   const [targets, setTargets] = useState<Targets>(() => loadTargets());
   const utils = trpc.useUtils();
 
@@ -204,10 +205,24 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
 
   // ─── Handlers ──────────────────────────────────────────────
 
+  // Fetch targets from DB — overrides localStorage once loaded
+  const { data: dbTargetsData } = trpc.targets.get.useQuery();
+  React.useEffect(() => {
+    if (dbTargetsData) {
+      setTargets(dbTargetsData);
+      saveTargets(dbTargetsData); // keep localStorage in sync as cache
+    }
+  }, [dbTargetsData]);
+
+  const setTargetsMut = trpc.targets.set.useMutation({
+    onSuccess: () => utils.targets.get.invalidate(),
+  });
+
   const handleUpdateTargets = useCallback((t: Targets) => {
     setTargets(t);
-    saveTargets(t);
-  }, []);
+    saveTargets(t); // optimistic local update
+    setTargetsMut.mutate(t); // persist to DB
+  }, [setTargetsMut]);
 
   const handleAddLead = useCallback(async (lead: Omit<Lead, "id">) => {
     await createLeadMut.mutateAsync({

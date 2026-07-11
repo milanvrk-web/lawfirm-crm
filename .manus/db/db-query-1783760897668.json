@@ -1,0 +1,9 @@
+{
+  "query": "INSERT INTO revenue_targets (`key`, `value`) VALUES ('monthly_green', 125000), ('monthly_yellow', 100000), ('weekly_green', 31250), ('weekly_yellow', 25000)",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3XMcbxFzTHYovJ1.eda9eae315a0 --database 4rZsaze476Y7zwabXnFWJ2 --execute INSERT INTO revenue_targets (`key`, `value`) VALUES ('monthly_green', 125000), ('monthly_yellow', 100000), ('weekly_green', 31250), ('weekly_yellow', 25000)",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 274
+}

@@ -292,3 +292,17 @@ export const dailyBriefings = mysqlTable("daily_briefings", {
 });
 export type DbDailyBriefing = typeof dailyBriefings.$inferSelect;
 export type InsertDailyBriefing = typeof dailyBriefings.$inferInsert;
+
+// ─── Revenue Targets ─────────────────────────────────────────
+// Stores adjustable revenue targets (monthly/weekly green/yellow zones).
+// key examples: "monthly_green", "monthly_yellow", "weekly_green", "weekly_yellow"
+
+export const revenueTargets = mysqlTable("revenue_targets", {
+  id: int("id").autoincrement().primaryKey(),
+  key: varchar("key", { length: 64 }).notNull().unique(),
+  value: int("value").notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type RevenueTarget = typeof revenueTargets.$inferSelect;
+export type InsertRevenueTarget = typeof revenueTargets.$inferInsert;

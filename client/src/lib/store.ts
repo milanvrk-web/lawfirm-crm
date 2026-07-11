@@ -438,8 +438,8 @@ export interface Targets {
 }
 
 export const DEFAULT_TARGETS: Targets = {
-  monthly: { green: 70000, yellow: 50000 },
-  weekly: { green: 17500, yellow: 12500 },
+  monthly: { green: 125000, yellow: 100000 },
+  weekly: { green: 31250, yellow: 25000 },
 };
 
 const TARGETS_KEY = "lawfirm_crm_targets";
