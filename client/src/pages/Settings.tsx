@@ -142,7 +142,7 @@ export default function Settings() {
                   ...inputStyle,
                   borderColor: !monthlyValid && mGreen <= mYellow && mGreen > 0 ? "oklch(0.60 0.22 25 / 60%)" : "oklch(0.30 0.02 250)",
                 }}
-                placeholder="70000"
+                placeholder="125000"
               />
               <p className="text-xs mt-1" style={{ color: "oklch(0.45 0.01 250)" }}>
                 Current: ${mGreen.toLocaleString()}
@@ -160,7 +160,7 @@ export default function Settings() {
                   ...inputStyle,
                   borderColor: !monthlyValid && mYellow >= mGreen && mYellow > 0 ? "oklch(0.60 0.22 25 / 60%)" : "oklch(0.30 0.02 250)",
                 }}
-                placeholder="50000"
+                placeholder="100000"
               />
               <p className="text-xs mt-1" style={{ color: "oklch(0.45 0.01 250)" }}>
                 Current: ${mYellow.toLocaleString()}
@@ -217,7 +217,7 @@ export default function Settings() {
                   ...inputStyle,
                   borderColor: !weeklyValid && wGreen <= wYellow && wGreen > 0 ? "oklch(0.60 0.22 25 / 60%)" : "oklch(0.30 0.02 250)",
                 }}
-                placeholder="17500"
+                placeholder="31250"
               />
               <p className="text-xs mt-1" style={{ color: "oklch(0.45 0.01 250)" }}>
                 Current: ${wGreen.toLocaleString()}
@@ -235,7 +235,7 @@ export default function Settings() {
                   ...inputStyle,
                   borderColor: !weeklyValid && wYellow >= wGreen && wYellow > 0 ? "oklch(0.60 0.22 25 / 60%)" : "oklch(0.30 0.02 250)",
                 }}
-                placeholder="12500"
+                placeholder="25000"
               />
               <p className="text-xs mt-1" style={{ color: "oklch(0.45 0.01 250)" }}>
                 Current: ${wYellow.toLocaleString()}
@@ -298,7 +298,7 @@ export default function Settings() {
 
       {/* Info card */}
       <div className="rounded-xl p-4 text-sm" style={{ background: "oklch(0.72 0.12 75 / 8%)", border: "1px solid oklch(0.72 0.12 75 / 20%)", color: "oklch(0.70 0.08 75)" }}>
-        <strong>Defaults:</strong> Monthly Green $70,000 · Yellow $50,000 &nbsp;|&nbsp; Weekly Green $17,500 · Yellow $12,500. Changes are saved in your browser and persist across sessions.
+        <strong>Defaults:</strong> Monthly Green $125,000 · Yellow $100,000 &nbsp;|&nbsp; Weekly Green $31,250 · Yellow $25,000. Changes are saved to the database and apply to all team members instantly.
       </div>
     </div>
   );

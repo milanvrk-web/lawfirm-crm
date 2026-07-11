@@ -1023,18 +1023,18 @@ export default function Dashboard() {
               </span>
             </div>
             <div className="relative h-4 rounded-full overflow-hidden mb-2" style={{ background: "oklch(0.22 0.025 250)" }}>
-              {/* Red zone */}
-              <div className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${Math.min(100, (targets.monthly.yellow / 80000) * 100)}%`, background: "oklch(0.60 0.22 25 / 30%)" }} />
-              {/* Yellow zone */}
-              <div className="absolute inset-y-0 rounded-full" style={{ left: `${(targets.monthly.yellow / 80000) * 100}%`, width: `${((targets.monthly.green - targets.monthly.yellow) / 80000) * 100}%`, background: "oklch(0.72 0.15 80 / 30%)" }} />
-              {/* Green zone */}
-              <div className="absolute inset-y-0 rounded-full" style={{ left: `${(targets.monthly.green / 80000) * 100}%`, right: 0, background: "oklch(0.55 0.18 145 / 30%)" }} />
+              {/* Red zone: 0 → yellow */}
+              <div className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${Math.min(100, (targets.monthly.yellow / targets.monthly.green) * 100)}%`, background: "oklch(0.60 0.22 25 / 30%)" }} />
+              {/* Yellow zone: yellow → green */}
+              <div className="absolute inset-y-0 rounded-full" style={{ left: `${(targets.monthly.yellow / targets.monthly.green) * 100}%`, width: `${((targets.monthly.green - targets.monthly.yellow) / targets.monthly.green) * 100}%`, background: "oklch(0.72 0.15 80 / 30%)" }} />
+              {/* Green zone: green → max */}
+              <div className="absolute inset-y-0 rounded-full" style={{ left: `${Math.min(100, (targets.monthly.green / targets.monthly.green) * 100)}%`, right: 0, background: "oklch(0.55 0.18 145 / 30%)" }} />
               {/* Progress */}
-              <div className="absolute inset-y-0 left-0 rounded-full transition-all duration-700" style={{ width: `${Math.min(100, (totalReceived / 80000) * 100)}%`, background: sc.text }} />
+              <div className="absolute inset-y-0 left-0 rounded-full transition-all duration-700" style={{ width: `${Math.min(100, (totalReceived / targets.monthly.green) * 100)}%`, background: sc.text }} />
             </div>
             <div className="flex justify-between text-xs" style={{ color: "oklch(0.50 0.01 250)" }}>
               <span>{formatCurrency(totalReceived)}</span>
-              <span>Target: {formatCurrency(80000)}</span>
+              <span>Target: {formatCurrency(targets.monthly.green)}</span>
             </div>
             {totalReceived < targets.monthly.green && (
               <div className="text-xs mt-1" style={{ color: "oklch(0.55 0.01 250)" }}>
@@ -1047,24 +1047,25 @@ export default function Dashboard() {
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-medium" style={{ color: "oklch(0.65 0.01 250)" }}>Weekly Breakdown</span>
               <div className="flex items-center gap-3 text-xs" style={{ color: "oklch(0.50 0.01 250)" }}>
-                <span>🟢 $17.5k</span>
-                <span>🟡 $12.5k</span>
+                <span>🟢 {formatCurrency(targets.weekly.green)}</span>
+                <span>🟡 {formatCurrency(targets.weekly.yellow)}</span>
               </div>
             </div>
             <div className="space-y-2">
               {weeklyData.map((w, i) => {
                 const wStatus = getTargetStatus(w.total, "weekly", targets);
                 const wSc = statusColors[wStatus];
-                const pct = Math.min(100, (w.total / 20000) * 100);
+                const weekScale = targets.weekly.green * 1.3; // show a bit past green
+                const pct = Math.min(100, (w.total / weekScale) * 100);
                 return (
                   <div key={i} className="flex items-center gap-3">
                     <span className="text-xs w-14 flex-shrink-0" style={{ color: "oklch(0.55 0.01 250)" }}>{w.name}</span>
                     <div className="flex-1 h-3 rounded-full overflow-hidden relative" style={{ background: "oklch(0.22 0.025 250)" }}>
                       <div className="absolute inset-y-0 left-0 rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: wSc.text }} />
                       {/* Yellow tick */}
-                      <div className="absolute inset-y-0 w-px" style={{ left: `${(targets.weekly.yellow / 20000) * 100}%`, background: "oklch(0.72 0.15 80 / 60%)" }} />
+                      <div className="absolute inset-y-0 w-px" style={{ left: `${Math.min(98, (targets.weekly.yellow / weekScale) * 100)}%`, background: "oklch(0.72 0.15 80 / 60%)" }} />
                       {/* Green tick */}
-                      <div className="absolute inset-y-0 w-px" style={{ left: `${(targets.weekly.green / 20000) * 100}%`, background: "oklch(0.55 0.18 145 / 60%)" }} />
+                      <div className="absolute inset-y-0 w-px" style={{ left: `${Math.min(98, (targets.weekly.green / weekScale) * 100)}%`, background: "oklch(0.55 0.18 145 / 60%)" }} />
                     </div>
                     <span className="text-xs w-16 text-right font-medium" style={{ color: wSc.text }}>{formatCurrency(w.total)}</span>
                   </div>
@@ -1084,8 +1085,8 @@ export default function Dashboard() {
           <div className="flex items-center gap-4 text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>
             <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm inline-block" style={{ background: "oklch(0.72 0.12 75)" }} />New Client</span>
             <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm inline-block" style={{ background: "oklch(0.35 0.05 250)" }} />Existing Client</span>
-            <span className="flex items-center gap-1.5"><span className="w-4 border-t-2 border-dashed inline-block" style={{ borderColor: "oklch(0.55 0.18 145)" }} />$17.5k</span>
-            <span className="flex items-center gap-1.5"><span className="w-4 border-t-2 border-dashed inline-block" style={{ borderColor: "oklch(0.72 0.15 80)" }} />$12.5k</span>
+            <span className="flex items-center gap-1.5"><span className="w-4 border-t-2 border-dashed inline-block" style={{ borderColor: "oklch(0.55 0.18 145)" }} />{formatCurrency(targets.weekly.green)}</span>
+            <span className="flex items-center gap-1.5"><span className="w-4 border-t-2 border-dashed inline-block" style={{ borderColor: "oklch(0.72 0.15 80)" }} />{formatCurrency(targets.weekly.yellow)}</span>
           </div>
         </div>
         <ResponsiveContainer width="100%" height={260}>
