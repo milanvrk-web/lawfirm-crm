@@ -16,8 +16,6 @@ import {
   getMonthPayments,
   getWeeksInMonth,
   getTargetStatus,
-  getDueTodayFollowUps,
-  getOverdueFollowUps,
   type Lead, type Payment, type CaseType, type PaymentType, type LeadStage,
 } from "@/lib/store";
 import {
@@ -95,8 +93,8 @@ function downloadCSV(filename: string, rows: string[][]): void {
 }
 
 export default function Dashboard() {
-  const { leads, payments, followUps, dayCloses, targets, addLead, addPayment } = useCRM();
-  const crmData = useMemo(() => ({ leads, payments, followUps, dayCloses }), [leads, payments, followUps, dayCloses]);
+  const { leads, payments, dayCloses, targets, addLead, addPayment } = useCRM();
+  const crmData = useMemo(() => ({ leads, payments, followUps: [], dayCloses }), [leads, payments, dayCloses]);
   const now = new Date();
   const nowPSTStr = now.toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" }); // YYYY-MM-DD
   const [selectedYear, setSelectedYear] = useState(parseInt(nowPSTStr.split("-")[0]));
@@ -363,9 +361,13 @@ export default function Dashboard() {
   // Today's stats (always today's date for other uses)
   const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
 
-  // Follow-up urgency counts
-  const overdueFollowUps = useMemo(() => followUps.filter(f => f.status === "Pending" && f.dueDate < todayStr), [followUps, todayStr]);
-  const dueTodayFollowUps = useMemo(() => followUps.filter(f => f.status === "Pending" && f.dueDate === todayStr), [followUps, todayStr]);
+  // Follow-up queue counts — must match the Follow-Ups page logic
+  const leadsWithFollowUp = useMemo(
+    () => leads.filter(l => l.followUpDate && isActiveLeadStage(l.stage)),
+    [leads]
+  );
+  const overdueFollowUps = useMemo(() => leadsWithFollowUp.filter(l => l.followUpDate! < todayStr), [leadsWithFollowUp, todayStr]);
+  const dueTodayFollowUps = useMemo(() => leadsWithFollowUp.filter(l => l.followUpDate === todayStr), [leadsWithFollowUp, todayStr]);
   // todayPayments kept for stale-lead checks; individual breakdowns computed in Day Navigator
 
   // Stale leads: active (non-lost, non-retained, non-onboarding) leads with no payment or follow-up activity in 14+ days
@@ -597,7 +599,7 @@ export default function Dashboard() {
       {(() => {
         const navPayments = payments.filter(p => p.date === dayNavDate);
         const navLeads = leads.filter(l => l.date === dayNavDate);
-        const navFollowUps = followUps.filter(f => f.dueDate === dayNavDate && f.status === "Pending");
+        const navFollowUps = leads.filter(l => l.followUpDate === dayNavDate && isActiveLeadStage(l.stage));
         const navNew = navPayments.filter(p => p.paymentType === "New Client").reduce((s, p) => s + p.amount, 0);
         const navExisting = navPayments.filter(p => p.paymentType === "Existing Client").reduce((s, p) => s + p.amount, 0);
         const navTotal = navNew + navExisting;
@@ -730,16 +732,13 @@ export default function Dashboard() {
                   Follow-Ups Due — {navFollowUps.length}
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {navFollowUps.map(f => {
-                    const lead = leads.find(l => l.id === f.leadId);
-                    return (
-                      <div key={f.id} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs" style={{ background: "oklch(0.22 0.025 250)", color: "oklch(0.80 0.01 250)" }}>
-                        {lead && <span className="font-medium" style={{ color: "oklch(0.93 0.005 250)" }}>{lead.name}</span>}
-                        <span style={{ color: "oklch(0.50 0.01 250)" }}>·</span>
-                        <span>{f.title}</span>
-                      </div>
-                    );
-                  })}
+                  {navFollowUps.map(lead => (
+                    <div key={lead.id} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs" style={{ background: "oklch(0.22 0.025 250)", color: "oklch(0.80 0.01 250)" }}>
+                      <span className="font-medium" style={{ color: "oklch(0.93 0.005 250)" }}>{lead.name}</span>
+                      <span style={{ color: "oklch(0.50 0.01 250)" }}>·</span>
+                      <span>{lead.caseType}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
@@ -846,39 +845,31 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* -- Follow-Up Alert Strip */}
+      {/* -- Follow-Up Queue Strip */}
       {(() => {
-        const dueTodayFUs = getDueTodayFollowUps(crmData as any);
-        const overdueFUs = getOverdueFollowUps(crmData as any);
-        if (dueTodayFUs.length === 0 && overdueFUs.length === 0) return null;
+        if (dueTodayFollowUps.length === 0 && overdueFollowUps.length === 0) return null;
         return (
           <div className="rounded-lg p-4 border flex items-start gap-4 flex-wrap" style={{ background: "oklch(0.70 0.22 25 / 8%)", borderColor: "oklch(0.70 0.22 25 / 35%)" }}>
             <div className="flex items-center gap-2">
               <Bell className="w-4 h-4" style={{ color: "oklch(0.72 0.12 75)" }} />
-              <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "oklch(0.72 0.12 75)" }}>Follow-Up Alerts</span>
+              <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "oklch(0.72 0.12 75)" }}>Follow-Ups In Progress</span>
             </div>
             <div className="flex items-center gap-4 flex-wrap flex-1">
-              {overdueFUs.length > 0 && (
+              {overdueFollowUps.length > 0 && (
                 <div className="flex items-center gap-2">
                   <AlertCircle className="w-3.5 h-3.5" style={{ color: "oklch(0.70 0.22 25)" }} />
-                  <span className="text-sm font-semibold" style={{ color: "oklch(0.70 0.22 25)" }}>{overdueFUs.length} overdue</span>
+                  <span className="text-sm font-semibold" style={{ color: "oklch(0.70 0.22 25)" }}>{overdueFollowUps.length} overdue in queue</span>
                   <span className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>
-                    {overdueFUs.slice(0, 2).map(f => {
-                      const lead = leads.find(l => l.id === f.leadId);
-                      return lead?.name || "Unknown";
-                    }).join(", ")}{overdueFUs.length > 2 ? ` +${overdueFUs.length - 2} more` : ""}
+                    {overdueFollowUps.slice(0, 2).map(lead => lead.name).join(", ")}{overdueFollowUps.length > 2 ? ` +${overdueFollowUps.length - 2} more` : ""}
                   </span>
                 </div>
               )}
-              {dueTodayFUs.length > 0 && (
+              {dueTodayFollowUps.length > 0 && (
                 <div className="flex items-center gap-2">
                   <CalendarCheck className="w-3.5 h-3.5" style={{ color: "oklch(0.72 0.12 75)" }} />
-                  <span className="text-sm font-semibold" style={{ color: "oklch(0.72 0.12 75)" }}>{dueTodayFUs.length} due today</span>
+                  <span className="text-sm font-semibold" style={{ color: "oklch(0.72 0.12 75)" }}>{dueTodayFollowUps.length} due today</span>
                   <span className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>
-                    {dueTodayFUs.slice(0, 2).map(f => {
-                      const lead = leads.find(l => l.id === f.leadId);
-                      return lead?.name || "Unknown";
-                    }).join(", ")}{dueTodayFUs.length > 2 ? ` +${dueTodayFUs.length - 2} more` : ""}
+                    {dueTodayFollowUps.slice(0, 2).map(lead => lead.name).join(", ")}{dueTodayFollowUps.length > 2 ? ` +${dueTodayFollowUps.length - 2} more` : ""}
                   </span>
                 </div>
               )}
@@ -886,7 +877,7 @@ export default function Dashboard() {
             <Link href="/follow-ups">
               <span className="text-xs font-medium px-3 py-1.5 rounded-lg transition-all hover:opacity-90 cursor-pointer"
                 style={{ background: "oklch(0.72 0.12 75 / 15%)", color: "oklch(0.72 0.12 75)", border: "1px solid oklch(0.72 0.12 75 / 35%)" }}>
-                View All
+                Open Follow-Ups
               </span>
             </Link>
           </div>

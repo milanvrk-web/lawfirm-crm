@@ -553,3 +553,12 @@
 - [x] Update CRMContext: fetch targets from DB via tRPC instead of localStorage
 - [x] Update Dashboard targets editor: save to DB via tRPC mutation instead of localStorage
 - [x] Update DEFAULT_TARGETS in store.ts to $125,000 monthly as fallback
+
+## Follow-Up System Unification
+
+- [ ] Rebuild Follow-Ups page to use lead.followUpDate as single source of truth (not separate follow_ups table)
+- [ ] Follow-Ups page: show leads grouped into Overdue / Today / Upcoming sections
+- [ ] Each lead row shows: name, phone, stage, assigned to, follow-up date, last comment
+- [ ] Allow marking follow-up done (clears followUpDate or sets new date) directly from the page
+- [ ] Fix Dashboard overdue count to match Follow-Ups page (use lead.followUpDate < today for active leads only)
+- [ ] Fix sidebar badge urgentCount to match the same logic

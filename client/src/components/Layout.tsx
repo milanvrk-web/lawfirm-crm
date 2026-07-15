@@ -29,8 +29,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCRM } from "@/contexts/CRMContext";
-import { getDueTodayFollowUps, getOverdueFollowUps, formatCurrency } from "@/lib/store";
-import { isConvertedStage } from "@shared/const";
+import { formatCurrency } from "@/lib/store";
+import { isConvertedStage, isActiveLeadStage } from "@shared/const";
 import {
   CommandDialog,
   CommandInput,
@@ -126,10 +126,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     setSearchQuery("");
   }, [navigate]);
 
-  // ── Follow-up urgency badge (uses followUpDate on leads) ───
+  // ── Follow-up urgency badge — synced with Follow-Ups page logic
+  // Only counts active leads (not converted, not lost) with a follow-up date set
   const urgentCount = useMemo(() => {
     const today = todayPST();
-    return leads.filter(l => l.followUpDate && l.followUpDate <= today).length;
+    return leads.filter(l =>
+      l.followUpDate &&
+      l.followUpDate <= today &&
+      isActiveLeadStage(l.stage)
+    ).length;
   }, [leads]);
 
   // Count leads with no follow-up activity in 7+ days (escalation)
