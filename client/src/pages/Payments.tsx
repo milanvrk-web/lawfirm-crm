@@ -46,11 +46,18 @@ export default function Payments() {
   const [filterType, setFilterType] = useState<PaymentType | "All">("All");
 
   // Converted clients for search (Retained & Onboarding)
-  const retainedLeads = useMemo(() => leads.filter(l => isConvertedStage(l.stage)), [leads]);
+  const filteredLeads = useMemo(() => {
+    if (form.paymentType === "New Client") {
+      return leads.filter(l => !isConvertedStage(l.stage));
+    } else {
+      return leads.filter(l => isConvertedStage(l.stage));
+    }
+  }, [leads, form.paymentType]);
+
   const clientMatches = useMemo(() => {
     if (clientSearch.length < 2) return [];
-    return retainedLeads.filter(l => l.name.toLowerCase().includes(clientSearch.toLowerCase())).slice(0, 6);
-  }, [retainedLeads, clientSearch]);
+    return filteredLeads.filter(l => l.name.toLowerCase().includes(clientSearch.toLowerCase())).slice(0, 6);
+  }, [filteredLeads, clientSearch]);
 
   const filtered = useMemo(() => {
     return payments.filter(p => {
@@ -91,7 +98,7 @@ export default function Payments() {
     setShowAdd(true);
   };
 
-  const linkClient = (lead: typeof retainedLeads[0]) => {
+  const linkClient = (lead: typeof filteredLeads[0]) => {
     setForm(f => ({
       ...f,
       clientName: lead.name,
