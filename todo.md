@@ -556,9 +556,13 @@
 
 ## Follow-Up System Unification
 
-- [ ] Rebuild Follow-Ups page to use lead.followUpDate as single source of truth (not separate follow_ups table)
-- [ ] Follow-Ups page: show leads grouped into Overdue / Today / Upcoming sections
-- [ ] Each lead row shows: name, phone, stage, assigned to, follow-up date, last comment
-- [ ] Allow marking follow-up done (clears followUpDate or sets new date) directly from the page
-- [ ] Fix Dashboard overdue count to match Follow-Ups page (use lead.followUpDate < today for active leads only)
-- [ ] Fix sidebar badge urgentCount to match the same logic
+- [x] Rebuild Follow-Ups page to use lead.followUpDate as single source of truth (not separate follow_ups table)
+- [x] Follow-Ups page: show leads grouped into Overdue / Today / Upcoming sections
+- [x] Each lead row shows: name, phone, stage, assigned to, follow-up date, last comment
+- [x] Allow marking follow-up done (clears followUpDate or sets new date) directly from the page
+- [x] Fix Dashboard overdue count to match Follow-Ups page (use lead.followUpDate < today for active leads only)
+- [x] Fix sidebar badge urgentCount to match the same logic
+
+## Release Validation
+
+- [x] Verify current database records, application health, and publish readiness before the user releases the live site
