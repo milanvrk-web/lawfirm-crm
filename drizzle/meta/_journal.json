@@ -141,6 +141,13 @@
       "when": 1783760879072,
       "tag": "0019_lonely_robin_chapel",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "5",
+      "when": 1787638697069,
+      "tag": "0020_wooden_goliath",
+      "breakpoints": true
     }
   ]
 }

@@ -40,6 +40,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import LostLeadDialog from "@/components/LostLeadDialog";
 import {
   FileText, X, Phone, Edit2, CheckCircle, CheckCircle2, Circle,
   Check, ChevronDown, CreditCard, MessageSquare, Trash2, Plus, Calendar, CheckCheck, Pencil,
@@ -457,6 +458,7 @@ export default function LeadDetailPanel({
   const [installmentsExpanded, setInstallmentsExpanded] = useState(false);
   const [showInlineConvert, setShowInlineConvert] = useState(false);
   const [inlineConvertForm, setInlineConvertForm] = useState({ retainerBooked: "", downpayment: "", caseNumber: "", notes: "" });
+  const [lostLeadPending, setLostLeadPending] = useState<Lead | null>(null);
   const stageDropdownRef = useRef<HTMLDivElement>(null);
 
   // Close stage dropdown on outside click
@@ -474,6 +476,10 @@ export default function LeadDetailPanel({
   const handleStageChange = async (newStage: LeadStage) => {
     setStageDropdownOpen(false);
     if (!lead || newStage === lead.stage) return;
+    if (newStage === "Lost" && lead.stage !== "Lost") {
+      setLostLeadPending(lead);
+      return;
+    }
     // Only trigger the Convert flow when moving a non-converted lead TO Retained.
     // If the lead is already Retained or Onboarding (already a client), just update
     // the stage directly without re-running the conversion flow.
@@ -786,6 +792,10 @@ export default function LeadDetailPanel({
                 { label: "Quoted",      value: lead.quotedAmount > 0 ? formatCurrency(lead.quotedAmount) : "—" },
                 ...(lead.caseNumber ? [{ label: "Case #", value: lead.caseNumber }] : []),
                 ...(lead.retainerBooked > 0 ? [{ label: "Retainer", value: formatCurrency(lead.retainerBooked) }] : []),
+                ...(lead.stage === "Lost" ? [
+                  { label: "Loss Reason", value: lead.lostReason || "Reason not recorded" },
+                  ...(lead.lostDate ? [{ label: "Marked Lost", value: formatDate(lead.lostDate) }] : []),
+                ] : []),
               ].map(({ label, value }) => (
                 <div
                   key={label}
@@ -901,6 +911,13 @@ export default function LeadDetailPanel({
                 )}
               </div>
             </div>
+
+            {lead.stage === "Lost" && (
+              <div className="rounded-lg p-3 mb-4" style={{ background: "oklch(0.60 0.22 25 / 8%)", border: "1px solid oklch(0.60 0.22 25 / 25%)" }}>
+                <div className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: "oklch(0.72 0.22 25)" }}>Loss review context</div>
+                <p className="text-sm" style={{ color: "oklch(0.82 0.005 250)" }}>{lead.lostNote || "Legacy record: no supporting context was recorded."}</p>
+              </div>
+            )}
 
             {/* Case Notes */}
             <div>
@@ -1451,6 +1468,8 @@ export default function LeadDetailPanel({
           </div>
         </DialogContent>
       </Dialog>
+
+      <LostLeadDialog lead={lostLeadPending} onClose={() => setLostLeadPending(null)} />
 
       {/* Complete Follow-Up Modal */}
       {showCompleteModal && lead && (

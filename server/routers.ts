@@ -32,6 +32,8 @@ const LeadInput = z.object({
   referredBy: z.string().default(""),
   convertedDate: z.string().optional().nullable(),
   lostReason: z.string().optional().nullable(),
+  lostNote: z.string().optional().nullable(),
+  lostDate: z.string().optional().nullable(),
   consultationFee: z.number().default(0).optional(),
   assignedTo: z.string().optional().nullable(),
 });
@@ -55,6 +57,8 @@ const LeadUpdateInput = z.object({
   referredBy: z.string().optional(),
   convertedDate: z.string().optional().nullable(),
   lostReason: z.string().optional().nullable(),
+  lostNote: z.string().optional().nullable(),
+  lostDate: z.string().optional().nullable(),
   consultationFee: z.number().optional(),
   assignedTo: z.string().optional().nullable(),
   followUpDate: z.string().optional().nullable(),
@@ -163,6 +167,8 @@ export const appRouter = router({
         quotedAmount: String(input.quotedAmount),
         convertedDate: input.convertedDate ?? null,
         lostReason: input.lostReason ?? null,
+        lostNote: input.lostNote ?? null,
+        lostDate: input.lostDate ?? null,
         consultationFee: String(input.consultationFee ?? 0),
         assignedTo: input.assignedTo ?? null,
       });

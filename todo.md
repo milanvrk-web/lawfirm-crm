@@ -566,3 +566,10 @@
 ## Release Validation
 
 - [x] Verify current database records, application health, and publish readiness before the user releases the live site
+
+## Lost Stage Separation & Loss Review
+
+- [x] Visually separate Lost from active and converted pipeline columns on the Leads page
+- [x] Require a standardized loss reason and supporting context whenever a lead is moved to Lost
+- [x] Preserve the loss reason, context, and date in the lead record and display them clearly in lead details
+- [x] Add a reviewable Lost Leads view with reason filtering and a reason-distribution summary
