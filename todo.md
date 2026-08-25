@@ -585,3 +585,7 @@
 - [x] Replace the stale in-process nightly AI briefing timer with a durable Heartbeat-compatible scheduled endpoint
 - [x] Reduce the oversized initial JavaScript bundle found during the production build
 - [x] Re-run validation and checkpoint the stress-tested release
+
+## Kanban Lost Shortcut
+
+- [x] Add a direct Mark Lost shortcut on active Kanban lead cards that opens the required Loss Review dialog

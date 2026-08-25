@@ -865,6 +865,7 @@ export default function Leads() {
                       onEdit={() => openEdit(lead)}
                       onDelete={() => { deleteLead(lead.id); toast.success("Lead deleted"); }}
                       onConvert={() => setConvertLead(lead)}
+                      onMarkLost={() => setLostLeadPending(lead)}
                       onMarkDone={handleMarkDone}
                       onReschedule={handleReschedule}
                       onSetFollowUpDate={(date) => setLeadFollowUpDate(lead.id, date)}
@@ -1122,7 +1123,7 @@ export default function Leads() {
 type ChecklistTemplate = { id: string; stageId: string; label: string; description: string | null; order: number; createdAt: Date; };
 
 function LeadCard({
-  lead, stageTemplates = [], stageColor: cardStageColor, rescheduleCount = 0, aiTier, onOpenDetail, onEdit, onDelete, onConvert, onMarkDone, onReschedule, onSetFollowUpDate,
+  lead, stageTemplates = [], stageColor: cardStageColor, rescheduleCount = 0, aiTier, onOpenDetail, onEdit, onDelete, onConvert, onMarkLost, onMarkDone, onReschedule, onSetFollowUpDate,
 }: {
   lead: Lead;
   stageTemplates?: ChecklistTemplate[];
@@ -1133,6 +1134,7 @@ function LeadCard({
   onEdit: () => void;
   onDelete: () => void;
   onConvert: () => void;
+  onMarkLost?: () => void;
   onMarkDone: (fu: FollowUp) => void;
   onReschedule: (fu: FollowUp, newDate: string) => void;
   onSetFollowUpDate: (date: string | null) => void;
@@ -1537,6 +1539,16 @@ function LeadCard({
           <button onClick={e => { e.stopPropagation(); onConvert(); }} className="flex items-center gap-1 text-xs px-2 py-1 rounded font-medium transition-colors"
             style={{ background: "oklch(0.55 0.18 145 / 15%)", color: "oklch(0.55 0.18 145)", border: "1px solid oklch(0.55 0.18 145 / 30%)" }}>
             <CheckCircle className="w-3 h-3" /> Convert
+          </button>
+        )}
+        {!isConvertedStage(lead.stage) && lead.stage !== "Lost" && onMarkLost && (
+          <button
+            onClick={e => { e.stopPropagation(); onMarkLost(); }}
+            className="flex items-center gap-1 text-xs px-2 py-1 rounded font-medium transition-colors hover:opacity-90"
+            title="Mark this lead as lost and record the required reason"
+            style={{ background: "oklch(0.60 0.22 25 / 15%)", color: "oklch(0.72 0.22 25)", border: "1px solid oklch(0.60 0.22 25 / 35%)" }}
+          >
+            <AlertCircle className="w-3 h-3" /> Mark Lost
           </button>
         )}
         <button onClick={e => { e.stopPropagation(); onEdit(); }} className="p-1.5 rounded transition-colors hover:bg-white/8" title="Edit lead" style={{ color: "oklch(0.72 0.12 75)" }}>
