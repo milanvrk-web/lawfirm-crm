@@ -589,3 +589,6 @@
 ## Kanban Lost Shortcut
 
 - [x] Add a direct Mark Lost shortcut on active Kanban lead cards that opens the required Loss Review dialog
+- [x] Verify the direct Kanban Mark Lost shortcut and required loss-review validation without changing live lead data
+- [x] Verify quick-action availability and safe interaction paths across all pipeline stages without changing live records
+- [x] Add a confirmation safeguard before deleting a lead from any Kanban stage card

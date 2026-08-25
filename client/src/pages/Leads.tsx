@@ -37,6 +37,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import LostLeadDialog from "@/components/LostLeadDialog";
+import { deleteAfterConfirmation } from "@/lib/leadDeletion";
 
 const STAGES: LeadStage[] = ["New Lead", "Consultation", "Follow-Up", "Retained & Onboarding", "Lost"];
 const CASE_TYPES: CaseType[] = ["DA", "SIJS", "AOS", "AO", "K1/K2", "U-Visa", "Green Card", "BIA", "Other"];
@@ -129,6 +130,7 @@ export default function Leads() {
   const [filterCaseType, setFilterCaseType] = useState<string>("All");
   const [lostLeadPending, setLostLeadPending] = useState<Lead | null>(null);
   const [lostReasonFilter, setLostReasonFilter] = useState("All Reasons");
+  const [leadPendingDelete, setLeadPendingDelete] = useState<Lead | null>(null);
 
   // ── Lead Detail Slide-Over ─────────────────────────────────
   const [detailLeadId, setDetailLeadId] = useState<string | null>(null);
@@ -475,6 +477,17 @@ export default function Leads() {
 
   const openDetail = (lead: Lead) => {
     setDetailLeadId(lead.id);
+  };
+
+  const handleDeleteLead = async () => {
+    try {
+      const leadName = await deleteAfterConfirmation(leadPendingDelete, deleteLead);
+      if (!leadName) return;
+      toast.success(`${leadName} deleted`);
+      setLeadPendingDelete(null);
+    } catch {
+      toast.error("Unable to delete this lead. Please try again.");
+    }
   };
 
   // Card-level quick actions (still used on the kanban card strip)
@@ -863,7 +876,7 @@ export default function Leads() {
                       aiTier={aiTierMap[lead.id]}
                       onOpenDetail={() => openDetail(lead)}
                       onEdit={() => openEdit(lead)}
-                      onDelete={() => { deleteLead(lead.id); toast.success("Lead deleted"); }}
+                      onDelete={() => setLeadPendingDelete(lead)}
                       onConvert={() => setConvertLead(lead)}
                       onMarkLost={() => setLostLeadPending(lead)}
                       onMarkDone={handleMarkDone}
@@ -951,7 +964,7 @@ export default function Leads() {
             <div className="col-span-full text-center py-7 text-sm" style={{ color: dragOverStage === "Lost" ? "oklch(0.80 0.22 25)" : "oklch(0.45 0.01 250)" }}>{dragOverStage === "Lost" ? "Drop here to record the required loss reason" : "No lost leads match this review filter."}</div>
           ) : lostLeadsForReview.map(lead => (
             <div key={lead.id} draggable onDragStart={e => handleDragStart(e, lead.id)} style={{ cursor: "grab" }}>
-              <LeadCard lead={lead} stageColor="oklch(0.70 0.22 25)" rescheduleCount={rescheduleCounts[lead.id] ?? 0} aiTier={aiTierMap[lead.id]} onOpenDetail={() => openDetail(lead)} onEdit={() => openEdit(lead)} onDelete={() => { deleteLead(lead.id); toast.success("Lead deleted"); }} onConvert={() => setConvertLead(lead)} onMarkDone={handleMarkDone} onReschedule={handleReschedule} onSetFollowUpDate={date => setLeadFollowUpDate(lead.id, date)} />
+              <LeadCard lead={lead} stageColor="oklch(0.70 0.22 25)" rescheduleCount={rescheduleCounts[lead.id] ?? 0} aiTier={aiTierMap[lead.id]} onOpenDetail={() => openDetail(lead)} onEdit={() => openEdit(lead)} onDelete={() => setLeadPendingDelete(lead)} onConvert={() => setConvertLead(lead)} onMarkDone={handleMarkDone} onReschedule={handleReschedule} onSetFollowUpDate={date => setLeadFollowUpDate(lead.id, date)} />
             </div>
           ))}
         </div>
@@ -1108,6 +1121,28 @@ export default function Leads() {
             </Button>
             <Button variant="outline" onClick={() => setConvertLead(null)}
               style={{ borderColor: "oklch(1 0 0 / 20%)", color: "oklch(0.65 0.01 250)" }}>
+              Cancel
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Lead deletion is intentionally confirmed before invoking the destructive mutation. */}
+      <Dialog open={!!leadPendingDelete} onOpenChange={open => { if (!open) setLeadPendingDelete(null); }}>
+        <DialogContent style={{ background: "oklch(0.18 0.025 250)", borderColor: "oklch(0.70 0.22 25 / 45%)", color: "oklch(0.93 0.005 250)" }}>
+          <DialogHeader>
+            <DialogTitle style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.93 0.005 250)" }}>
+              Delete {leadPendingDelete?.name}?
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm" style={{ color: "oklch(0.68 0.01 250)" }}>
+            This will permanently remove the lead record and its associated CRM data. This action cannot be undone.
+          </p>
+          <div className="flex gap-3 mt-2">
+            <Button onClick={handleDeleteLead} style={{ background: "oklch(0.60 0.22 25)", color: "oklch(0.98 0 0)" }}>
+              <Trash2 className="w-4 h-4 mr-2" /> Delete Lead
+            </Button>
+            <Button variant="outline" onClick={() => setLeadPendingDelete(null)} style={{ borderColor: "oklch(1 0 0 / 20%)", color: "oklch(0.65 0.01 250)" }}>
               Cancel
             </Button>
           </div>
