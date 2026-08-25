@@ -623,3 +623,15 @@
 - [x] Save a checkpoint for the corrected UI and Lost-reason taxonomy
 
 All items in this section must be completed before delivery.
+
+## Consultation Conversion Reporting & Source Drill-Down — Pending
+
+- [x] Add a clear count of paid consultations that later converted to Retained & Onboarding
+- [x] Verify consultation-fee payments are included in new revenue exactly once and remain separately identifiable
+- [x] Make each Lead Source Funnel outcome expandable into the matching underlying lead list
+- [x] Add "Case too complicated" as a Lost reason
+- [x] Add "Attorney declined to take the case" as a Lost reason with required explanation
+- [x] Reconcile and test the updated metrics, drill-downs, and Lost-reason validation
+- [x] Save a checkpoint for the completed reporting enhancement
+
+All items in this section must be completed before delivery.

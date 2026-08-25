@@ -10,6 +10,8 @@ describe("loss reason validation", () => {
       "Client is going with another attorney",
       "We don't provide that service",
       "Client unhappy with our customer support",
+      "Case too complicated",
+      "Attorney declined to take the case",
     ]);
   });
 
@@ -18,11 +20,17 @@ describe("loss reason validation", () => {
     expect(isLossReasonComplete("Client not reachable", "")).toBe(false);
     expect(isLossReasonComplete("Client CNC not reachable", "")).toBe(true);
     expect(isLossReasonComplete("Client unhappy with our customer support", "")).toBe(true);
+    expect(isLossReasonComplete("Case too complicated", "")).toBe(true);
   });
 
   it("requires the requested case context when the firm does not provide the service", () => {
     expect(isLossReasonComplete("We don't provide that service", "")).toBe(false);
     expect(isLossReasonComplete("We don't provide that service", "Family-based case")).toBe(true);
+  });
+
+  it("requires an explanation when an attorney declines the case", () => {
+    expect(isLossReasonComplete("Attorney declined to take the case", "")).toBe(false);
+    expect(isLossReasonComplete("Attorney declined to take the case", "Outside the firm's practice scope")).toBe(true);
   });
 
   it("formats the operational reason and optional context for review", () => {

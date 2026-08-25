@@ -101,6 +101,7 @@ export default function Dashboard() {
   const [selectedMonth, setSelectedMonth] = useState(parseInt(nowPSTStr.split("-")[1]));
   const [panelLeadId, setPanelLeadId] = useState<string | null>(null);
   const [panelInitialTab, setPanelInitialTab] = useState<"followups" | "notes" | "info" | "installments">("installments");
+  const [expandedSourceOutcome, setExpandedSourceOutcome] = useState<string | null>(null);
   // Drill-down drawer
   type DrillKey = "leads" | "converted" | "revBooked" | "newClient" | "existingClient" | "totalReceived" | null;
   const [drillDown, setDrillDown] = useState<DrillKey>(null); // current month
@@ -171,6 +172,11 @@ export default function Dashboard() {
     () => new Set(monthPayments.filter(payment => payment.receivedFor === "Consultation Fee" && payment.leadId).map(payment => payment.leadId)).size,
     [monthPayments]
   );
+  const monthConsultationsConverted = useMemo(() => leads.filter(lead => {
+    if (!isConvertedStage(lead.stage) || !lead.consultationBookedDate) return false;
+    const d = new Date((lead.convertedDate || lead.date) + "T12:00:00");
+    return d.getFullYear() === selectedYear && d.getMonth() + 1 === selectedMonth;
+  }).length, [leads, selectedYear, selectedMonth]);
   const monthLeadsIn = monthLeads.length;
   const monthConvRate = monthLeadsIn > 0 ? Math.round((monthConverted / monthLeadsIn) * 100) : 0;
 
@@ -965,7 +971,8 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-10 gap-3">
         <StatCard icon={<Users className="w-4 h-4" />} label="Leads In" value={totalLeads} sub="this month" onClick={() => setDrillDown("leads")} />
         <StatCard icon={<CalendarCheck className="w-4 h-4" />} label="Consultations" value={monthConsultationsBooked} sub="fee paid & booked" />
-        <StatCard icon={<DollarSign className="w-4 h-4" />} label="Consult. Fees" value={formatCurrency(consultationFeeRevenue)} sub="paid this month" />
+        <StatCard icon={<UserCheck className="w-4 h-4" />} label="Consults → Won" value={monthConsultationsConverted} sub="booked consultations converted" />
+        <StatCard icon={<DollarSign className="w-4 h-4" />} label="Consult. Fees" value={formatCurrency(consultationFeeRevenue)} sub="included in new revenue" />
         <StatCard icon={<UserCheck className="w-4 h-4" />} label="Converted" value={converted} sub={`${convRate}% conv. rate`} onClick={() => setDrillDown("converted")} />
         <StatCard icon={<TrendingUp className="w-4 h-4" />} label="Conv. Rate" value={`${convRate}%`} sub={`${converted} of ${totalLeads}`} onClick={() => setDrillDown("converted")} />
         <StatCard icon={<BookOpen className="w-4 h-4" />} label="Rev. Booked" value={formatCurrency(revenueBooked)} sub={`${converted} retainers signed`} gold onClick={() => setDrillDown("revBooked")} />
@@ -1438,17 +1445,30 @@ export default function Dashboard() {
               const d = new Date(l.date + "T12:00:00");
               return d.getFullYear() === selectedYear && (d.getMonth() + 1) === selectedMonth;
             });
-            const sourceMap: Record<string, { leads: number; consultations: number; converted: number; lost: number; inProgress: number; revenue: number }> = {};
+            type SourceOutcome = "all" | "consulted" | "consultedWon" | "won" | "lost" | "open";
+            type SourceRow = { leads: number; consultations: number; consultationsConverted: number; converted: number; lost: number; inProgress: number; revenue: number; leadIds: Record<SourceOutcome, string[]> };
+            const emptyLeadIds = (): Record<SourceOutcome, string[]> => ({ all: [], consulted: [], consultedWon: [], won: [], lost: [], open: [] });
+            const sourceMap: Record<string, SourceRow> = {};
             monthLeads.forEach(l => {
               const src = l.source || "Unknown";
-              if (!sourceMap[src]) sourceMap[src] = { leads: 0, consultations: 0, converted: 0, lost: 0, inProgress: 0, revenue: 0 };
-              sourceMap[src].leads += 1;
-              if (l.consultationBookedDate || payments.some(payment => payment.leadId === l.id && payment.receivedFor === "Consultation Fee")) sourceMap[src].consultations += 1;
+              if (!sourceMap[src]) sourceMap[src] = { leads: 0, consultations: 0, consultationsConverted: 0, converted: 0, lost: 0, inProgress: 0, revenue: 0, leadIds: emptyLeadIds() };
+              const row = sourceMap[src];
+              const consulted = Boolean(l.consultationBookedDate || payments.some(payment => payment.leadId === l.id && payment.receivedFor === "Consultation Fee"));
+              row.leads += 1;
+              row.leadIds.all.push(l.id);
+              if (consulted) { row.consultations += 1; row.leadIds.consulted.push(l.id); }
               if (isConvertedStage(l.stage)) {
-                sourceMap[src].converted += 1;
-                sourceMap[src].revenue += l.retainerBooked || 0;
-              } else if (l.stage === "Lost") sourceMap[src].lost += 1;
-              else sourceMap[src].inProgress += 1;
+                row.converted += 1;
+                row.leadIds.won.push(l.id);
+                if (consulted) { row.consultationsConverted += 1; row.leadIds.consultedWon.push(l.id); }
+                row.revenue += l.retainerBooked || 0;
+              } else if (l.stage === "Lost") {
+                row.lost += 1;
+                row.leadIds.lost.push(l.id);
+              } else {
+                row.inProgress += 1;
+                row.leadIds.open.push(l.id);
+              }
             });
             const rows = Object.entries(sourceMap)
               .map(([src, d]) => ({ src, ...d, convRate: d.leads > 0 ? Math.round((d.converted / d.leads) * 100) : 0 }))
@@ -1463,8 +1483,26 @@ export default function Dashboard() {
                     <div key={row.src} className="rounded px-3 py-2" style={{ background: "oklch(0.20 0.025 250)" }}>
                       <div className="flex justify-between gap-3"><span className="text-xs font-medium truncate" style={{ color: "oklch(0.80 0.005 250)" }}>{row.src}</span><span className="text-xs font-semibold shrink-0" style={{ color: "oklch(0.72 0.12 75)" }}>{formatCurrency(row.revenue)}</span></div>
                       <div className="text-xs mt-1 flex flex-wrap gap-x-2 gap-y-1" style={{ color: "oklch(0.60 0.01 250)" }}>
-                        <span>Leads {row.leads}</span><span style={{ color: "oklch(0.72 0.12 75)" }}>Consults {row.consultations}</span><span style={{ color: "oklch(0.55 0.18 145)" }}>Won {row.converted} ({row.convRate}%)</span><span style={{ color: "oklch(0.70 0.22 25)" }}>Lost {row.lost}</span><span>Open {row.inProgress}</span>
+                        {([
+                          ["all", `Leads ${row.leads}`, "oklch(0.60 0.01 250)"],
+                          ["consulted", `Consulted ${row.consultations}`, "oklch(0.72 0.12 75)"],
+                          ["consultedWon", `Consulted → Won ${row.consultationsConverted}`, "oklch(0.55 0.18 145)"],
+                          ["won", `Won ${row.converted} (${row.convRate}%)`, "oklch(0.55 0.18 145)"],
+                          ["lost", `Lost ${row.lost}`, "oklch(0.70 0.22 25)"],
+                          ["open", `In progress ${row.inProgress}`, "oklch(0.60 0.01 250)"],
+                        ] as const).map(([outcome, label, color]) => {
+                          const key = `${row.src}:${outcome}`;
+                          return <button key={outcome} onClick={() => setExpandedSourceOutcome(expandedSourceOutcome === key ? null : key)} className="underline-offset-2 hover:underline" style={{ color }} aria-expanded={expandedSourceOutcome === key}>{label}</button>;
+                        })}
                       </div>
+                      {(["all", "consulted", "consultedWon", "won", "lost", "open"] as const).map(outcome => {
+                        const key = `${row.src}:${outcome}`;
+                        if (expandedSourceOutcome !== key) return null;
+                        const outcomeLeads = row.leadIds[outcome].map(id => monthLeads.find(lead => lead.id === id)).filter((lead): lead is Lead => Boolean(lead));
+                        return <div key={key} className="mt-2 rounded border-t pt-2 space-y-1" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
+                          {outcomeLeads.length === 0 ? <span className="text-xs" style={{ color: "oklch(0.45 0.01 250)" }}>No matching leads.</span> : outcomeLeads.map(lead => <button key={lead.id} onClick={() => { setPanelLeadId(lead.id); setPanelInitialTab("info"); }} className="block w-full text-left text-xs hover:underline" style={{ color: "oklch(0.86 0.01 250)" }}>{lead.name} · {lead.caseType} · {lead.stage}</button>)}
+                        </div>;
+                      })}
                     </div>
                   ))}
                 </div>
