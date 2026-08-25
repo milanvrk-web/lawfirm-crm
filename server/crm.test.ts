@@ -152,6 +152,8 @@ describe("CRM Router", () => {
         stage: "New Lead",
         source: "Referral",
         date: "2026-05-04",
+        followUpDate: "2099-05-04",
+        assignedTo: "Case Team",
         retainerBooked: 5000,
         downpayment: 1000,
         notes: "Test note",
@@ -159,7 +161,13 @@ describe("CRM Router", () => {
       expect(lead).toMatchObject({ id: expect.any(String) });
     });
 
-    it("rejects a Lost-stage transition without a reason and supporting context", async () => {
+    it("rejects new leads without an assignee or a valid future-or-today follow-up date", async () => {
+      const caller = appRouter.createCaller(createAuthContext());
+      await expect(caller.leads.create({ name: "Missing assignment", caseType: "DA", date: "2026-05-04" })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+      await expect(caller.leads.create({ name: "Missing follow-up", caseType: "DA", date: "2026-05-04", assignedTo: "Case Team" })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    });
+
+    it("rejects a Lost-stage transition without an approved reason", async () => {
       const { vi } = await import("vitest");
       const dbModule = await import("./db");
       vi.mocked(dbModule.getLeadById).mockResolvedValueOnce({ id: "lead-1", stage: "Follow-Up" } as never);
@@ -170,7 +178,7 @@ describe("CRM Router", () => {
       });
     });
 
-    it("allows a Lost-stage transition when a reason and supporting context are supplied", async () => {
+    it("allows a standard Lost-stage reason with an optional note", async () => {
       const { vi } = await import("vitest");
       const dbModule = await import("./db");
       vi.mocked(dbModule.getLeadById).mockResolvedValueOnce({ id: "lead-2", stage: "Follow-Up" } as never);
@@ -178,13 +186,20 @@ describe("CRM Router", () => {
 
       await expect(caller.leads.update({
         id: "lead-2",
-        data: { stage: "Lost", lostReason: "No response", lostNote: "Three calls and two emails went unanswered.", lostDate: "2026-08-25" },
+        data: { stage: "Lost", lostReason: "Client not reachable", lostDate: "2026-08-25", actorName: "Case Team" },
       })).resolves.toEqual({ success: true });
       expect(dbModule.updateLead).toHaveBeenCalledWith("lead-2", expect.objectContaining({
         stage: "Lost",
-        lostReason: "No response",
-        lostNote: "Three calls and two emails went unanswered.",
+        lostReason: "Client not reachable",
       }));
+    });
+
+    it("requires a detail when Other is selected for a Lost-stage transition", async () => {
+      const { vi } = await import("vitest");
+      const dbModule = await import("./db");
+      vi.mocked(dbModule.getLeadById).mockResolvedValueOnce({ id: "lead-3", stage: "Follow-Up" } as never);
+      const caller = appRouter.createCaller(createAuthContext());
+      await expect(caller.leads.update({ id: "lead-3", data: { stage: "Lost", lostReason: "Other" } })).rejects.toMatchObject({ code: "BAD_REQUEST" });
     });
   });
 

@@ -11,17 +11,18 @@ import { formatCurrency, formatDate } from "@/lib/store";
 import { isConvertedStage } from "@shared/const";
 import { todayPST, addDaysPST } from "@/lib/timezone";
 import { PSTDatePicker } from "@/components/PSTDatePicker";
-import { CalendarCheck, Lock, CheckCircle, ChevronLeft, ChevronRight, User, Trash2 } from "lucide-react";
+import { CalendarCheck, Lock, CheckCircle, ChevronLeft, ChevronRight, User, Trash2, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
+import { downloadCloseDayReportPng } from "@/lib/closeDayReport";
 
 function todayStr() {
   return todayPST();
 }
 
 export default function CloseDay() {
-  const { leads, payments, dayCloses, closeDay, isDayClosed, getDayClose } = useCRM();
+  const { leads, payments, dayCloses, closeDay, isDayClosed, getDayClose, targets } = useCRM();
   const { activeMember } = useActiveMember();
   const [selectedDate, setSelectedDate] = useState(todayStr());
 
@@ -40,6 +41,14 @@ export default function CloseDay() {
   const totalNew = newPayments.reduce((s, p) => s + p.amount, 0);
   const totalExisting = existingPayments.reduce((s, p) => s + p.amount, 0);
   const grandTotal = totalNew + totalExisting;
+  const selectedMonth = selectedDate.slice(0, 7);
+  const mtdPayments = useMemo(() => payments.filter(payment => payment.date.startsWith(selectedMonth)), [payments, selectedMonth]);
+  const mtdReceived = useMemo(() => mtdPayments.reduce((sum, payment) => sum + payment.amount, 0), [mtdPayments]);
+  const mtdBooked = useMemo(() => leads.filter(lead => isConvertedStage(lead.stage) && (lead.convertedDate ?? lead.date).startsWith(selectedMonth)).reduce((sum, lead) => sum + lead.retainerBooked, 0), [leads, selectedMonth]);
+  const weekday = new Date(`${selectedDate}T12:00:00`).getDay();
+  const weekStart = addDaysPST(selectedDate, -((weekday + 6) % 7));
+  const weekEnd = addDaysPST(weekStart, 6);
+  const weeklyReceived = useMemo(() => payments.filter(payment => payment.date >= weekStart && payment.date <= weekEnd).reduce((sum, payment) => sum + payment.amount, 0), [payments, weekStart, weekEnd]);
 
   const closed = isDayClosed(selectedDate);
   const closeRecord = getDayClose(selectedDate);
@@ -65,6 +74,22 @@ export default function CloseDay() {
         ? `${formatDate(selectedDate)} closed by ${activeMember.name}`
         : `${formatDate(selectedDate)} closed successfully`
     );
+  };
+
+  const handleDownloadReport = () => {
+    downloadCloseDayReportPng({
+      dateLabel: selectedDate,
+      payments: paymentsForDay,
+      leadsReceived: leadsForDay.length,
+      totalNew,
+      totalExisting,
+      totalRevenue: grandTotal,
+      mtdReceived,
+      mtdBooked,
+      weeklyReceived,
+      weeklyTarget: targets.weekly.green,
+    });
+    toast.success("PNG report downloaded — ready to share on WhatsApp.");
   };
 
   const displayDate = new Date(selectedDate + "T12:00:00").toLocaleDateString("en-US", {
@@ -136,6 +161,18 @@ export default function CloseDay() {
             <div className="text-2xl font-bold" style={{ color: "oklch(0.55 0.15 200)" }}>{formatCurrency(totalExisting)}</div>
             <div className="text-xs mt-1" style={{ color: "oklch(0.55 0.01 250)" }}>Existing Client Revenue</div>
           </div>
+        </div>
+      </div>
+
+      <div className="grid sm:grid-cols-2 gap-4">
+        <div className="rounded-lg p-4 border" style={{ background: "oklch(0.18 0.025 250)", borderColor: "oklch(0.72 0.12 75 / 28%)" }}>
+          <p className="text-xs uppercase tracking-wider" style={{ color: "oklch(0.72 0.12 75)" }}>Month to date — {new Date(`${selectedMonth}-01T12:00:00`).toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", month: "long", year: "numeric" })}</p>
+          <div className="grid grid-cols-2 gap-4 mt-3"><div><p className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>Received</p><p className="text-xl font-bold" style={{ color: "oklch(0.55 0.18 145)" }}>{formatCurrency(mtdReceived)}</p></div><div><p className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>Booked</p><p className="text-xl font-bold" style={{ color: "oklch(0.72 0.12 75)" }}>{formatCurrency(mtdBooked)}</p></div></div>
+        </div>
+        <div className="rounded-lg p-4 border" style={{ background: "oklch(0.18 0.025 250)", borderColor: "oklch(0.55 0.18 145 / 28%)" }}>
+          <p className="text-xs uppercase tracking-wider" style={{ color: "oklch(0.55 0.18 145)" }}>Weekly target — {weekStart} to {weekEnd}</p>
+          <p className="text-xl font-bold mt-3" style={{ color: weeklyReceived >= targets.weekly.green ? "oklch(0.55 0.18 145)" : "oklch(0.93 0.005 250)" }}>{formatCurrency(weeklyReceived)} <span className="text-sm font-normal" style={{ color: "oklch(0.55 0.01 250)" }}>of {formatCurrency(targets.weekly.green)}</span></p>
+          <div className="h-1.5 rounded-full mt-3 overflow-hidden" style={{ background: "oklch(1 0 0 / 10%)" }}><div className="h-full rounded-full" style={{ width: `${Math.min(100, (weeklyReceived / Math.max(1, targets.weekly.green)) * 100)}%`, background: "oklch(0.55 0.18 145)" }} /></div>
         </div>
       </div>
 
@@ -247,6 +284,9 @@ export default function CloseDay() {
             <div className="text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.72 0.12 75)" }}>
               {formatCurrency(grandTotal)}
             </div>
+            <Button variant="outline" onClick={handleDownloadReport} style={{ borderColor: "oklch(0.72 0.12 75 / 45%)", color: "oklch(0.72 0.12 75)" }}>
+              <Download className="w-4 h-4 mr-2" /> Download PNG
+            </Button>
             {!closed ? (
               <Button onClick={handleClose} style={{ background: "oklch(0.55 0.18 145)", color: "oklch(0.98 0 0)" }}>
                 <Lock className="w-4 h-4 mr-2" />

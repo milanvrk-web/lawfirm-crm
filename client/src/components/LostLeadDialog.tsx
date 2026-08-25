@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { AlertCircle } from "lucide-react";
 import { useCRM } from "@/contexts/CRMContext";
+import { useActiveMember } from "@/contexts/ActiveMemberContext";
 import { type Lead, formatCurrency } from "@/lib/store";
 import { todayPST } from "@/lib/timezone";
 import { LOSS_REASON_OPTIONS, isLossReasonComplete } from "@/lib/lossReasons";
@@ -19,18 +20,18 @@ interface LostLeadDialogProps {
 
 export default function LostLeadDialog({ lead, onClose, onMarkedLost }: LostLeadDialogProps) {
   const { updateLead } = useCRM();
+  const { activeMember } = useActiveMember();
   const [reason, setReason] = useState("");
   const [customReason, setCustomReason] = useState("");
   const [note, setNote] = useState("");
-  const isComplete = isLossReasonComplete(reason, customReason, note);
-  const selectedReason = reason === "Other" ? customReason.trim() : reason;
+  const isComplete = isLossReasonComplete(reason, customReason);
 
   useEffect(() => {
     if (!lead) return;
     const savedReason = lead.lostReason?.trim() ?? "";
     const isStandardReason = LOSS_REASON_OPTIONS.some(option => option === savedReason);
     setReason(isStandardReason ? savedReason : savedReason ? "Other" : "");
-    setCustomReason(isStandardReason ? "" : savedReason);
+    setCustomReason(isStandardReason ? (lead.lostReasonDetail ?? "") : savedReason);
     setNote(lead.lostNote ?? "");
   }, [lead]);
 
@@ -43,16 +44,18 @@ export default function LostLeadDialog({ lead, onClose, onMarkedLost }: LostLead
 
   const handleConfirm = async () => {
     if (!lead || !isComplete) {
-      toast.error("Choose a reason and add supporting context before marking this lead as lost.");
+      toast.error("Choose a loss reason. Other reasons must include a short explanation.");
       return;
     }
     const isExistingLostLead = lead.stage === "Lost";
     await updateLead(lead.id, {
       stage: "Lost",
-      lostReason: selectedReason,
-      lostNote: note.trim(),
+      lostReason: reason,
+      lostReasonDetail: reason === "Other" ? customReason.trim() : null,
+      lostNote: note.trim() || null,
       lostDate: lead.lostDate ?? todayPST(),
       followUpDate: null,
+      actorName: activeMember?.name ?? "Team",
     });
     toast.success(isExistingLostLead ? `${lead.name}'s loss review updated` : `${lead.name} marked as Lost with a reviewable reason`);
     onMarkedLost?.();
@@ -69,7 +72,7 @@ export default function LostLeadDialog({ lead, onClose, onMarkedLost }: LostLead
           </DialogTitle>
         </DialogHeader>
         <p className="text-sm" style={{ color: "oklch(0.60 0.01 250)" }}>
-          {lead?.stage === "Lost" ? "Complete or correct this loss record so reporting remains accurate." : "This removes the lead from the active pipeline. A loss reason and supporting context are required for review."}
+          {lead?.stage === "Lost" ? "Complete or correct this loss record so reporting remains accurate." : "This removes the lead from active work. Choose a reason; notes are optional unless you select Other."}
         </p>
 
         {((lead?.consultationFee ?? 0) > 0 || (lead?.quotedAmount ?? 0) > 0) && (
@@ -91,8 +94,8 @@ export default function LostLeadDialog({ lead, onClose, onMarkedLost }: LostLead
         </div>
 
         <div>
-          <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.75 0.01 250)" }}>Supporting context *</Label>
-          <Textarea value={note} onChange={e => setNote(e.target.value)} rows={3} placeholder="What happened? Include any relevant conversation, objection, or next review note." style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
+          <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.75 0.01 250)" }}>Additional note <span style={{ color: "oklch(0.50 0.01 250)" }}>(optional)</span></Label>
+          <Textarea value={note} onChange={e => setNote(e.target.value)} rows={3} placeholder="Optional context, conversation details, or future review note." style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
         </div>
 
         <div className="flex gap-3 mt-1">

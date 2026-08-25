@@ -492,7 +492,7 @@ export default function LeadDetailPanel({
       }
       return;
     }
-    await updateLead(lead.id, { stage: newStage });
+    await updateLead(lead.id, { stage: newStage, actorName: activeMember?.name ?? "Team" });
     toast.success(`Moved to ${newStage}`);
   };
 
@@ -507,6 +507,7 @@ export default function LeadDetailPanel({
       downpayment: dp,
       caseNumber: inlineConvertForm.caseNumber || lead.caseNumber,
       convertedDate: todayPST(),
+      actorName: activeMember?.name ?? "Team",
     });
     if (dp > 0) {
       await addPayment({

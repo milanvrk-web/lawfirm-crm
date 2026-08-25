@@ -146,11 +146,23 @@ export async function updateLead(id: string, data: Partial<InsertLead>) {
   await db.update(leads).set(data).where(eq(leads.id, id));
 }
 
-export async function deleteLead(id: string) {
+export async function updateClientLedgerRecord(id: string, data: { name: string; phone: string; retainerBooked: string }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  // Cascade: delete related payments, follow-ups, and notes first
-  await db.delete(payments).where(eq(payments.leadId, id));
+  await db.update(leads).set(data).where(eq(leads.id, id));
+  // Only explicit lead relationships are propagated; matching by a person's name would be unsafe.
+  await db.update(payments).set({ clientName: data.name }).where(eq(payments.leadId, id));
+}
+
+export async function deleteLead(id: string, paymentIdsToDelete: string[]) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  // Explicitly delete only the caller-selected linked payments. Any other linked
+  // payment is retained and unlinked before the lead is removed.
+  for (const paymentId of paymentIdsToDelete) {
+    await db.delete(payments).where(eq(payments.id, paymentId));
+  }
+  await db.update(payments).set({ leadId: null }).where(eq(payments.leadId, id));
   await db.delete(followUps).where(eq(followUps.leadId, id));
   await db.delete(leadNotes).where(eq(leadNotes.leadId, id));
   await db.delete(leads).where(eq(leads.id, id));

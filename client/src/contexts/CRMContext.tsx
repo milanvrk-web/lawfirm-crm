@@ -29,8 +29,8 @@ interface CRMContextValue {
   updateTargets: (t: Targets) => void;
   // Leads
   addLead: (lead: Omit<Lead, "id">) => Promise<void>;
-  updateLead: (id: string, updates: Partial<Lead>) => Promise<void>;
-  deleteLead: (id: string) => Promise<void>;
+  updateLead: (id: string, updates: Partial<Lead> & { actorName?: string }) => Promise<void>;
+  deleteLead: (id: string, paymentIdsToDelete?: string[]) => Promise<void>;
   // Payments
   addPayment: (payment: Omit<Payment, "id">) => Promise<void>;
   updatePayment: (id: string, updates: Partial<Payment>) => Promise<void>;
@@ -61,7 +61,7 @@ type DbLead = {
   caseNumber: string; source: string; stage: string; notes: string; date: string;
   retainerBooked: string | number; downpayment: string | number; quotedAmount: string | number;
   referredBy: string; convertedDate?: string | null; lostReason?: string | null;
-  lostNote?: string | null; lostDate?: string | null;
+  lostReasonDetail?: string | null; lostNote?: string | null; lostDate?: string | null;
   consultationFee?: string | number | null;
   followUpDate?: string | null;
   assignedTo?: string | null;
@@ -105,6 +105,7 @@ function normalizeLead(r: DbLead): Lead {
     referredBy: r.referredBy,
     convertedDate: r.convertedDate ?? undefined,
     lostReason: r.lostReason ?? null,
+    lostReasonDetail: r.lostReasonDetail ?? null,
     lostNote: r.lostNote ?? null,
     lostDate: r.lostDate ?? null,
     consultationFee: Number(r.consultationFee ?? 0),
@@ -244,17 +245,21 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
       referredBy: lead.referredBy,
       convertedDate: lead.convertedDate ?? null,
       lostReason: lead.lostReason ?? null,
+      lostReasonDetail: lead.lostReasonDetail ?? null,
+      lostNote: lead.lostNote ?? null,
+      lostDate: lead.lostDate ?? null,
       consultationFee: lead.consultationFee ?? 0,
       assignedTo: lead.assignedTo ?? null,
+      followUpDate: lead.followUpDate ?? null,
     });
   }, [createLeadMut]);
 
-  const handleUpdateLead = useCallback(async (id: string, updates: Partial<Lead>) => {
+  const handleUpdateLead = useCallback(async (id: string, updates: Partial<Lead> & { actorName?: string }) => {
     await updateLeadMut.mutateAsync({ id, data: updates as Parameters<typeof updateLeadMut.mutateAsync>[0]["data"] });
   }, [updateLeadMut]);
 
-  const handleDeleteLead = useCallback(async (id: string) => {
-    await deleteLeadMut.mutateAsync({ id });
+  const handleDeleteLead = useCallback(async (id: string, paymentIdsToDelete: string[] = []) => {
+    await deleteLeadMut.mutateAsync({ id, paymentIdsToDelete });
   }, [deleteLeadMut]);
 
   const handleAddPayment = useCallback(async (payment: Omit<Payment, "id">) => {

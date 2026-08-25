@@ -592,3 +592,16 @@
 - [x] Verify the direct Kanban Mark Lost shortcut and required loss-review validation without changing live lead data
 - [x] Verify quick-action availability and safe interaction paths across all pipeline stages without changing live records
 - [x] Add a confirmation safeguard before deleting a lead from any Kanban stage card
+
+## Requested CRM Improvements — Pending Approval
+
+- [x] Require an assignee and a future-or-today follow-up date when creating a new lead
+- [x] Standardize the Lost workflow across every entry point, including the updated loss-reason taxonomy, activity attribution, and reporting feed
+- [x] Add Close Day month-to-date and weekly target summaries plus a shareable PNG report
+- [x] Add safe client-ledger editing with rename propagation, contact updates, and retainer correction
+- [x] Expand lead deletion confirmation to select linked payments for deletion or safe unlinking
+- [x] Complete organization-wide author and timestamp visibility for activities and stage changes
+- [x] Add source filtering to Follow-Ups and improve stale-lead and password-visibility interactions
+- [x] Audit and reconcile Dashboard reporting against raw CRM records, including Lost, revenue, KPI drill-downs, stale-lead rules, and PST date handling
+- [x] Report existing orphan payments and missing payment-to-lead links before applying any approved data repairs
+- [x] Link the 17 user-authorized one-to-one exact-name payment candidates and verify no orphan payments were introduced

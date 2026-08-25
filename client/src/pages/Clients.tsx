@@ -4,30 +4,52 @@
              retainer progress, outstanding balances
    ============================================================ */
 
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useCRM } from "@/contexts/CRMContext";
 import { formatCurrency, formatDate } from "@/lib/store";
 import { isConvertedStage } from "@shared/const";
-import { BookOpen, ChevronDown, ChevronUp, Search, Trash2, ExternalLink } from "lucide-react";
+import { BookOpen, ChevronDown, ChevronUp, Search, Trash2, ExternalLink, Pencil } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import LeadDeleteDialog from "@/components/LeadDeleteDialog";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { trpc } from "@/lib/trpc";
 
 export default function Clients() {
-  const { leads, payments: allPayments, deleteLead } = useCRM();
+  const { leads, payments: allPayments } = useCRM();
   const [, navigate] = useLocation();
   const [search, setSearch] = useState("");
   const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [leadPendingDelete, setLeadPendingDelete] = useState<typeof leads[number] | null>(null);
+  const [editingClient, setEditingClient] = useState<typeof leads[number] | null>(null);
+  const [ledgerForm, setLedgerForm] = useState({ name: "", phone: "", retainerBooked: "" });
+  const utils = trpc.useUtils();
+  const updateLedgerMut = trpc.leads.updateLedger.useMutation({
+    onSuccess: () => {
+      utils.leads.list.invalidate();
+      utils.payments.list.invalidate();
+      setEditingClient(null);
+      toast.success("Client ledger updated; linked payment names were refreshed.");
+    },
+    onError: error => toast.error(error.message || "Unable to update the client ledger."),
+  });
 
-  const handleDeleteClient = async (id: string) => {
-    try {
-      await deleteLead(id);
-      toast.success("Client record deleted");
-      setConfirmDeleteId(null);
-    } catch {
-      toast.error("Failed to delete client");
-    }
+  useEffect(() => {
+    if (!editingClient) return;
+    setLedgerForm({ name: editingClient.name, phone: editingClient.phone, retainerBooked: String(editingClient.retainerBooked || "") });
+  }, [editingClient]);
+
+  const saveLedgerEdit = () => {
+    if (!editingClient || !ledgerForm.name.trim()) return;
+    updateLedgerMut.mutate({
+      id: editingClient.id,
+      name: ledgerForm.name.trim(),
+      phone: ledgerForm.phone,
+      retainerBooked: Number(ledgerForm.retainerBooked || 0),
+    });
   };
 
   const retainedLeads = useMemo(() => leads.filter(l => isConvertedStage(l.stage)), [leads]);
@@ -127,30 +149,22 @@ export default function Clients() {
                     >
                       <ExternalLink className="w-4 h-4" />
                     </button>
-                    {confirmDeleteId === lead.id ? (
-                      <span className="inline-flex items-center gap-1">
-                        <span className="text-xs" style={{ color: "oklch(0.75 0.18 25)" }}>Delete?</span>
-                        <button
-                          onClick={() => handleDeleteClient(lead.id)}
-                          className="text-xs px-2 py-0.5 rounded font-semibold"
-                          style={{ background: "oklch(0.60 0.22 25 / 20%)", color: "oklch(0.75 0.18 25)" }}
-                        >Yes</button>
-                        <button
-                          onClick={() => setConfirmDeleteId(null)}
-                          className="text-xs px-2 py-0.5 rounded"
-                          style={{ color: "oklch(0.55 0.01 250)" }}
-                        >No</button>
-                      </span>
-                    ) : (
-                      <button
-                        onClick={() => setConfirmDeleteId(lead.id)}
-                        className="p-1 rounded hover:bg-white/5 transition-colors"
-                        style={{ color: "oklch(0.60 0.22 25)" }}
-                        title="Delete client record"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
+                    <button
+                      onClick={() => setEditingClient(lead)}
+                      className="p-1 rounded hover:bg-white/5 transition-colors"
+                      style={{ color: "oklch(0.72 0.12 75)" }}
+                      title="Edit client ledger"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => setLeadPendingDelete(lead)}
+                      className="p-1 rounded hover:bg-white/5 transition-colors"
+                      style={{ color: "oklch(0.60 0.22 25)" }}
+                      title="Delete client record"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                     <button onClick={() => toggleExpand(lead.id)} style={{ color: "oklch(0.55 0.01 250)" }}>
                       {expanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
                     </button>
@@ -223,6 +237,22 @@ export default function Clients() {
           );
         })}
       </div>
+      <LeadDeleteDialog lead={leadPendingDelete} onClose={() => setLeadPendingDelete(null)} />
+      <Dialog open={Boolean(editingClient)} onOpenChange={open => { if (!open) setEditingClient(null); }}>
+        <DialogContent style={{ background: "oklch(0.18 0.025 250)", borderColor: "oklch(0.72 0.12 75 / 35%)", color: "oklch(0.93 0.005 250)" }}>
+          <DialogHeader><DialogTitle style={{ fontFamily: "'Playfair Display', serif" }}>Edit Client Ledger</DialogTitle></DialogHeader>
+          <p className="text-xs" style={{ color: "oklch(0.60 0.01 250)" }}>A name change updates only payments explicitly linked to this client record, preserving other historical payments.</p>
+          <div className="space-y-3">
+            <div><Label className="text-xs mb-1.5 block">Client name *</Label><Input value={ledgerForm.name} onChange={e => setLedgerForm(form => ({ ...form, name: e.target.value }))} /></div>
+            <div><Label className="text-xs mb-1.5 block">Phone number</Label><Input value={ledgerForm.phone} onChange={e => setLedgerForm(form => ({ ...form, phone: e.target.value }))} /></div>
+            <div><Label className="text-xs mb-1.5 block">Booked / retainer amount</Label><Input type="number" min="0" value={ledgerForm.retainerBooked} onChange={e => setLedgerForm(form => ({ ...form, retainerBooked: e.target.value }))} /></div>
+          </div>
+          <div className="flex gap-3 mt-2">
+            <Button onClick={saveLedgerEdit} disabled={!ledgerForm.name.trim() || updateLedgerMut.isPending} style={{ background: "oklch(0.72 0.12 75)", color: "oklch(0.13 0.025 250)" }}>Save Ledger Changes</Button>
+            <Button variant="outline" onClick={() => setEditingClient(null)}>Cancel</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

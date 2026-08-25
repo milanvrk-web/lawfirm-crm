@@ -15,6 +15,25 @@ const LeadStageEnum = z.string().min(1);
 const CaseTypeEnum = z.enum(["DA", "SIJS", "AOS", "AO", "K1/K2", "U-Visa", "Green Card", "BIA", "Other"]);
 const PaymentTypeEnum = z.enum(["New Client", "Existing Client"]);
 const FollowUpStatusEnum = z.enum(["Pending", "Done", "Snoozed"]);
+const LossReasonEnum = z.enum([
+  "Client not reachable",
+  "Client declined the service",
+  "Price too high",
+  "Hired someone else",
+  "Will take service later",
+  "Service not needed anymore",
+  "We couldn't provide the service",
+  "Other",
+]);
+
+function isValidLossSelection(reason?: string | null, detail?: string | null) {
+  const parsed = LossReasonEnum.safeParse(reason);
+  return parsed.success && (parsed.data !== "Other" || Boolean(detail?.trim()));
+}
+
+function todayPSTServer() {
+  return new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
+}
 
 // Schema for CREATE — includes .default() so missing fields get sensible values
 const LeadInput = z.object({
@@ -33,10 +52,12 @@ const LeadInput = z.object({
   referredBy: z.string().default(""),
   convertedDate: z.string().optional().nullable(),
   lostReason: z.string().optional().nullable(),
+  lostReasonDetail: z.string().optional().nullable(),
   lostNote: z.string().optional().nullable(),
   lostDate: z.string().optional().nullable(),
   consultationFee: z.number().default(0).optional(),
   assignedTo: z.string().optional().nullable(),
+  followUpDate: z.string().optional().nullable(),
 });
 
 // Schema for UPDATE — NO .default() values so only explicitly provided fields are updated.
@@ -58,11 +79,13 @@ const LeadUpdateInput = z.object({
   referredBy: z.string().optional(),
   convertedDate: z.string().optional().nullable(),
   lostReason: z.string().optional().nullable(),
+  lostReasonDetail: z.string().optional().nullable(),
   lostNote: z.string().optional().nullable(),
   lostDate: z.string().optional().nullable(),
   consultationFee: z.number().optional(),
   assignedTo: z.string().optional().nullable(),
   followUpDate: z.string().optional().nullable(),
+  actorName: z.string().optional(),
 });
 
 const PaymentInput = z.object({
@@ -159,8 +182,14 @@ export const appRouter = router({
     }),
 
     create: publicProcedure.input(LeadInput).mutation(async ({ input }) => {
-      if (input.stage === "Lost" && (!input.lostReason?.trim() || !input.lostNote?.trim())) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "A loss reason and supporting context are required for Lost leads." });
+      if (!input.assignedTo?.trim()) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "A team member must be assigned before creating a lead." });
+      }
+      if (!input.followUpDate || input.followUpDate < todayPSTServer()) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "A follow-up date of today or later is required before creating a lead." });
+      }
+      if (input.stage === "Lost" && !isValidLossSelection(input.lostReason, input.lostReasonDetail)) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Select a valid loss reason. Other requires an explanation." });
       }
       const id = nanoid();
       await db.createLead({
@@ -171,10 +200,12 @@ export const appRouter = router({
         quotedAmount: String(input.quotedAmount),
         convertedDate: input.convertedDate ?? null,
         lostReason: input.lostReason ?? null,
+        lostReasonDetail: input.lostReasonDetail ?? null,
         lostNote: input.lostNote ?? null,
         lostDate: input.lostDate ?? null,
         consultationFee: String(input.consultationFee ?? 0),
         assignedTo: input.assignedTo ?? null,
+        followUpDate: input.followUpDate ?? null,
       });
       return { id };
     }),
@@ -185,23 +216,64 @@ export const appRouter = router({
         const existingLead = await db.getLeadById(input.id);
         if (!existingLead) throw new TRPCError({ code: "NOT_FOUND", message: "Lead not found." });
         const movingToLost = input.data.stage === "Lost" && existingLead.stage !== "Lost";
-        if (movingToLost && (!input.data.lostReason?.trim() || !input.data.lostNote?.trim())) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "A loss reason and supporting context are required before moving a lead to Lost." });
+        if (movingToLost && !isValidLossSelection(input.data.lostReason, input.data.lostReasonDetail)) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Select a valid loss reason. Other requires an explanation." });
         }
-        const data: Record<string, unknown> = { ...input.data };
+        const { actorName, ...leadChanges } = input.data;
+        const data: Record<string, unknown> = { ...leadChanges };
         if (input.data.retainerBooked !== undefined) data.retainerBooked = String(input.data.retainerBooked);
         if (input.data.downpayment !== undefined) data.downpayment = String(input.data.downpayment);
         if (input.data.quotedAmount !== undefined) data.quotedAmount = String(input.data.quotedAmount);
         if (input.data.consultationFee !== undefined) data.consultationFee = String(input.data.consultationFee);
         if (input.data.assignedTo !== undefined) data.assignedTo = input.data.assignedTo ?? null;
         await db.updateLead(input.id, data as Parameters<typeof db.updateLead>[1]);
+        if (movingToLost) {
+          const reasonDetail = input.data.lostReason === "Other" ? ` — ${input.data.lostReasonDetail?.trim()}` : "";
+          await db.createLeadNote({
+            id: nanoid(),
+            leadId: input.id,
+            text: `Marked Lost: ${input.data.lostReason}${reasonDetail}${input.data.lostNote?.trim() ? `\n${input.data.lostNote.trim()}` : ""}`,
+            timestamp: new Date().toISOString(),
+            authorName: actorName ?? "Team",
+          });
+        } else if (input.data.stage && input.data.stage !== existingLead.stage) {
+          await db.createLeadNote({
+            id: nanoid(),
+            leadId: input.id,
+            text: `Stage changed: ${existingLead.stage} → ${input.data.stage}`,
+            timestamp: new Date().toISOString(),
+            authorName: actorName ?? "Team",
+          });
+        }
         return { success: true };
       }),
 
-    delete: publicProcedure.input(z.object({ id: z.string() })).mutation(async ({ input }) => {
-      await db.deleteLead(input.id);
-      return { success: true };
-    }),
+    updateLedger: publicProcedure
+      .input(z.object({ id: z.string(), name: z.string().trim().min(1), phone: z.string(), retainerBooked: z.number().min(0) }))
+      .mutation(async ({ input }) => {
+        const existingLead = await db.getLeadById(input.id);
+        if (!existingLead) throw new TRPCError({ code: "NOT_FOUND", message: "Client record not found." });
+        await db.updateClientLedgerRecord(input.id, {
+          name: input.name,
+          phone: input.phone,
+          retainerBooked: String(input.retainerBooked),
+        });
+        return { success: true };
+      }),
+
+    delete: publicProcedure
+      .input(z.object({ id: z.string(), paymentIdsToDelete: z.array(z.string()).default([]) }))
+      .mutation(async ({ input }) => {
+        const linkedPayments = await db.getPaymentsByLead(input.id);
+        const linkedPaymentIds = new Set(linkedPayments.map(payment => payment.id));
+        const paymentIdsToDelete = input.paymentIdsToDelete.filter(paymentId => linkedPaymentIds.has(paymentId));
+        await db.deleteLead(input.id, paymentIdsToDelete);
+        return {
+          success: true,
+          deletedPaymentCount: paymentIdsToDelete.length,
+          unlinkedPaymentCount: linkedPayments.length - paymentIdsToDelete.length,
+        };
+      }),
 
     // Lead notes
     getNotes: publicProcedure.input(z.object({ leadId: z.string() })).query(async ({ input }) => {

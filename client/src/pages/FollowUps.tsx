@@ -349,6 +349,7 @@ export default function FollowUps() {
   const [panelLeadId, setPanelLeadId] = useState<string | null>(null);
   const [filter, setFilter] = useState<"All" | "Overdue" | "Today" | "Upcoming">("All");
   const [memberFilter, setMemberFilter] = useState<string>("All");
+  const [sourceFilter, setSourceFilter] = useState<string>("All");
   const [completingLead, setCompletingLead] = useState<Lead | null>(null);
   const [reschedulingLead, setReschedulingLead] = useState<Lead | null>(null);
 
@@ -385,8 +386,14 @@ export default function FollowUps() {
     else if (filter === "Upcoming") list = upcomingLeads;
     else list = leadsWithFollowUp;
     if (memberFilter !== "All") list = list.filter(l => l.assignedTo === memberFilter);
+    if (sourceFilter !== "All") list = list.filter(l => l.source === sourceFilter);
     return [...list].sort((a, b) => a.followUpDate!.localeCompare(b.followUpDate!));
-  }, [filter, memberFilter, leadsWithFollowUp, overdueLeads, todayLeads, upcomingLeads]);
+  }, [filter, memberFilter, sourceFilter, leadsWithFollowUp, overdueLeads, todayLeads, upcomingLeads]);
+
+  const sources = useMemo(
+    () => Array.from(new Set(leadsWithFollowUp.map(lead => lead.source).filter(Boolean))).sort(),
+    [leadsWithFollowUp]
+  );
 
   const handleMarkDoneClick = (lead: Lead, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -503,6 +510,27 @@ export default function FollowUps() {
               }}
             >
               {name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* ── Source Filter Chips ───────────────────────────────────── */}
+      {sources.length > 0 && (
+        <div className="flex flex-wrap gap-2 items-center">
+          <span className="text-xs" style={{ color: "oklch(0.45 0.01 250)" }}>Source:</span>
+          {["All", ...sources].map(source => (
+            <button
+              key={source}
+              onClick={() => setSourceFilter(source)}
+              className="text-xs px-2.5 py-1 rounded-full transition-all"
+              style={{
+                background: sourceFilter === source ? "oklch(0.72 0.12 75 / 22%)" : "oklch(0.20 0.025 250)",
+                color: sourceFilter === source ? "oklch(0.72 0.12 75)" : "oklch(0.55 0.01 250)",
+                border: sourceFilter === source ? "1px solid oklch(0.72 0.12 75 / 50%)" : "1px solid oklch(1 0 0 / 10%)",
+              }}
+            >
+              {source}
             </button>
           ))}
         </div>

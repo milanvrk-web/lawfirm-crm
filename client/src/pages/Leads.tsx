@@ -37,7 +37,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import LostLeadDialog from "@/components/LostLeadDialog";
-import { deleteAfterConfirmation } from "@/lib/leadDeletion";
+import LeadDeleteDialog from "@/components/LeadDeleteDialog";
 
 const STAGES: LeadStage[] = ["New Lead", "Consultation", "Follow-Up", "Retained & Onboarding", "Lost"];
 const CASE_TYPES: CaseType[] = ["DA", "SIJS", "AOS", "AO", "K1/K2", "U-Visa", "Green Card", "BIA", "Other"];
@@ -51,15 +51,15 @@ const stageColor: Record<LeadStage, string> = {
 };
 
 // ── AssignedToSelect: reusable dropdown for team member assignment ──────────
-function AssignedToSelect({ value, onChange }: { value: string | null; onChange: (v: string | null) => void }) {
+function AssignedToSelect({ value, onChange, required = false }: { value: string | null; onChange: (v: string | null) => void; required?: boolean }) {
   const { data: members = [] } = trpc.members.list.useQuery();
   return (
     <Select value={value ?? "__unassigned__"} onValueChange={v => onChange(v === "__unassigned__" ? null : v)}>
       <SelectTrigger style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }}>
-        <SelectValue placeholder="Unassigned" />
+        <SelectValue placeholder={required ? "Select team member *" : "Unassigned"} />
       </SelectTrigger>
       <SelectContent style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)" }}>
-        <SelectItem value="__unassigned__">Unassigned</SelectItem>
+        {!required && <SelectItem value="__unassigned__">Unassigned</SelectItem>}
         {members.map((m: { id: string; name: string }) => (
           <SelectItem key={m.id} value={m.name}>{m.name}</SelectItem>
         ))}
@@ -72,7 +72,7 @@ const emptyLead: Omit<Lead, "id"> = {
   name: "", phone: "", email: "", caseType: "DA", caseNumber: "", source: "",
   stage: "New Lead", notes: "", date: todayPST(),
   retainerBooked: 0, downpayment: 0, quotedAmount: 0, referredBy: "", consultationFee: 0,
-  assignedTo: "Khushi",
+  assignedTo: null, followUpDate: todayPST(),
 };
 
 // ── Helpers ────────────────────────────────────────────────
@@ -118,7 +118,7 @@ function LeadAgeBadge({ dateStr }: { dateStr: string }) {
 
 // ── Main Component ─────────────────────────────────────────
 export default function Leads() {
-  const { leads, payments, followUps, addLead, updateLead, deleteLead, addPayment, updateFollowUp, addFollowUp, setLeadFollowUpDate } = useCRM();
+  const { leads, payments, followUps, addLead, updateLead, addPayment, updateFollowUp, addFollowUp, setLeadFollowUpDate } = useCRM();
   const { activeMember } = useActiveMember();
   const [showAdd, setShowAdd] = useState(false);
   const [editLead, setEditLead] = useState<Lead | null>(null);
@@ -207,7 +207,7 @@ export default function Leads() {
   }), [leads, summaryYear, summaryMonth]);
   const monthLost = useMemo(() => leads.filter(l => {
     if (l.stage !== "Lost") return false;
-    const d = new Date(l.date + "T12:00:00");
+    const d = new Date((l.lostDate || l.date) + "T12:00:00");
     return d.getFullYear() === summaryYear && d.getMonth() + 1 === summaryMonth;
   }), [leads, summaryYear, summaryMonth]);
   const monthConvRate = monthLeadsIn.length > 0 ? Math.round((monthConverted.length / monthLeadsIn.length) * 100) : 0;
@@ -356,7 +356,7 @@ export default function Leads() {
       setConvertLead(lead);
       setConvertForm({ retainerBooked: "", downpayment: "", caseNumber: lead.caseNumber || "", notes: "" });
     } else {
-      updateLead(leadId, { stage: targetStage });
+      updateLead(leadId, { stage: targetStage, actorName: activeMember?.name ?? "Team" });
       toast.success(`Moved to ${targetStage}`);
       // Auto-log consultation fee as a payment when moving to Consultation (if fee > 0 and not already logged)
       if (targetStage === "Consultation" && (lead.consultationFee ?? 0) > 0) {
@@ -396,7 +396,7 @@ export default function Leads() {
     setDragOverStage(null);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.name.trim()) { toast.error("Name is required"); return; }
     if (editLead) {
       // If changing to Lost stage, prompt for reason
@@ -408,7 +408,7 @@ export default function Leads() {
       // Exclude 'notes' from edit dialog updates — case notes are only editable
       // from the LeadDetailPanel dedicated notes editor to prevent accidental wipes.
       const { notes: _notes, ...formWithoutNotes } = form;
-      updateLead(editLead.id, formWithoutNotes);
+      updateLead(editLead.id, { ...formWithoutNotes, actorName: activeMember?.name ?? "Team" });
       toast.success("Lead updated");
       // Auto-log consultation fee when stage changes to Consultation via edit form
       if (form.stage === "Consultation" && editLead.stage !== "Consultation" && (form.consultationFee ?? 0) > 0) {
@@ -431,7 +431,10 @@ export default function Leads() {
       setEditLead(null);
       setShowAdd(false);
     } else {
-      addLead(form);
+      if (!form.assignedTo?.trim()) { toast.error("Assign a team member before creating this lead."); return; }
+      if (!form.followUpDate || form.followUpDate < todayPST()) { toast.error("Set a follow-up date of today or later before creating this lead."); return; }
+      if (form.stage === "Lost") { toast.error("Create the lead in the active pipeline, then use Mark Lost so the required review is recorded."); return; }
+      await addLead(form);
       toast.success("Lead added");
       setShowAdd(false);
     }
@@ -449,6 +452,7 @@ export default function Leads() {
       downpayment: dp,
       caseNumber: convertForm.caseNumber || convertLead.caseNumber,
       convertedDate: todayPST(),
+      actorName: activeMember?.name ?? "Team",
     });
     if (dp > 0) {
       addPayment({
@@ -477,17 +481,6 @@ export default function Leads() {
 
   const openDetail = (lead: Lead) => {
     setDetailLeadId(lead.id);
-  };
-
-  const handleDeleteLead = async () => {
-    try {
-      const leadName = await deleteAfterConfirmation(leadPendingDelete, deleteLead);
-      if (!leadName) return;
-      toast.success(`${leadName} deleted`);
-      setLeadPendingDelete(null);
-    } catch {
-      toast.error("Unable to delete this lead. Please try again.");
-    }
   };
 
   // Card-level quick actions (still used on the kanban card strip)
@@ -1032,7 +1025,7 @@ export default function Leads() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)" }}>
-                  {pipelineStageNames.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  {pipelineStageNames.filter(s => editLead || s !== "Lost").map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -1065,16 +1058,21 @@ export default function Leads() {
                 style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
             </div>
             <div>
-              <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Assigned To</Label>
+              <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Assigned To {!editLead && <span style={{ color: "oklch(0.70 0.22 25)" }}>*</span>}</Label>
               <AssignedToSelect
                 value={form.assignedTo ?? null}
                 onChange={v => setForm(f => ({ ...f, assignedTo: v }))}
+                required={!editLead}
               />
             </div>
+            {!editLead && <div>
+              <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Next Follow-Up Date <span style={{ color: "oklch(0.70 0.22 25)" }}>*</span></Label>
+              <PSTDatePicker value={form.followUpDate ?? ""} onChange={v => setForm(f => ({ ...f, followUpDate: v }))} minDate={todayPST()} inline />
+            </div>}
           </div>
           {/* Note: Case notes are edited from the Lead Detail Panel, not here, to prevent accidental overwrites */}
           <div className="flex gap-3 mt-4">
-            <Button onClick={handleSave} style={{ background: "oklch(0.72 0.12 75)", color: "oklch(0.13 0.025 250)" }}>
+            <Button onClick={handleSave} disabled={!editLead && (!form.assignedTo?.trim() || !form.followUpDate || form.followUpDate < todayPST())} style={{ background: "oklch(0.72 0.12 75)", color: "oklch(0.13 0.025 250)" }}>
               {editLead ? "Save Changes" : "Add Lead"}
             </Button>
             <Button variant="outline" onClick={() => { setShowAdd(false); setEditLead(null); setForm(emptyLead); }}
@@ -1127,27 +1125,7 @@ export default function Leads() {
         </DialogContent>
       </Dialog>
 
-      {/* Lead deletion is intentionally confirmed before invoking the destructive mutation. */}
-      <Dialog open={!!leadPendingDelete} onOpenChange={open => { if (!open) setLeadPendingDelete(null); }}>
-        <DialogContent style={{ background: "oklch(0.18 0.025 250)", borderColor: "oklch(0.70 0.22 25 / 45%)", color: "oklch(0.93 0.005 250)" }}>
-          <DialogHeader>
-            <DialogTitle style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.93 0.005 250)" }}>
-              Delete {leadPendingDelete?.name}?
-            </DialogTitle>
-          </DialogHeader>
-          <p className="text-sm" style={{ color: "oklch(0.68 0.01 250)" }}>
-            This will permanently remove the lead record and its associated CRM data. This action cannot be undone.
-          </p>
-          <div className="flex gap-3 mt-2">
-            <Button onClick={handleDeleteLead} style={{ background: "oklch(0.60 0.22 25)", color: "oklch(0.98 0 0)" }}>
-              <Trash2 className="w-4 h-4 mr-2" /> Delete Lead
-            </Button>
-            <Button variant="outline" onClick={() => setLeadPendingDelete(null)} style={{ borderColor: "oklch(1 0 0 / 20%)", color: "oklch(0.65 0.01 250)" }}>
-              Cancel
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <LeadDeleteDialog lead={leadPendingDelete} onClose={() => setLeadPendingDelete(null)} />
 
       <LostLeadDialog lead={lostLeadPending} onClose={() => { setLostLeadPending(null); setEditLead(null); setForm(emptyLead); }} />
     </div>

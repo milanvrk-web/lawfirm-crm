@@ -8,8 +8,8 @@ import { toast } from "sonner";
 import { useCRM } from "@/contexts/CRMContext";
 import { useActiveMember } from "@/contexts/ActiveMemberContext";
 import type { Lead } from "@/lib/store";
-import { isConvertedStage } from "@shared/const";
-import { todayPST, tomorrowPST } from "@/lib/timezone";
+import { isActiveLeadStage } from "@shared/const";
+import { todayPST, tomorrowPST, addDaysPST } from "@/lib/timezone";
 import { PSTDatePicker } from "@/components/PSTDatePicker";
 
 interface StaleLead {
@@ -68,11 +68,17 @@ export default function StaleLeadsDrawer({ open, onClose }: StaleLeadsDrawerProp
     }
   }, [open, handleKeyDown]);
 
-  // Compute stale leads using followUpDate and latest payment as activity signals
+  // Match Dashboard: active leads with neither a scheduled follow-up nor
+  // a linked payment within the prior 14 PST calendar days.
   const staleLeadList: StaleLead[] = (() => {
-    const cutoffMs = Date.now() - 14 * 24 * 60 * 60 * 1000;
+    const cutoffDate = addDaysPST(todayPST(), -14);
     return leads
-      .filter(l => l.stage !== "Lost" && !isConvertedStage(l.stage))
+      .filter(l => {
+        if (!isActiveLeadStage(l.stage)) return false;
+        const hasRecentScheduledFollowUp = Boolean(l.followUpDate && l.followUpDate >= cutoffDate);
+        const hasRecentLinkedPayment = payments.some(p => p.leadId === l.id && p.date >= cutoffDate);
+        return !hasRecentScheduledFollowUp && !hasRecentLinkedPayment;
+      })
       .map(l => {
         const lastPaymentMs = payments
           .filter(p => p.leadId === l.id)
@@ -86,7 +92,6 @@ export default function StaleLeadsDrawer({ open, onClose }: StaleLeadsDrawerProp
         const lastActivityMs = Math.max(createdMs, lastPaymentMs, followUpDateMs);
         return { lead: l, lastActivityMs, daysSinceActivity: Math.floor((Date.now() - lastActivityMs) / (1000 * 60 * 60 * 24)), lastActivityLabel: formatRelativeDate(lastActivityMs) };
       })
-      .filter(s => s.lastActivityMs < cutoffMs)
       .sort((a, b) => a.lastActivityMs - b.lastActivityMs); // most stale first
   })();
 
@@ -200,9 +205,12 @@ export default function StaleLeadsDrawer({ open, onClose }: StaleLeadsDrawerProp
                 }}
               >
                 {/* Lead row */}
-                <button
-                  className="w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-white/3 transition-colors"
+                <div
+                  className="w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-white/3 transition-colors cursor-pointer"
+                  role="button"
+                  tabIndex={0}
                   onClick={() => setExpandedId(isExpanded ? null : lead.id)}
+                  onKeyDown={event => { if (event.key === "Enter" || event.key === " ") setExpandedId(isExpanded ? null : lead.id); }}
                 >
                   {/* Stale duration badge */}
                   <div
@@ -218,9 +226,12 @@ export default function StaleLeadsDrawer({ open, onClose }: StaleLeadsDrawerProp
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium text-sm truncate" style={{ color: "oklch(0.93 0.005 250)" }}>
-                      {lead.name}
-                    </div>
+                    <button
+                      onClick={event => { event.stopPropagation(); onClose(); navigate(`/leads?lead=${lead.id}`); }}
+                      className="font-medium text-sm truncate hover:underline text-left"
+                      style={{ color: "oklch(0.93 0.005 250)" }}
+                      title="Open full lead detail"
+                    >{lead.name}</button>
                     <div className="flex items-center gap-2 mt-0.5">
                       <span
                         className="text-xs px-1.5 py-0.5 rounded"
@@ -248,7 +259,7 @@ export default function StaleLeadsDrawer({ open, onClose }: StaleLeadsDrawerProp
                       {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                     </div>
                   </div>
-                </button>
+                </div>
 
                 {/* Inline follow-up form */}
                 {isExpanded && (

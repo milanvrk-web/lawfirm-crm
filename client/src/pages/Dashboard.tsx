@@ -8,7 +8,7 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { useCRM } from "@/contexts/CRMContext";
 import { trpc } from "@/lib/trpc";
-import { todayPST, formatDate as fmtDate } from "@/lib/timezone";
+import { todayPST, addDaysPST, formatDate as fmtDate } from "@/lib/timezone";
 import { PSTDatePicker } from "@/components/PSTDatePicker";
 import {
   formatCurrency,
@@ -370,25 +370,17 @@ export default function Dashboard() {
   const dueTodayFollowUps = useMemo(() => leadsWithFollowUp.filter(l => l.followUpDate === todayStr), [leadsWithFollowUp, todayStr]);
   // todayPayments kept for stale-lead checks; individual breakdowns computed in Day Navigator
 
-  // Stale leads: active (non-lost, non-retained, non-onboarding) leads with no payment or follow-up activity in 14+ days
-  // Uses lead.followUpDate (single follow-up system) — must match StaleLeadsDrawer logic exactly
+  // Stale leads are active intake records with neither a scheduled follow-up nor
+  // a linked payment in the prior 14 PST calendar days.
   const staleLeads = useMemo(() => {
-    const cutoffMs = Date.now() - 14 * 24 * 60 * 60 * 1000;
+    const cutoffDate = addDaysPST(todayStr, -14);
     return leads.filter(l => {
-      if (l.stage === "Lost" || isConvertedStage(l.stage)) return false;
-      const lastPaymentMs = payments
-        .filter(p => p.leadId === l.id)
-        .map(p => new Date(p.date + "T12:00:00").getTime())
-        .reduce((max, t) => Math.max(max, t), 0);
-      // followUpDate is the primary activity signal (single follow-up system)
-      const followUpDateMs = l.followUpDate
-        ? new Date(l.followUpDate + "T12:00:00").getTime()
-        : 0;
-      const createdMs = new Date(l.date + "T12:00:00").getTime();
-      const lastActivity = Math.max(createdMs, lastPaymentMs, followUpDateMs);
-      return lastActivity < cutoffMs;
+      if (!isActiveLeadStage(l.stage)) return false;
+      const hasRecentScheduledFollowUp = Boolean(l.followUpDate && l.followUpDate >= cutoffDate);
+      const hasRecentLinkedPayment = payments.some(p => p.leadId === l.id && p.date >= cutoffDate);
+      return !hasRecentScheduledFollowUp && !hasRecentLinkedPayment;
     }).length;
-  }, [leads, payments]);
+  }, [leads, payments, todayStr]);
 
 
   // Drill-down data

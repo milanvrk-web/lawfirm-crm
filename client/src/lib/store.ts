@@ -58,6 +58,7 @@ export interface Lead {
   referredBy: string;
   convertedDate?: string;
   lostReason?: string | null;
+  lostReasonDetail?: string | null;
   lostNote?: string | null;
   lostDate?: string | null;
   consultationFee?: number;  // fee paid for consultation (e.g. $150)

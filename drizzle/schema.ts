@@ -52,6 +52,7 @@ export const leads = mysqlTable("leads", {
   referredBy: varchar("referredBy", { length: 255 }).default("").notNull(),
   convertedDate: varchar("convertedDate", { length: 10 }),
   lostReason: varchar("lostReason", { length: 255 }),
+  lostReasonDetail: varchar("lostReasonDetail", { length: 500 }),
   lostNote: text("lostNote"),
   lostDate: varchar("lostDate", { length: 10 }),
   consultationFee: decimal("consultationFee", { precision: 10, scale: 2 }).default("0"),
