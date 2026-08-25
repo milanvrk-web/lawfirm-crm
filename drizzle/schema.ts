@@ -56,6 +56,12 @@ export const leads = mysqlTable("leads", {
   lostNote: text("lostNote"),
   lostDate: varchar("lostDate", { length: 10 }),
   consultationFee: decimal("consultationFee", { precision: 10, scale: 2 }).default("0"),
+  /** PST date on which a paid consultation was booked. */
+  consultationBookedDate: varchar("consultationBookedDate", { length: 10 }),
+  /** PST appointment date selected after the consultation fee is paid. */
+  consultationScheduledFor: varchar("consultationScheduledFor", { length: 10 }),
+  /** Whether the paid consultation fee is credited toward the contractual retainer balance. */
+  consultationFeeAppliedToRetainer: int("consultationFeeAppliedToRetainer").default(0).notNull(),
   /** Next follow-up due date (YYYY-MM-DD). Null = no follow-up scheduled. */
   followUpDate: varchar("followUpDate", { length: 10 }),
   /** Team member responsible for this lead (name string, matches crmMembers.name) */

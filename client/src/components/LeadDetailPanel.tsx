@@ -457,7 +457,7 @@ export default function LeadDetailPanel({
   };
   const [installmentsExpanded, setInstallmentsExpanded] = useState(false);
   const [showInlineConvert, setShowInlineConvert] = useState(false);
-  const [inlineConvertForm, setInlineConvertForm] = useState({ retainerBooked: "", downpayment: "", caseNumber: "", notes: "" });
+  const [inlineConvertForm, setInlineConvertForm] = useState({ retainerBooked: "", downpayment: "", caseNumber: "", notes: "", applyConsultationFee: false });
   const [lostLeadPending, setLostLeadPending] = useState<Lead | null>(null);
   const stageDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -487,7 +487,7 @@ export default function LeadDetailPanel({
       if (onConvertLead) {
         onConvertLead(lead);
       } else {
-        setInlineConvertForm({ retainerBooked: "", downpayment: "", caseNumber: lead.caseNumber || "", notes: "" });
+        setInlineConvertForm({ retainerBooked: "", downpayment: "", caseNumber: lead.caseNumber || "", notes: "", applyConsultationFee: false });
         setShowInlineConvert(true);
       }
       return;
@@ -507,6 +507,7 @@ export default function LeadDetailPanel({
       downpayment: dp,
       caseNumber: inlineConvertForm.caseNumber || lead.caseNumber,
       convertedDate: todayPST(),
+      consultationFeeAppliedToRetainer: inlineConvertForm.applyConsultationFee,
       actorName: activeMember?.name ?? "Team",
     });
     if (dp > 0) {
@@ -524,7 +525,7 @@ export default function LeadDetailPanel({
     }
     toast.success(`${lead.name} converted to Retained`);
     setShowInlineConvert(false);
-    setInlineConvertForm({ retainerBooked: "", downpayment: "", caseNumber: "", notes: "" });
+    setInlineConvertForm({ retainerBooked: "", downpayment: "", caseNumber: "", notes: "", applyConsultationFee: false });
   };
 
   const lead = useMemo(
@@ -547,7 +548,9 @@ export default function LeadDetailPanel({
     [lead, payments]
   );
 
-  const totalReceived = leadPayments.reduce((s, p) => s + p.amount, 0);
+  const totalReceived = leadPayments
+    .filter(payment => lead?.consultationFeeAppliedToRetainer || payment.receivedFor !== "Consultation Fee")
+    .reduce((sum, payment) => sum + payment.amount, 0);
 
   if (!lead) return null;
 
@@ -1455,6 +1458,12 @@ export default function LeadDetailPanel({
                 style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }}
               />
             </div>
+            {(lead?.consultationFee ?? 0) > 0 && lead?.consultationBookedDate && (
+              <label className="flex items-start gap-3 rounded-lg p-3 cursor-pointer" style={{ background: "oklch(0.72 0.12 75 / 8%)", border: "1px solid oklch(0.72 0.12 75 / 22%)" }}>
+                <input type="checkbox" checked={inlineConvertForm.applyConsultationFee} onChange={event => setInlineConvertForm(form => ({ ...form, applyConsultationFee: event.target.checked }))} className="mt-1" />
+                <span className="text-sm"><strong style={{ color: "oklch(0.72 0.12 75)" }}>Apply {formatCurrency(lead.consultationFee ?? 0)} consultation fee toward the retainer</strong><br /><span style={{ color: "oklch(0.60 0.01 250)" }}>Leave this unchecked to keep the consultation payment separate from the retainer balance.</span></span>
+              </label>
+            )}
             <div>
               <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Case Number</Label>
               <Input

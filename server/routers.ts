@@ -56,6 +56,9 @@ const LeadInput = z.object({
   lostNote: z.string().optional().nullable(),
   lostDate: z.string().optional().nullable(),
   consultationFee: z.number().default(0).optional(),
+  consultationBookedDate: z.string().optional().nullable(),
+  consultationScheduledFor: z.string().optional().nullable(),
+  consultationFeeAppliedToRetainer: z.number().int().min(0).max(1).optional(),
   assignedTo: z.string().optional().nullable(),
   followUpDate: z.string().optional().nullable(),
 });
@@ -83,6 +86,9 @@ const LeadUpdateInput = z.object({
   lostNote: z.string().optional().nullable(),
   lostDate: z.string().optional().nullable(),
   consultationFee: z.number().optional(),
+  consultationBookedDate: z.string().optional().nullable(),
+  consultationScheduledFor: z.string().optional().nullable(),
+  consultationFeeAppliedToRetainer: z.number().int().min(0).max(1).optional(),
   assignedTo: z.string().optional().nullable(),
   followUpDate: z.string().optional().nullable(),
   actorName: z.string().optional(),
@@ -204,6 +210,9 @@ export const appRouter = router({
         lostNote: input.lostNote ?? null,
         lostDate: input.lostDate ?? null,
         consultationFee: String(input.consultationFee ?? 0),
+        consultationBookedDate: input.consultationBookedDate ?? null,
+        consultationScheduledFor: input.consultationScheduledFor ?? null,
+        consultationFeeAppliedToRetainer: input.consultationFeeAppliedToRetainer ?? 0,
         assignedTo: input.assignedTo ?? null,
         followUpDate: input.followUpDate ?? null,
       });
@@ -259,6 +268,58 @@ export const appRouter = router({
           retainerBooked: String(input.retainerBooked),
         });
         return { success: true };
+      }),
+
+    bookConsultation: publicProcedure
+      .input(z.object({
+        id: z.string(),
+        fee: z.union([z.literal(150), z.literal(200)]),
+        scheduledFor: z.string().min(10),
+        notes: z.string().default(""),
+        actorName: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const lead = await db.getLeadById(input.id);
+        if (!lead) throw new TRPCError({ code: "NOT_FOUND", message: "Lead not found." });
+        if (lead.stage === "Lost" || lead.stage === "Retained & Onboarding") {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Only active leads can have a consultation booked." });
+        }
+        if (lead.stage === "Consultation Booked" || lead.consultationBookedDate) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "A consultation is already booked for this lead." });
+        }
+        if (input.scheduledFor < todayPSTServer()) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Select a consultation date of today or later." });
+        }
+        const paymentId = nanoid();
+        await db.createPayment({
+          id: paymentId,
+          date: todayPSTServer(),
+          clientName: lead.name,
+          leadId: lead.id,
+          caseType: lead.caseType as Parameters<typeof db.createPayment>[0]["caseType"],
+          caseNumber: lead.caseNumber,
+          paymentType: "New Client",
+          amount: String(input.fee),
+          receivedFor: "Consultation Fee",
+          notes: input.notes,
+          linkedInstallmentId: null,
+        });
+        await db.updateLead(lead.id, {
+          stage: "Consultation Booked",
+          consultationFee: String(input.fee),
+          consultationBookedDate: todayPSTServer(),
+          consultationScheduledFor: input.scheduledFor,
+          consultationFeeAppliedToRetainer: 0,
+          followUpDate: input.scheduledFor,
+        });
+        await db.createLeadNote({
+          id: nanoid(),
+          leadId: lead.id,
+          text: `Consultation booked for ${input.scheduledFor} · Fee paid: $${input.fee}${input.notes.trim() ? `\n${input.notes.trim()}` : ""}`,
+          timestamp: new Date().toISOString(),
+          authorName: input.actorName ?? "Team",
+        });
+        return { success: true, paymentId };
       }),
 
     delete: publicProcedure

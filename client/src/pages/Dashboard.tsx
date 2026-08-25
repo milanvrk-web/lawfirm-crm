@@ -134,6 +134,7 @@ export default function Dashboard() {
   }, [leads, selectedYear, selectedMonth]);
   const newClientRev = monthPayments.filter(p => p.paymentType === "New Client").reduce((s, p) => s + p.amount, 0);
   const existingClientRev = monthPayments.filter(p => p.paymentType === "Existing Client").reduce((s, p) => s + p.amount, 0);
+  const consultationFeeRevenue = monthPayments.filter(p => p.receivedFor === "Consultation Fee").reduce((s, p) => s + p.amount, 0);
   const totalReceived = newClientRev + existingClientRev;
   const pctOfBooked = revenueBooked > 0 ? Math.round((totalReceived / revenueBooked) * 100) : 0;
 
@@ -166,6 +167,10 @@ export default function Dashboard() {
       return d.getFullYear() === selectedYear && d.getMonth() + 1 === selectedMonth;
     }).length;
   }, [leads, selectedYear, selectedMonth]);
+  const monthConsultationsBooked = useMemo(
+    () => new Set(monthPayments.filter(payment => payment.receivedFor === "Consultation Fee" && payment.leadId).map(payment => payment.leadId)).size,
+    [monthPayments]
+  );
   const monthLeadsIn = monthLeads.length;
   const monthConvRate = monthLeadsIn > 0 ? Math.round((monthConverted / monthLeadsIn) * 100) : 0;
 
@@ -957,8 +962,10 @@ export default function Dashboard() {
       </div>
 
             {/* ── 7 Stat Cards ────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 xl:grid-cols-8 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-10 gap-3">
         <StatCard icon={<Users className="w-4 h-4" />} label="Leads In" value={totalLeads} sub="this month" onClick={() => setDrillDown("leads")} />
+        <StatCard icon={<CalendarCheck className="w-4 h-4" />} label="Consultations" value={monthConsultationsBooked} sub="fee paid & booked" />
+        <StatCard icon={<DollarSign className="w-4 h-4" />} label="Consult. Fees" value={formatCurrency(consultationFeeRevenue)} sub="paid this month" />
         <StatCard icon={<UserCheck className="w-4 h-4" />} label="Converted" value={converted} sub={`${convRate}% conv. rate`} onClick={() => setDrillDown("converted")} />
         <StatCard icon={<TrendingUp className="w-4 h-4" />} label="Conv. Rate" value={`${convRate}%`} sub={`${converted} of ${totalLeads}`} onClick={() => setDrillDown("converted")} />
         <StatCard icon={<BookOpen className="w-4 h-4" />} label="Rev. Booked" value={formatCurrency(revenueBooked)} sub={`${converted} retainers signed`} gold onClick={() => setDrillDown("revBooked")} />
@@ -1422,7 +1429,7 @@ export default function Dashboard() {
         <div className="rounded-lg p-5 border" style={{ background: "oklch(0.18 0.025 250)", borderColor: "oklch(1 0 0 / 8%)" }}>
           <div className="flex items-center gap-2 mb-4">
             <Target className="w-4 h-4" style={{ color: "oklch(0.72 0.12 75)" }} />
-            <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "oklch(0.72 0.12 75)" }}>Lead Source</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "oklch(0.72 0.12 75)" }}>Lead Source Funnel</h2>
             <span className="text-xs" style={{ color: "oklch(0.45 0.01 250)" }}>{MONTHS[selectedMonth - 1]} {selectedYear}</span>
           </div>
           {(() => {
@@ -1431,16 +1438,17 @@ export default function Dashboard() {
               const d = new Date(l.date + "T12:00:00");
               return d.getFullYear() === selectedYear && (d.getMonth() + 1) === selectedMonth;
             });
-            const sourceMap: Record<string, { leads: number; converted: number; revenue: number }> = {};
+            const sourceMap: Record<string, { leads: number; consultations: number; converted: number; lost: number; inProgress: number; revenue: number }> = {};
             monthLeads.forEach(l => {
               const src = l.source || "Unknown";
-              if (!sourceMap[src]) sourceMap[src] = { leads: 0, converted: 0, revenue: 0 };
+              if (!sourceMap[src]) sourceMap[src] = { leads: 0, consultations: 0, converted: 0, lost: 0, inProgress: 0, revenue: 0 };
               sourceMap[src].leads += 1;
-              // Both Retained AND Onboarding are converted clients
+              if (l.consultationBookedDate || payments.some(payment => payment.leadId === l.id && payment.receivedFor === "Consultation Fee")) sourceMap[src].consultations += 1;
               if (isConvertedStage(l.stage)) {
                 sourceMap[src].converted += 1;
                 sourceMap[src].revenue += l.retainerBooked || 0;
-              }
+              } else if (l.stage === "Lost") sourceMap[src].lost += 1;
+              else sourceMap[src].inProgress += 1;
             });
             const rows = Object.entries(sourceMap)
               .map(([src, d]) => ({ src, ...d, convRate: d.leads > 0 ? Math.round((d.converted / d.leads) * 100) : 0 }))
@@ -1449,22 +1457,14 @@ export default function Dashboard() {
             if (rows.length === 0) return <p className="text-sm text-center py-6" style={{ color: "oklch(0.45 0.01 250)" }}>No lead source data for this month.</p>;
             return (
               <div>
-                {/* Header row */}
-                <div className="grid grid-cols-4 gap-2 mb-2 px-1">
-                  <span className="text-xs col-span-1" style={{ color: "oklch(0.45 0.01 250)" }}>Source</span>
-                  <span className="text-xs text-center" style={{ color: "oklch(0.45 0.01 250)" }}>Leads</span>
-                  <span className="text-xs text-center" style={{ color: "oklch(0.45 0.01 250)" }}>Conv.</span>
-                  <span className="text-xs text-right" style={{ color: "oklch(0.45 0.01 250)" }}>Revenue</span>
-                </div>
+                <p className="text-xs mb-2" style={{ color: "oklch(0.45 0.01 250)" }}>Selected-month lead cohort and its current lifecycle outcomes.</p>
                 <div className="space-y-1.5">
                   {rows.map(row => (
-                    <div key={row.src} className="grid grid-cols-4 gap-2 items-center rounded px-1 py-1.5" style={{ background: "oklch(0.20 0.025 250)" }}>
-                      <span className="text-xs font-medium truncate col-span-1" style={{ color: "oklch(0.80 0.005 250)" }}>{row.src}</span>
-                      <span className="text-xs text-center" style={{ color: "oklch(0.65 0.01 250)" }}>{row.leads}</span>
-                      <span className="text-xs text-center font-semibold" style={{ color: row.convRate >= 50 ? "oklch(0.65 0.18 145)" : row.convRate >= 25 ? "oklch(0.72 0.12 75)" : "oklch(0.65 0.01 250)" }}>
-                        {row.converted} <span className="font-normal opacity-70">({row.convRate}%)</span>
-                      </span>
-                      <span className="text-xs font-semibold text-right" style={{ color: "oklch(0.72 0.12 75)" }}>{formatCurrency(row.revenue)}</span>
+                    <div key={row.src} className="rounded px-3 py-2" style={{ background: "oklch(0.20 0.025 250)" }}>
+                      <div className="flex justify-between gap-3"><span className="text-xs font-medium truncate" style={{ color: "oklch(0.80 0.005 250)" }}>{row.src}</span><span className="text-xs font-semibold shrink-0" style={{ color: "oklch(0.72 0.12 75)" }}>{formatCurrency(row.revenue)}</span></div>
+                      <div className="text-xs mt-1 flex flex-wrap gap-x-2 gap-y-1" style={{ color: "oklch(0.60 0.01 250)" }}>
+                        <span>Leads {row.leads}</span><span style={{ color: "oklch(0.72 0.12 75)" }}>Consults {row.consultations}</span><span style={{ color: "oklch(0.55 0.18 145)" }}>Won {row.converted} ({row.convRate}%)</span><span style={{ color: "oklch(0.70 0.22 25)" }}>Lost {row.lost}</span><span>Open {row.inProgress}</span>
+                      </div>
                     </div>
                   ))}
                 </div>

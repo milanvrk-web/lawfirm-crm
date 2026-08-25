@@ -605,3 +605,11 @@
 - [x] Audit and reconcile Dashboard reporting against raw CRM records, including Lost, revenue, KPI drill-downs, stale-lead rules, and PST date handling
 - [x] Report existing orphan payments and missing payment-to-lead links before applying any approved data repairs
 - [x] Link the 17 user-authorized one-to-one exact-name payment candidates and verify no orphan payments were introduced
+
+## Consultation-to-Retainer Workflow & Source Outcomes — Pending Approval
+
+- [x] Add an explicit Book Consultation action that requires and records a paid $150 or $200 consultation fee before moving the lead to Consultation Booked
+- [x] Support direct-retainer conversion and consultation-led conversion, with a required choice to adjust or not adjust a paid consultation fee against the retainer
+- [x] Record the consultation outcome as Won, Lost, or Still In Progress without duplicating lifecycle paths
+- [x] Expand lead-source reporting to show leads received, consultations booked, converted/won, lost reasons, and in-progress outcomes per source
+- [x] Reconcile the revised Dashboard lifecycle and source-outcome metrics against raw lead and payment records before release

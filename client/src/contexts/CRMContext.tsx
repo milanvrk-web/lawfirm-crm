@@ -63,6 +63,8 @@ type DbLead = {
   referredBy: string; convertedDate?: string | null; lostReason?: string | null;
   lostReasonDetail?: string | null; lostNote?: string | null; lostDate?: string | null;
   consultationFee?: string | number | null;
+  consultationBookedDate?: string | null; consultationScheduledFor?: string | null;
+  consultationFeeAppliedToRetainer?: number | boolean | null;
   followUpDate?: string | null;
   assignedTo?: string | null;
   createdAt?: Date; updatedAt?: Date;
@@ -109,6 +111,9 @@ function normalizeLead(r: DbLead): Lead {
     lostNote: r.lostNote ?? null,
     lostDate: r.lostDate ?? null,
     consultationFee: Number(r.consultationFee ?? 0),
+    consultationBookedDate: r.consultationBookedDate ?? null,
+    consultationScheduledFor: r.consultationScheduledFor ?? null,
+    consultationFeeAppliedToRetainer: Boolean(r.consultationFeeAppliedToRetainer),
     followUpDate: r.followUpDate ?? null,
     assignedTo: r.assignedTo ?? null,
   };
@@ -249,6 +254,9 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
       lostNote: lead.lostNote ?? null,
       lostDate: lead.lostDate ?? null,
       consultationFee: lead.consultationFee ?? 0,
+      consultationBookedDate: lead.consultationBookedDate ?? null,
+      consultationScheduledFor: lead.consultationScheduledFor ?? null,
+      consultationFeeAppliedToRetainer: lead.consultationFeeAppliedToRetainer ? 1 : 0,
       assignedTo: lead.assignedTo ?? null,
       followUpDate: lead.followUpDate ?? null,
     });

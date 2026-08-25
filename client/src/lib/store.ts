@@ -62,6 +62,9 @@ export interface Lead {
   lostNote?: string | null;
   lostDate?: string | null;
   consultationFee?: number;  // fee paid for consultation (e.g. $150)
+  consultationBookedDate?: string | null;
+  consultationScheduledFor?: string | null;
+  consultationFeeAppliedToRetainer?: boolean;
   followUpDate?: string | null;  // YYYY-MM-DD, next follow-up due date
   assignedTo?: string | null;    // team member name responsible for this lead
   leadLog?: LeadNote[];   // inline timestamped notes

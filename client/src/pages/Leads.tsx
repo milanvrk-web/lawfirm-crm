@@ -123,8 +123,10 @@ export default function Leads() {
   const [showAdd, setShowAdd] = useState(false);
   const [editLead, setEditLead] = useState<Lead | null>(null);
   const [convertLead, setConvertLead] = useState<Lead | null>(null);
+  const [consultationLead, setConsultationLead] = useState<Lead | null>(null);
   const [form, setForm] = useState<Omit<Lead, "id">>(emptyLead);
-  const [convertForm, setConvertForm] = useState({ retainerBooked: "", downpayment: "", caseNumber: "", notes: "" });
+  const [convertForm, setConvertForm] = useState({ retainerBooked: "", downpayment: "", caseNumber: "", notes: "", applyConsultationFee: false });
+  const [consultationForm, setConsultationForm] = useState({ fee: 150 as 150 | 200, scheduledFor: todayPST(), notes: "" });
   const [search, setSearch] = useState("");
   const [filterStage, setFilterStage] = useState<LeadStage | "All">("All");
   const [filterCaseType, setFilterCaseType] = useState<string>("All");
@@ -285,6 +287,16 @@ export default function Leads() {
   const createChecklistMut = trpc.pipeline.createChecklistTemplate.useMutation({ onSuccess: () => pipelineUtils.pipeline.getAllChecklistTemplates.invalidate() });
   const updateChecklistMut = trpc.pipeline.updateChecklistTemplate.useMutation({ onSuccess: () => pipelineUtils.pipeline.getAllChecklistTemplates.invalidate() });
   const deleteChecklistMut = trpc.pipeline.deleteChecklistTemplate.useMutation({ onSuccess: () => pipelineUtils.pipeline.getAllChecklistTemplates.invalidate() });
+  const bookConsultationMut = trpc.leads.bookConsultation.useMutation({
+    onSuccess: async () => {
+      await pipelineUtils.leads.list.invalidate();
+      await pipelineUtils.payments.list.invalidate();
+      setConsultationLead(null);
+      setConsultationForm({ fee: 150, scheduledFor: todayPST(), notes: "" });
+      toast.success("Consultation booked and fee payment recorded.");
+    },
+    onError: error => toast.error(error.message),
+  });
 
   const handleMoveStage = (stageId: string, direction: "left" | "right") => {
     const sorted = [...dbStages].sort((a, b) => a.order - b.order);
@@ -344,40 +356,48 @@ export default function Leads() {
     e.dataTransfer.effectAllowed = "move";
   };
 
+  const openBookConsultation = (lead: Lead) => {
+    setConsultationLead(lead);
+    setConsultationForm({
+      fee: 150,
+      scheduledFor: lead.followUpDate && lead.followUpDate >= todayPST() ? lead.followUpDate : todayPST(),
+      notes: "",
+    });
+  };
+
+  const handleBookConsultation = () => {
+    if (!consultationLead) return;
+    if (!consultationForm.scheduledFor || consultationForm.scheduledFor < todayPST()) {
+      toast.error("Select a consultation date of today or later.");
+      return;
+    }
+    bookConsultationMut.mutate({
+      id: consultationLead.id,
+      fee: consultationForm.fee,
+      scheduledFor: consultationForm.scheduledFor,
+      notes: consultationForm.notes,
+      actorName: activeMember?.name ?? "Team",
+    });
+  };
+
   const handleDrop = (e: React.DragEvent, targetStage: LeadStage) => {
     e.preventDefault();
     const leadId = e.dataTransfer.getData("leadId");
     const lead = leads.find(l => l.id === leadId);
     if (!lead || lead.stage === targetStage) { setDragOverStage(null); return; }
-    if (targetStage === "Lost" && lead.stage !== "Lost") {
+    if (targetStage === "Consultation Scheduled" || targetStage === "Consultation") {
+      toast.error("Use Book Consultation to record the paid $150 or $200 fee before scheduling.");
+    } else if (targetStage === "Lost" && lead.stage !== "Lost") {
       setLostLeadPending(lead);
     } else if (targetStage === "Retained & Onboarding" && !isConvertedStage(lead.stage)) {
       // Only trigger Convert modal if the lead is NOT already a converted client.
       setConvertLead(lead);
-      setConvertForm({ retainerBooked: "", downpayment: "", caseNumber: lead.caseNumber || "", notes: "" });
+      setConvertForm({ retainerBooked: "", downpayment: "", caseNumber: lead.caseNumber || "", notes: "", applyConsultationFee: false });
     } else {
       updateLead(leadId, { stage: targetStage, actorName: activeMember?.name ?? "Team" });
       toast.success(`Moved to ${targetStage}`);
-      // Auto-log consultation fee as a payment when moving to Consultation (if fee > 0 and not already logged)
-      if (targetStage === "Consultation" && (lead.consultationFee ?? 0) > 0) {
-        const alreadyLogged = payments.some(p => p.leadId === leadId && p.receivedFor === "Consultation Fee");
-        if (!alreadyLogged) {
-          addPayment({
-            date: todayPST(),
-            clientName: lead.name,
-            leadId,
-            caseType: lead.caseType,
-            caseNumber: lead.caseNumber,
-            paymentType: "New Client",
-            amount: lead.consultationFee!,
-            receivedFor: "Consultation Fee",
-            notes: "",
-          });
-          toast.info(`Consultation fee $${lead.consultationFee} logged as payment`);
-        }
-      }
-      // Auto-create a follow-up task when a lead moves to Consultation or Follow-Up with no pending tasks
-      if (targetStage === "Consultation" || targetStage === "Follow-Up") {
+      // Follow-up work is created after a booked consultation or when explicitly moved to Follow-Up.
+      if (targetStage === "Consultation Booked" || targetStage === "Follow-Up") {
         const hasPending = followUps.some(f => f.leadId === leadId && f.status === "Pending");
         if (!hasPending) {
           const tomorrowStr = tomorrowPST();
@@ -452,6 +472,7 @@ export default function Leads() {
       downpayment: dp,
       caseNumber: convertForm.caseNumber || convertLead.caseNumber,
       convertedDate: todayPST(),
+      consultationFeeAppliedToRetainer: convertForm.applyConsultationFee,
       actorName: activeMember?.name ?? "Team",
     });
     if (dp > 0) {
@@ -469,7 +490,7 @@ export default function Leads() {
     }
     toast.success(`${convertLead.name} converted to Retained`);
     setConvertLead(null);
-    setConvertForm({ retainerBooked: "", downpayment: "", caseNumber: "", notes: "" });
+    setConvertForm({ retainerBooked: "", downpayment: "", caseNumber: "", notes: "", applyConsultationFee: false });
   };
 
   const openEdit = (lead: Lead) => {
@@ -871,6 +892,7 @@ export default function Leads() {
                       onEdit={() => openEdit(lead)}
                       onDelete={() => setLeadPendingDelete(lead)}
                       onConvert={() => setConvertLead(lead)}
+                      onBookConsultation={() => openBookConsultation(lead)}
                       onMarkLost={() => setLostLeadPending(lead)}
                       onMarkDone={handleMarkDone}
                       onReschedule={handleReschedule}
@@ -1083,6 +1105,36 @@ export default function Leads() {
         </DialogContent>
       </Dialog>
 
+      {/* ── Book Consultation Modal — payment is required before scheduling ── */}
+      <Dialog open={!!consultationLead} onOpenChange={open => { if (!open) setConsultationLead(null); }}>
+        <DialogContent style={{ background: "oklch(0.18 0.025 250)", borderColor: "oklch(0.72 0.12 75 / 35%)", color: "oklch(0.93 0.005 250)" }}>
+          <DialogHeader>
+            <DialogTitle style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.93 0.005 250)" }}>Book Consultation — {consultationLead?.name}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm" style={{ color: "oklch(0.65 0.01 250)" }}>Record the paid upfront fee, then select the confirmed consultation date. A consultation is not scheduled until the fee is paid.</p>
+          <div className="space-y-4 mt-2">
+            <div>
+              <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Consultation Fee Received *</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {[150, 200].map(fee => <button key={fee} onClick={() => setConsultationForm(form => ({ ...form, fee: fee as 150 | 200 }))} className="rounded-lg py-2.5 text-sm font-semibold" style={{ background: consultationForm.fee === fee ? "oklch(0.72 0.12 75)" : "oklch(0.22 0.025 250)", color: consultationForm.fee === fee ? "oklch(0.13 0.025 250)" : "oklch(0.80 0.005 250)", border: "1px solid oklch(0.72 0.12 75 / 30%)" }}>{formatCurrency(fee)}</button>)}
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Confirmed Consultation Date *</Label>
+              <PSTDatePicker value={consultationForm.scheduledFor} onChange={date => setConsultationForm(form => ({ ...form, scheduledFor: date }))} minDate={todayPST()} inline />
+            </div>
+            <div>
+              <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Payment / booking note</Label>
+              <Textarea value={consultationForm.notes} onChange={event => setConsultationForm(form => ({ ...form, notes: event.target.value }))} rows={2} placeholder="Optional receipt or booking note…" style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
+            </div>
+          </div>
+          <div className="flex gap-3 mt-4">
+            <Button onClick={handleBookConsultation} disabled={bookConsultationMut.isPending} style={{ background: "oklch(0.72 0.12 75)", color: "oklch(0.13 0.025 250)" }}><Calendar className="w-4 h-4 mr-2" /> Record Payment & Book</Button>
+            <Button variant="outline" onClick={() => setConsultationLead(null)} style={{ borderColor: "oklch(1 0 0 / 20%)", color: "oklch(0.65 0.01 250)" }}>Cancel</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* ── Convert Lead Modal ──────────────────────────────── */}
       <Dialog open={!!convertLead} onOpenChange={open => { if (!open) setConvertLead(null); }}>
         <DialogContent style={{ background: "oklch(0.18 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }}>
@@ -1102,6 +1154,12 @@ export default function Leads() {
               <Input type="number" value={convertForm.downpayment} onChange={e => setConvertForm(f => ({ ...f, downpayment: e.target.value }))} placeholder="e.g. 2500"
                 style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
             </div>
+            {(convertLead?.consultationFee ?? 0) > 0 && convertLead?.consultationBookedDate && (
+              <label className="flex items-start gap-3 rounded-lg p-3 cursor-pointer" style={{ background: "oklch(0.72 0.12 75 / 8%)", border: "1px solid oklch(0.72 0.12 75 / 22%)" }}>
+                <input type="checkbox" checked={convertForm.applyConsultationFee} onChange={event => setConvertForm(form => ({ ...form, applyConsultationFee: event.target.checked }))} className="mt-1" />
+                <span className="text-sm"><strong style={{ color: "oklch(0.72 0.12 75)" }}>Apply {formatCurrency(convertLead.consultationFee ?? 0)} consultation fee toward the retainer</strong><br /><span style={{ color: "oklch(0.60 0.01 250)" }}>If unchecked, the fee remains separate consultation revenue and does not reduce the retainer balance.</span></span>
+              </label>
+            )}
             <div>
               <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Case Number</Label>
               <Input value={convertForm.caseNumber} onChange={e => setConvertForm(f => ({ ...f, caseNumber: e.target.value }))} placeholder={convertLead?.caseNumber || "e.g. 512"}
@@ -1136,7 +1194,7 @@ export default function Leads() {
 type ChecklistTemplate = { id: string; stageId: string; label: string; description: string | null; order: number; createdAt: Date; };
 
 function LeadCard({
-  lead, stageTemplates = [], stageColor: cardStageColor, rescheduleCount = 0, aiTier, onOpenDetail, onEdit, onDelete, onConvert, onMarkLost, onMarkDone, onReschedule, onSetFollowUpDate,
+  lead, stageTemplates = [], stageColor: cardStageColor, rescheduleCount = 0, aiTier, onOpenDetail, onEdit, onDelete, onConvert, onBookConsultation, onMarkLost, onMarkDone, onReschedule, onSetFollowUpDate,
 }: {
   lead: Lead;
   stageTemplates?: ChecklistTemplate[];
@@ -1147,6 +1205,7 @@ function LeadCard({
   onEdit: () => void;
   onDelete: () => void;
   onConvert: () => void;
+  onBookConsultation?: () => void;
   onMarkLost?: () => void;
   onMarkDone: (fu: FollowUp) => void;
   onReschedule: (fu: FollowUp, newDate: string) => void;
@@ -1222,7 +1281,10 @@ function LeadCard({
       completedBy: isCompleted ? null : (activeMember?.name ?? "Staff"),
     });
   }, [completedTemplateIds, lead.id, activeMember, toggleCompletionMut]);
-  const totalReceived = allPayments.filter(p => p.leadId === lead.id).reduce((s, p) => s + p.amount, 0);
+  const totalReceived = allPayments
+    .filter(payment => payment.leadId === lead.id)
+    .filter(payment => lead.consultationFeeAppliedToRetainer || payment.receivedFor !== "Consultation Fee")
+    .reduce((sum, payment) => sum + payment.amount, 0);
   const outstanding = lead.retainerBooked > 0 ? lead.retainerBooked - totalReceived : 0;
   const pct = lead.retainerBooked > 0 ? Math.min(100, (totalReceived / lead.retainerBooked) * 100) : 0;
   const paidFull = lead.retainerBooked > 0 && totalReceived >= lead.retainerBooked;
@@ -1548,6 +1610,12 @@ function LeadCard({
 
       {/* Action row */}
       <div className="flex items-center gap-2 mt-2.5">
+        {!isConvertedStage(lead.stage) && lead.stage !== "Lost" && lead.stage !== "Consultation Booked" && onBookConsultation && (
+          <button onClick={e => { e.stopPropagation(); onBookConsultation(); }} className="flex items-center gap-1 text-xs px-2 py-1 rounded font-medium transition-colors"
+            style={{ background: "oklch(0.72 0.12 75 / 16%)", color: "oklch(0.76 0.14 75)", border: "1px solid oklch(0.72 0.12 75 / 35%)" }}>
+            <Calendar className="w-3 h-3" /> Book Consultation
+          </button>
+        )}
         {!isConvertedStage(lead.stage) && lead.stage !== "Lost" && (
           <button onClick={e => { e.stopPropagation(); onConvert(); }} className="flex items-center gap-1 text-xs px-2 py-1 rounded font-medium transition-colors"
             style={{ background: "oklch(0.55 0.18 145 / 15%)", color: "oklch(0.55 0.18 145)", border: "1px solid oklch(0.55 0.18 145 / 30%)" }}>

@@ -201,6 +201,17 @@ describe("CRM Router", () => {
       const caller = appRouter.createCaller(createAuthContext());
       await expect(caller.leads.update({ id: "lead-3", data: { stage: "Lost", lostReason: "Other" } })).rejects.toMatchObject({ code: "BAD_REQUEST" });
     });
+
+    it("books a consultation only after recording an approved paid fee", async () => {
+      const { vi } = await import("vitest");
+      const dbModule = await import("./db");
+      vi.mocked(dbModule.getLeadById).mockResolvedValueOnce({ id: "lead-4", name: "Consultation Client", stage: "New Lead", caseType: "DA", caseNumber: "" } as never);
+      const caller = appRouter.createCaller(createAuthContext());
+
+      await expect(caller.leads.bookConsultation({ id: "lead-4", fee: 150, scheduledFor: "2099-05-04", notes: "Paid by card", actorName: "Case Team" })).resolves.toMatchObject({ success: true, paymentId: expect.any(String) });
+      expect(dbModule.createPayment).toHaveBeenCalledWith(expect.objectContaining({ leadId: "lead-4", amount: "150", receivedFor: "Consultation Fee" }));
+      expect(dbModule.updateLead).toHaveBeenCalledWith("lead-4", expect.objectContaining({ stage: "Consultation Booked", consultationFee: "150", consultationScheduledFor: "2099-05-04" }));
+    });
   });
 
   describe("payments", () => {
