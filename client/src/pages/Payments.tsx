@@ -45,7 +45,7 @@ export default function Payments() {
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<PaymentType | "All">("All");
 
-  // Converted clients for search (Retained & Onboarding)
+  // New payments link to non-converted leads; existing-client payments link to retained clients.
   const filteredLeads = useMemo(() => {
     if (form.paymentType === "New Client") {
       return leads.filter(l => !isConvertedStage(l.stage));
@@ -53,6 +53,7 @@ export default function Payments() {
       return leads.filter(l => isConvertedStage(l.stage));
     }
   }, [leads, form.paymentType]);
+  const clientSearchScope = form.paymentType === "New Client" ? "non-converted leads" : "retained clients";
 
   const clientMatches = useMemo(() => {
     if (clientSearch.length < 2) return [];
@@ -327,7 +328,7 @@ export default function Payments() {
                     setShowClientDropdown(true);
                   }}
                   onFocus={() => setShowClientDropdown(true)}
-                  placeholder="Type client name (2+ chars to search retained clients)"
+                placeholder={`Type client name (2+ chars to search ${clientSearchScope})`}
                   style={{ background: "oklch(0.22 0.025 250)", borderColor: form.leadId ? "oklch(0.55 0.18 145 / 50%)" : "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }}
                 />
                 {form.leadId && (

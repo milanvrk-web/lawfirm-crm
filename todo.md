@@ -573,3 +573,15 @@
 - [x] Require a standardized loss reason and supporting context whenever a lead is moved to Lost
 - [x] Preserve the loss reason, context, and date in the lead record and display them clearly in lead details
 - [x] Add a reviewable Lost Leads view with reason filtering and a reason-distribution summary
+
+## Comprehensive Stress Test
+
+- [x] Run static checks, full automated tests, application log review, and database integrity checks
+- [x] Exercise high-risk CRM workflows: leads, stage transitions, Lost review, follow-ups, payments, targets, and AI briefing
+- [x] Fix reproducible reliability, data-integrity, and usability issues found during stress testing
+- [x] Add an explicit, easy-to-find Mark as Lost action for active leads
+- [x] Exclude converted clients from the Follow-Ups queue so it matches the active-lead dashboard logic
+- [x] Make payment client-search guidance match the selected New Client or Existing Client workflow
+- [x] Replace the stale in-process nightly AI briefing timer with a durable Heartbeat-compatible scheduled endpoint
+- [x] Reduce the oversized initial JavaScript bundle found during the production build
+- [x] Re-run validation and checkpoint the stress-tested release

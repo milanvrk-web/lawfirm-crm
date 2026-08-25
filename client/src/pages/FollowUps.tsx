@@ -12,6 +12,7 @@ import { useCRM } from "@/contexts/CRMContext";
 import { trpc } from "@/lib/trpc";
 import { formatDate, type Lead } from "@/lib/store";
 import { todayPST, addDaysPST, nowDateTimePST } from "@/lib/timezone";
+import { isActiveLeadStage } from "@shared/const";
 import { useActiveMember } from "@/contexts/ActiveMemberContext";
 import {
   Bell, AlertCircle, CheckCircle2, Calendar,
@@ -364,9 +365,10 @@ export default function FollowUps() {
     return map;
   }, [aiAnalyses]);
 
-  // Leads with a follow-up date set
+  // The Follow-Ups queue is for active intake work only. Converted clients
+  // and Lost leads are intentionally excluded to match the Dashboard/sidebar.
   const leadsWithFollowUp = useMemo(() =>
-    leads.filter(l => l.followUpDate),
+    leads.filter(l => l.followUpDate && isActiveLeadStage(l.stage)),
     [leads]
   );
 

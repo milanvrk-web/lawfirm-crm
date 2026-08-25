@@ -4,7 +4,7 @@
    scores, headlines, and recommended next actions using AI.
    ============================================================ */
 
-import { useState, useMemo } from "react";
+import { lazy, Suspense, useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useCRM } from "@/contexts/CRMContext";
@@ -18,7 +18,8 @@ import {
   FileText, Calendar, Share2, Download, Copy,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Streamdown } from "streamdown";
+
+const Streamdown = lazy(() => import("streamdown").then(module => ({ default: module.Streamdown })));
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -577,7 +578,7 @@ export default function Intelligence() {
                   <span className="text-sm font-semibold" style={{ color: "oklch(0.80 0.05 280)" }}>Morning Report</span>
                 </div>
                 <div className="prose prose-invert prose-sm max-w-none" style={{ color: "oklch(0.80 0.02 250)" }}>
-                  <Streamdown>{latestBriefing.content}</Streamdown>
+                  <Suspense fallback={<p className="text-sm">Loading briefing…</p>}><Streamdown>{latestBriefing.content}</Streamdown></Suspense>
                 </div>
               </div>
 
@@ -932,7 +933,7 @@ export default function Intelligence() {
                     </summary>
                     <div className="px-4 pb-4 space-y-3 border-t" style={{ borderColor: "oklch(0.20 0.02 250)" }}>
                       <div className="pt-3 prose prose-invert prose-sm max-w-none" style={{ color: "oklch(0.75 0.02 250)" }}>
-                        <Streamdown>{b.content}</Streamdown>
+                        <Suspense fallback={<p className="text-sm">Loading briefing…</p>}><Streamdown>{b.content}</Streamdown></Suspense>
                       </div>
                       {bTopActions.length > 0 && (
                         <div>

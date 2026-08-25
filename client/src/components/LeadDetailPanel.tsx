@@ -694,6 +694,26 @@ export default function LeadDetailPanel({
             </div>
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
+            {lead.stage !== "Lost" && !isConvertedStage(lead.stage) && (
+              <button
+                onClick={() => setLostLeadPending(lead)}
+                className="flex items-center gap-1 text-xs px-2 py-1 rounded font-medium transition-colors"
+                style={{ background: "oklch(0.60 0.22 25 / 15%)", color: "oklch(0.72 0.22 25)", border: "1px solid oklch(0.60 0.22 25 / 30%)" }}
+                title="Mark this lead as lost and record the reason"
+              >
+                <AlertCircle className="w-3 h-3" /> Mark Lost
+              </button>
+            )}
+            {lead.stage === "Lost" && (
+              <button
+                onClick={() => setLostLeadPending(lead)}
+                className="flex items-center gap-1 text-xs px-2 py-1 rounded font-medium transition-colors"
+                style={{ background: "oklch(0.60 0.22 25 / 15%)", color: "oklch(0.72 0.22 25)", border: "1px solid oklch(0.60 0.22 25 / 30%)" }}
+                title="Complete or correct loss review"
+              >
+                <AlertCircle className="w-3 h-3" /> Review Loss
+              </button>
+            )}
             {onEditLead && (
               <button
                 onClick={() => onEditLead(lead)}

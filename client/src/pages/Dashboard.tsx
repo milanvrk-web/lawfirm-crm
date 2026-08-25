@@ -1543,21 +1543,23 @@ export default function Dashboard() {
 
       {/* ── Lost Reasons Breakdown ────────────────────────────────── */}
       {(() => {
-        const lostLeads = leads.filter(l => l.stage === "Lost" && l.lostReason);
+        const lostLeads = leads.filter(l => l.stage === "Lost");
         if (lostLeads.length === 0) return null;
         const reasonMap: Record<string, number> = {};
         lostLeads.forEach(l => {
-          const r = l.lostReason || "Other";
+          const r = l.lostReason?.trim() || "Needs review";
           reasonMap[r] = (reasonMap[r] || 0) + 1;
         });
         const rows = Object.entries(reasonMap).sort((a, b) => b[1] - a[1]);
         const maxCount = rows[0]?.[1] || 1;
+        const needsReviewCount = reasonMap["Needs review"] ?? 0;
         const reasonColors: Record<string, string> = {
           "Price": "oklch(0.70 0.22 25)",
           "Competitor": "oklch(0.65 0.15 250)",
           "Not Qualified": "oklch(0.60 0.20 60)",
           "No Response": "oklch(0.55 0.01 250)",
           "Other": "oklch(0.50 0.01 250)",
+          "Needs review": "oklch(0.70 0.22 25)",
         };
         return (
           <div className="rounded-lg p-5 border" style={{ background: "oklch(0.18 0.025 250)", borderColor: "oklch(1 0 0 / 8%)" }}>
@@ -1565,6 +1567,7 @@ export default function Dashboard() {
               <AlertCircle className="w-4 h-4" style={{ color: "oklch(0.70 0.22 25)" }} />
               <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "oklch(0.72 0.12 75)" }}>Lost Lead Reasons</h2>
               <span className="text-xs" style={{ color: "oklch(0.45 0.01 250)" }}>{lostLeads.length} lost leads</span>
+              {needsReviewCount > 0 && <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "oklch(0.60 0.22 25 / 18%)", color: "oklch(0.78 0.22 25)" }}>{needsReviewCount} need review</span>}
             </div>
             <div className="space-y-2">
               {rows.map(([reason, count]) => (

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { AlertCircle } from "lucide-react";
 import { useCRM } from "@/contexts/CRMContext";
@@ -25,6 +25,15 @@ export default function LostLeadDialog({ lead, onClose, onMarkedLost }: LostLead
   const isComplete = isLossReasonComplete(reason, customReason, note);
   const selectedReason = reason === "Other" ? customReason.trim() : reason;
 
+  useEffect(() => {
+    if (!lead) return;
+    const savedReason = lead.lostReason?.trim() ?? "";
+    const isStandardReason = LOSS_REASON_OPTIONS.some(option => option === savedReason);
+    setReason(isStandardReason ? savedReason : savedReason ? "Other" : "");
+    setCustomReason(isStandardReason ? "" : savedReason);
+    setNote(lead.lostNote ?? "");
+  }, [lead]);
+
   const close = () => {
     setReason("");
     setCustomReason("");
@@ -37,14 +46,15 @@ export default function LostLeadDialog({ lead, onClose, onMarkedLost }: LostLead
       toast.error("Choose a reason and add supporting context before marking this lead as lost.");
       return;
     }
+    const isExistingLostLead = lead.stage === "Lost";
     await updateLead(lead.id, {
       stage: "Lost",
       lostReason: selectedReason,
       lostNote: note.trim(),
-      lostDate: todayPST(),
+      lostDate: lead.lostDate ?? todayPST(),
       followUpDate: null,
     });
-    toast.success(`${lead.name} marked as Lost with a reviewable reason`);
+    toast.success(isExistingLostLead ? `${lead.name}'s loss review updated` : `${lead.name} marked as Lost with a reviewable reason`);
     onMarkedLost?.();
     close();
   };
@@ -55,11 +65,11 @@ export default function LostLeadDialog({ lead, onClose, onMarkedLost }: LostLead
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.93 0.005 250)" }}>
             <AlertCircle className="w-5 h-5" style={{ color: "oklch(0.70 0.22 25)" }} />
-            Mark {lead?.name} as Lost
+            {lead?.stage === "Lost" ? `Complete Loss Review for ${lead.name}` : `Mark ${lead?.name} as Lost`}
           </DialogTitle>
         </DialogHeader>
         <p className="text-sm" style={{ color: "oklch(0.60 0.01 250)" }}>
-          This removes the lead from the active pipeline. A loss reason and supporting context are required for review.
+          {lead?.stage === "Lost" ? "Complete or correct this loss record so reporting remains accurate." : "This removes the lead from the active pipeline. A loss reason and supporting context are required for review."}
         </p>
 
         {((lead?.consultationFee ?? 0) > 0 || (lead?.quotedAmount ?? 0) > 0) && (
@@ -86,7 +96,7 @@ export default function LostLeadDialog({ lead, onClose, onMarkedLost }: LostLead
         </div>
 
         <div className="flex gap-3 mt-1">
-          <Button onClick={handleConfirm} disabled={!isComplete} style={{ background: "oklch(0.60 0.22 25)", color: "oklch(0.98 0 0)" }}>Confirm Lost</Button>
+          <Button onClick={handleConfirm} disabled={!isComplete} style={{ background: "oklch(0.60 0.22 25)", color: "oklch(0.98 0 0)" }}>{lead?.stage === "Lost" ? "Save Loss Review" : "Confirm Lost"}</Button>
           <Button variant="outline" onClick={close} style={{ borderColor: "oklch(1 0 0 / 20%)", color: "oklch(0.65 0.01 250)" }}>Cancel</Button>
         </div>
       </DialogContent>

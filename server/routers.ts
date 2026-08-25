@@ -4,6 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { nanoid } from "nanoid";
+import { TRPCError } from "@trpc/server";
 import * as db from "./db";
 import { ENV } from "./_core/env";
 
@@ -158,6 +159,9 @@ export const appRouter = router({
     }),
 
     create: publicProcedure.input(LeadInput).mutation(async ({ input }) => {
+      if (input.stage === "Lost" && (!input.lostReason?.trim() || !input.lostNote?.trim())) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "A loss reason and supporting context are required for Lost leads." });
+      }
       const id = nanoid();
       await db.createLead({
         id,
@@ -178,6 +182,12 @@ export const appRouter = router({
     update: publicProcedure
       .input(z.object({ id: z.string(), data: LeadUpdateInput }))
       .mutation(async ({ input }) => {
+        const existingLead = await db.getLeadById(input.id);
+        if (!existingLead) throw new TRPCError({ code: "NOT_FOUND", message: "Lead not found." });
+        const movingToLost = input.data.stage === "Lost" && existingLead.stage !== "Lost";
+        if (movingToLost && (!input.data.lostReason?.trim() || !input.data.lostNote?.trim())) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "A loss reason and supporting context are required before moving a lead to Lost." });
+        }
         const data: Record<string, unknown> = { ...input.data };
         if (input.data.retainerBooked !== undefined) data.retainerBooked = String(input.data.retainerBooked);
         if (input.data.downpayment !== undefined) data.downpayment = String(input.data.downpayment);
