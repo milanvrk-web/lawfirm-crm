@@ -613,3 +613,13 @@
 - [x] Record the consultation outcome as Won, Lost, or Still In Progress without duplicating lifecycle paths
 - [x] Expand lead-source reporting to show leads received, consultations booked, converted/won, lost reasons, and in-progress outcomes per source
 - [x] Reconcile the revised Dashboard lifecycle and source-outcome metrics against raw lead and payment records before release
+
+## Kanban Action Layout & Lost Reasons — Pending
+
+- [x] Fix responsive lead-card quick-action layout so Book Consultation, Convert, Mark Lost, Edit, and Delete do not overlap
+- [x] Update Lost-reason labels to the user's exact operational wording
+- [x] Require the specific case/service context only for "We don't provide that service"
+- [x] Re-run Lost-reason tests, TypeScript validation, and visual verification
+- [x] Save a checkpoint for the corrected UI and Lost-reason taxonomy
+
+All items in this section must be completed before delivery.

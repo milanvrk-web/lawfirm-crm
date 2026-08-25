@@ -16,19 +16,17 @@ const CaseTypeEnum = z.enum(["DA", "SIJS", "AOS", "AO", "K1/K2", "U-Visa", "Gree
 const PaymentTypeEnum = z.enum(["New Client", "Existing Client"]);
 const FollowUpStatusEnum = z.enum(["Pending", "Done", "Snoozed"]);
 const LossReasonEnum = z.enum([
-  "Client not reachable",
-  "Client declined the service",
-  "Price too high",
-  "Hired someone else",
-  "Will take service later",
-  "Service not needed anymore",
-  "We couldn't provide the service",
-  "Other",
+  "Client CNC not reachable",
+  "Client denied the service due to high price",
+  "Client said he doesn't need the service anymore",
+  "Client is going with another attorney",
+  "We don't provide that service",
+  "Client unhappy with our customer support",
 ]);
 
 function isValidLossSelection(reason?: string | null, detail?: string | null) {
   const parsed = LossReasonEnum.safeParse(reason);
-  return parsed.success && (parsed.data !== "Other" || Boolean(detail?.trim()));
+  return parsed.success && (parsed.data !== "We don't provide that service" || Boolean(detail?.trim()));
 }
 
 function todayPSTServer() {
@@ -195,7 +193,7 @@ export const appRouter = router({
         throw new TRPCError({ code: "BAD_REQUEST", message: "A follow-up date of today or later is required before creating a lead." });
       }
       if (input.stage === "Lost" && !isValidLossSelection(input.lostReason, input.lostReasonDetail)) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Select a valid loss reason. Other requires an explanation." });
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Select a valid loss reason. The out-of-scope service reason requires the requested case type." });
       }
       const id = nanoid();
       await db.createLead({
@@ -226,7 +224,7 @@ export const appRouter = router({
         if (!existingLead) throw new TRPCError({ code: "NOT_FOUND", message: "Lead not found." });
         const movingToLost = input.data.stage === "Lost" && existingLead.stage !== "Lost";
         if (movingToLost && !isValidLossSelection(input.data.lostReason, input.data.lostReasonDetail)) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "Select a valid loss reason. Other requires an explanation." });
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Select a valid loss reason. The out-of-scope service reason requires the requested case type." });
         }
         const { actorName, ...leadChanges } = input.data;
         const data: Record<string, unknown> = { ...leadChanges };
@@ -237,7 +235,7 @@ export const appRouter = router({
         if (input.data.assignedTo !== undefined) data.assignedTo = input.data.assignedTo ?? null;
         await db.updateLead(input.id, data as Parameters<typeof db.updateLead>[1]);
         if (movingToLost) {
-          const reasonDetail = input.data.lostReason === "Other" ? ` — ${input.data.lostReasonDetail?.trim()}` : "";
+          const reasonDetail = input.data.lostReasonDetail?.trim() ? ` — ${input.data.lostReasonDetail.trim()}` : "";
           await db.createLeadNote({
             id: nanoid(),
             leadId: input.id,

@@ -186,20 +186,20 @@ describe("CRM Router", () => {
 
       await expect(caller.leads.update({
         id: "lead-2",
-        data: { stage: "Lost", lostReason: "Client not reachable", lostDate: "2026-08-25", actorName: "Case Team" },
+        data: { stage: "Lost", lostReason: "Client CNC not reachable", lostDate: "2026-08-25", actorName: "Case Team" },
       })).resolves.toEqual({ success: true });
       expect(dbModule.updateLead).toHaveBeenCalledWith("lead-2", expect.objectContaining({
         stage: "Lost",
-        lostReason: "Client not reachable",
+        lostReason: "Client CNC not reachable",
       }));
     });
 
-    it("requires a detail when Other is selected for a Lost-stage transition", async () => {
+    it("requires the requested case context when the out-of-scope service reason is selected", async () => {
       const { vi } = await import("vitest");
       const dbModule = await import("./db");
       vi.mocked(dbModule.getLeadById).mockResolvedValueOnce({ id: "lead-3", stage: "Follow-Up" } as never);
       const caller = appRouter.createCaller(createAuthContext());
-      await expect(caller.leads.update({ id: "lead-3", data: { stage: "Lost", lostReason: "Other" } })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+      await expect(caller.leads.update({ id: "lead-3", data: { stage: "Lost", lostReason: "We don't provide that service" } })).rejects.toMatchObject({ code: "BAD_REQUEST" });
     });
 
     it("books a consultation only after recording an approved paid fee", async () => {

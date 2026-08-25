@@ -1609,15 +1609,15 @@ function LeadCard({
       )}
 
       {/* Action row */}
-      <div className="flex items-center gap-2 mt-2.5">
+      <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
         {!isConvertedStage(lead.stage) && lead.stage !== "Lost" && lead.stage !== "Consultation Booked" && onBookConsultation && (
-          <button onClick={e => { e.stopPropagation(); onBookConsultation(); }} className="flex items-center gap-1 text-xs px-2 py-1 rounded font-medium transition-colors"
+          <button onClick={e => { e.stopPropagation(); onBookConsultation(); }} className="flex min-w-0 flex-1 basis-[calc(50%-0.375rem)] items-center justify-center gap-1 text-center text-xs px-2 py-1 rounded font-medium leading-tight transition-colors"
             style={{ background: "oklch(0.72 0.12 75 / 16%)", color: "oklch(0.76 0.14 75)", border: "1px solid oklch(0.72 0.12 75 / 35%)" }}>
             <Calendar className="w-3 h-3" /> Book Consultation
           </button>
         )}
         {!isConvertedStage(lead.stage) && lead.stage !== "Lost" && (
-          <button onClick={e => { e.stopPropagation(); onConvert(); }} className="flex items-center gap-1 text-xs px-2 py-1 rounded font-medium transition-colors"
+          <button onClick={e => { e.stopPropagation(); onConvert(); }} className="flex min-w-0 flex-1 basis-[calc(50%-0.375rem)] items-center justify-center gap-1 text-center text-xs px-2 py-1 rounded font-medium leading-tight transition-colors"
             style={{ background: "oklch(0.55 0.18 145 / 15%)", color: "oklch(0.55 0.18 145)", border: "1px solid oklch(0.55 0.18 145 / 30%)" }}>
             <CheckCircle className="w-3 h-3" /> Convert
           </button>
@@ -1625,17 +1625,17 @@ function LeadCard({
         {!isConvertedStage(lead.stage) && lead.stage !== "Lost" && onMarkLost && (
           <button
             onClick={e => { e.stopPropagation(); onMarkLost(); }}
-            className="flex items-center gap-1 text-xs px-2 py-1 rounded font-medium transition-colors hover:opacity-90"
+            className="flex min-w-0 flex-1 basis-[calc(50%-0.375rem)] items-center justify-center gap-1 text-center text-xs px-2 py-1 rounded font-medium leading-tight transition-colors hover:opacity-90"
             title="Mark this lead as lost and record the required reason"
             style={{ background: "oklch(0.60 0.22 25 / 15%)", color: "oklch(0.72 0.22 25)", border: "1px solid oklch(0.60 0.22 25 / 35%)" }}
           >
             <AlertCircle className="w-3 h-3" /> Mark Lost
           </button>
         )}
-        <button onClick={e => { e.stopPropagation(); onEdit(); }} className="p-1.5 rounded transition-colors hover:bg-white/8" title="Edit lead" style={{ color: "oklch(0.72 0.12 75)" }}>
+        <button onClick={e => { e.stopPropagation(); onEdit(); }} className="shrink-0 p-1.5 rounded transition-colors hover:bg-white/8" title="Edit lead" style={{ color: "oklch(0.72 0.12 75)" }}>
           <Edit2 className="w-3.5 h-3.5" />
         </button>
-        <button onClick={e => { e.stopPropagation(); onDelete(); }} className="p-1.5 rounded transition-colors hover:bg-red-500/10" title="Delete lead" style={{ color: "oklch(0.65 0.18 25)" }}>
+        <button onClick={e => { e.stopPropagation(); onDelete(); }} className="shrink-0 p-1.5 rounded transition-colors hover:bg-red-500/10" title="Delete lead" style={{ color: "oklch(0.65 0.18 25)" }}>
           <Trash2 className="w-3.5 h-3.5" />
         </button>
       </div>

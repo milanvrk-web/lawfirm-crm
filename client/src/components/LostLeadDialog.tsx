@@ -5,7 +5,7 @@ import { useCRM } from "@/contexts/CRMContext";
 import { useActiveMember } from "@/contexts/ActiveMemberContext";
 import { type Lead, formatCurrency } from "@/lib/store";
 import { todayPST } from "@/lib/timezone";
-import { LOSS_REASON_OPTIONS, isLossReasonComplete } from "@/lib/lossReasons";
+import { LOSS_REASON_OPTIONS, LOSS_REASON_DETAIL_REQUIRED, getLossReasonDetailLabel, getLossReasonDetailPlaceholder, isLossReasonComplete } from "@/lib/lossReasons";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,8 +30,8 @@ export default function LostLeadDialog({ lead, onClose, onMarkedLost }: LostLead
     if (!lead) return;
     const savedReason = lead.lostReason?.trim() ?? "";
     const isStandardReason = LOSS_REASON_OPTIONS.some(option => option === savedReason);
-    setReason(isStandardReason ? savedReason : savedReason ? "Other" : "");
-    setCustomReason(isStandardReason ? (lead.lostReasonDetail ?? "") : savedReason);
+    setReason(isStandardReason ? savedReason : "");
+    setCustomReason(isStandardReason ? (lead.lostReasonDetail ?? "") : "");
     setNote(lead.lostNote ?? "");
   }, [lead]);
 
@@ -44,14 +44,14 @@ export default function LostLeadDialog({ lead, onClose, onMarkedLost }: LostLead
 
   const handleConfirm = async () => {
     if (!lead || !isComplete) {
-      toast.error("Choose a loss reason. Other reasons must include a short explanation.");
+      toast.error("Choose a valid loss reason. The out-of-scope service reason requires the requested case type.");
       return;
     }
     const isExistingLostLead = lead.stage === "Lost";
     await updateLead(lead.id, {
       stage: "Lost",
       lostReason: reason,
-      lostReasonDetail: reason === "Other" ? customReason.trim() : null,
+      lostReasonDetail: reason === LOSS_REASON_DETAIL_REQUIRED ? customReason.trim() || null : null,
       lostNote: note.trim() || null,
       lostDate: lead.lostDate ?? todayPST(),
       followUpDate: null,
@@ -72,7 +72,7 @@ export default function LostLeadDialog({ lead, onClose, onMarkedLost }: LostLead
           </DialogTitle>
         </DialogHeader>
         <p className="text-sm" style={{ color: "oklch(0.60 0.01 250)" }}>
-          {lead?.stage === "Lost" ? "Complete or correct this loss record so reporting remains accurate." : "This removes the lead from active work. Choose a reason; notes are optional unless you select Other."}
+          {lead?.stage === "Lost" ? "Complete or correct this loss record so reporting remains accurate." : "This removes the lead from active work. Choose a reason; case context is required only when we do not provide the requested service."}
         </p>
 
         {((lead?.consultationFee ?? 0) > 0 || (lead?.quotedAmount ?? 0) > 0) && (
@@ -90,7 +90,12 @@ export default function LostLeadDialog({ lead, onClose, onMarkedLost }: LostLead
               <button key={option} onClick={() => setReason(option)} className="text-left px-3 py-2 rounded-lg text-xs transition-all" style={{ background: reason === option ? "oklch(0.70 0.22 25 / 20%)" : "oklch(0.22 0.025 250)", border: reason === option ? "1px solid oklch(0.70 0.22 25 / 60%)" : "1px solid oklch(1 0 0 / 8%)", color: reason === option ? "oklch(0.82 0.22 25)" : "oklch(0.75 0.01 250)" }}>{option}</button>
             ))}
           </div>
-          {reason === "Other" && <Input value={customReason} onChange={e => setCustomReason(e.target.value)} placeholder="Specify the primary reason *" style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />}
+          {reason === LOSS_REASON_DETAIL_REQUIRED && (
+            <div className="space-y-1.5">
+              <Label className="text-xs" style={{ color: "oklch(0.75 0.01 250)" }}>{getLossReasonDetailLabel(reason)}</Label>
+              <Input value={customReason} onChange={e => setCustomReason(e.target.value)} placeholder={getLossReasonDetailPlaceholder(reason)} style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
+            </div>
+          )}
         </div>
 
         <div>

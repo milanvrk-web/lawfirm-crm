@@ -1,21 +1,32 @@
 import { describe, expect, it } from "vitest";
-import { formatLossReason, isLossReasonComplete } from "./lossReasons";
+import { LOSS_REASON_OPTIONS, formatLossReason, isLossReasonComplete } from "./lossReasons";
 
 describe("loss reason validation", () => {
-  it("requires one of the approved standardized reasons but does not require a note", () => {
+  it("exposes the six approved operational reasons", () => {
+    expect(LOSS_REASON_OPTIONS).toEqual([
+      "Client CNC not reachable",
+      "Client denied the service due to high price",
+      "Client said he doesn't need the service anymore",
+      "Client is going with another attorney",
+      "We don't provide that service",
+      "Client unhappy with our customer support",
+    ]);
+  });
+
+  it("requires a valid reason but does not require a general note", () => {
     expect(isLossReasonComplete("", "")).toBe(false);
-    expect(isLossReasonComplete("No response", "")).toBe(false);
-    expect(isLossReasonComplete("Client not reachable", "")).toBe(true);
-    expect(isLossReasonComplete("Price too high", "")).toBe(true);
+    expect(isLossReasonComplete("Client not reachable", "")).toBe(false);
+    expect(isLossReasonComplete("Client CNC not reachable", "")).toBe(true);
+    expect(isLossReasonComplete("Client unhappy with our customer support", "")).toBe(true);
   });
 
-  it("requires detail when Other is selected", () => {
-    expect(isLossReasonComplete("Other", "")).toBe(false);
-    expect(isLossReasonComplete("Other", "Visa ineligibility")).toBe(true);
+  it("requires the requested case context when the firm does not provide the service", () => {
+    expect(isLossReasonComplete("We don't provide that service", "")).toBe(false);
+    expect(isLossReasonComplete("We don't provide that service", "Family-based case")).toBe(true);
   });
 
-  it("formats Other with its required detail for user-facing review", () => {
-    expect(formatLossReason("Other", "Matter is outside our practice scope")).toBe("Other — Matter is outside our practice scope");
-    expect(formatLossReason("Client declined the service", null)).toBe("Client declined the service");
+  it("formats the operational reason and optional context for review", () => {
+    expect(formatLossReason("We don't provide that service", "Family-based case")).toBe("We don't provide that service — Family-based case");
+    expect(formatLossReason("Client denied the service due to high price", null)).toBe("Client denied the service due to high price");
   });
 });
