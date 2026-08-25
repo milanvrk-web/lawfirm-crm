@@ -1063,6 +1063,7 @@ Based on this information, provide:
     /** Generate the daily AI Chief of Staff briefing */
     generateBriefing: publicProcedure.mutation(async () => {
       const { invokeLLM } = await import("./_core/llm");
+      const { notifyOwner } = await import("./_core/notification");
       const allLeads = await db.getAllLeads();
       const activeLeads = allLeads.filter(l => l.stage !== "Lost");
       const analyses = await db.getAllAiAnalyses();
@@ -1233,6 +1234,9 @@ For unassignedLeads: list any lead from UNASSIGNED LEADS above, suggest Khushi a
       }
 
       const briefingId = nanoid();
+      // Avoid duplicate owner alerts when a briefing is regenerated manually on the same day.
+      const previousBriefing = await db.getLatestBriefing();
+      const shouldSendEscalation = previousBriefing?.briefingDate !== today;
       await db.saveDailyBriefing({
         id: briefingId,
         briefingDate: today,
@@ -1244,7 +1248,21 @@ For unassignedLeads: list any lead from UNASSIGNED LEADS above, suggest Khushi a
         unassignedLeads: JSON.stringify(parsed.unassignedLeads ?? []),
       });
 
-      return { ok: true, briefingDate: today, briefingId };
+      // Escalate only objectively verified Hot leads with 3+ days of inactivity.
+      // This keeps the owner alert high-signal and avoids notification noise.
+      let escalationNotificationSent = false;
+      if (shouldSendEscalation && suggestedEscalations.length > 0) {
+        const leadSummary = suggestedEscalations
+          .slice(0, 3)
+          .map(lead => `${lead.name} (${lead.caseType})`)
+          .join(", ");
+        escalationNotificationSent = await notifyOwner({
+          title: `AI escalation: ${suggestedEscalations.length} Hot lead${suggestedEscalations.length === 1 ? "" : "s"} inactive for 3+ days`,
+          content: `The AI Chief of Staff flagged ${leadSummary} for review. These Hot leads remain in Khushi's ownership and were not automatically reassigned. Open the AI Chief of Staff briefing to review the recommended next actions.`,
+        });
+      }
+
+      return { ok: true, briefingDate: today, briefingId, escalationNotificationSent };
     }),
 
     /** Get the latest daily briefing */

@@ -8,13 +8,14 @@ import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useCRM } from "@/contexts/CRMContext";
+import { useActiveMember } from "@/contexts/ActiveMemberContext";
 import { formatDate } from "@/lib/store";
 import { isConvertedStage } from "@shared/const";
 import {
   Brain, Zap, Flame, Snowflake, AlertTriangle, RefreshCw,
   ChevronDown, ChevronUp, ExternalLink, Clock, Target,
   TrendingUp, Sparkles, Users, ListChecks, TriangleAlert,
-  FileText, Calendar,
+  FileText, Calendar, Share2, Download, Copy,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Streamdown } from "streamdown";
@@ -261,7 +262,8 @@ export default function Intelligence() {
   const [analyzingIds, setAnalyzingIds] = useState<Set<string>>(new Set());
   const [isAnalyzingAll, setIsAnalyzingAll] = useState(false);
   const [isGeneratingBriefing, setIsGeneratingBriefing] = useState(false);
-  const [activeTab, setActiveTab] = useState<"briefing" | "pipeline" | "history">("briefing");
+  const [activeTab, setActiveTab] = useState<"briefing" | "myTasks" | "pipeline" | "history">("briefing");
+  const { activeMember } = useActiveMember();
 
   const { data: analyses = [], isLoading } = trpc.intelligence.getAll.useQuery();
   const { data: latestBriefing, isLoading: briefingLoading } = trpc.intelligence.getLatestBriefing.useQuery();
@@ -283,6 +285,42 @@ export default function Intelligence() {
     setIsGeneratingBriefing(true);
     toast.info("Generating today's briefing — this may take 15–30 seconds...");
     generateBriefingMut.mutate();
+  };
+
+  const handleCopyBriefing = async () => {
+    if (!briefingExportText) return;
+    try {
+      await navigator.clipboard.writeText(briefingExportText);
+      toast.success("Briefing copied — ready to share with the owner.");
+    } catch {
+      toast.error("Could not copy the briefing. Please use Download instead.");
+    }
+  };
+
+  const handleShareBriefing = async () => {
+    if (!briefingExportText || !latestBriefing) return;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: `AI Chief of Staff Briefing — ${latestBriefing.briefingDate}`, text: briefingExportText });
+        toast.success("Briefing shared.");
+      } else {
+        await handleCopyBriefing();
+      }
+    } catch (error) {
+      if ((error as Error).name !== "AbortError") toast.error("Unable to share the briefing.");
+    }
+  };
+
+  const handleDownloadBriefing = () => {
+    if (!briefingExportText || !latestBriefing) return;
+    const blob = new Blob([briefingExportText], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `ai-chief-of-staff-briefing-${latestBriefing.briefingDate}.md`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success("Briefing downloaded as Markdown.");
   };
 
   const analyzeLeadMut = trpc.intelligence.analyzeLead.useMutation({
@@ -382,6 +420,13 @@ export default function Intelligence() {
     if (!latestBriefing?.unassignedLeads) return [];
     try { return JSON.parse(latestBriefing.unassignedLeads); } catch { return []; }
   }, [latestBriefing]);
+  const briefingExportText = useMemo(() => {
+    if (!latestBriefing) return "";
+    const dateLabel = new Date(latestBriefing.briefingDate + "T12:00:00").toLocaleDateString("en-US", { timeZone: "America/Los_Angeles", weekday: "long", month: "long", day: "numeric", year: "numeric" });
+    return `# AI Chief of Staff Daily Briefing\n\n**Date:** ${dateLabel} (PST)\n\n${latestBriefing.content}\n\n## Top Actions\n${topActions.map((action, index) => `${index + 1}. **${action.leadName}** (${action.tier}) — ${action.action}`).join("\n") || "No top actions recorded."}\n\n## Escalations\n${escalations.map(escalation => `- **${escalation.leadName}:** ${escalation.reason}`).join("\n") || "No escalations recorded."}`;
+  }, [latestBriefing, topActions, escalations]);
+  const myAssignment = useMemo(() => memberAssignments.find(assignment => assignment.memberName.toLowerCase() === activeMember?.name?.toLowerCase()), [memberAssignments, activeMember?.name]);
+  const myTasks = myAssignment?.tasks ?? [];
 
   const tierBadgeColors: Record<string, string> = {
     Hot: "oklch(0.65 0.22 25)",
@@ -411,6 +456,13 @@ export default function Intelligence() {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          {latestBriefing && (
+            <>
+              <button onClick={handleShareBriefing} className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all hover:opacity-90" style={{ background: "oklch(0.20 0.04 200)", color: "oklch(0.75 0.14 200)", border: "1px solid oklch(0.35 0.10 200)" }} title="Share briefing with the owner"><Share2 className="w-3.5 h-3.5" /> Share Briefing</button>
+              <button onClick={handleCopyBriefing} className="p-2 rounded-xl transition-all hover:opacity-90" style={{ background: "oklch(0.18 0.025 250)", color: "oklch(0.65 0.01 250)", border: "1px solid oklch(1 0 0 / 10%)" }} title="Copy briefing"><Copy className="w-3.5 h-3.5" /></button>
+              <button onClick={handleDownloadBriefing} className="p-2 rounded-xl transition-all hover:opacity-90" style={{ background: "oklch(0.18 0.025 250)", color: "oklch(0.65 0.01 250)", border: "1px solid oklch(1 0 0 / 10%)" }} title="Download briefing as Markdown"><Download className="w-3.5 h-3.5" /></button>
+            </>
+          )}
           {staleCount > 0 && (
             <span className="text-xs px-2 py-1 rounded-full" style={{ background: "oklch(0.22 0.06 80)", color: "oklch(0.80 0.15 80)" }}>
               {staleCount} stale (&gt;24h)
@@ -445,7 +497,7 @@ export default function Intelligence() {
 
       {/* Tab navigation */}
       <div className="flex gap-1 mb-6 p-1 rounded-xl" style={{ background: "oklch(0.14 0.02 250)" }}>
-        {(["briefing", "pipeline", "history"] as const).map(tab => (
+        {(["briefing", "myTasks", "pipeline", "history"] as const).map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -456,7 +508,7 @@ export default function Intelligence() {
               border: activeTab === tab ? "1px solid oklch(0.35 0.10 280)" : "1px solid transparent",
             }}
           >
-            {tab === "briefing" ? <><Sparkles className="w-4 h-4" /> Daily Briefing</> : tab === "pipeline" ? <><ListChecks className="w-4 h-4" /> Pipeline Analysis</> : <><Calendar className="w-4 h-4" /> History</>}
+            {tab === "briefing" ? <><Sparkles className="w-4 h-4" /> Daily Briefing</> : tab === "myTasks" ? <><ListChecks className="w-4 h-4" /> My Tasks</> : tab === "pipeline" ? <><ListChecks className="w-4 h-4" /> Pipeline Analysis</> : <><Calendar className="w-4 h-4" /> History</>}
           </button>
         ))}
       </div>
@@ -650,6 +702,42 @@ export default function Intelligence() {
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── MY TASKS TAB ─────────────────────────────────────────── */}
+      {activeTab === "myTasks" && (
+        <div className="max-w-3xl mx-auto">
+          <div className="rounded-xl border overflow-hidden" style={{ background: "oklch(0.14 0.02 250)", borderColor: "oklch(0.22 0.03 250)" }}>
+            <div className="px-5 py-4 border-b flex items-center justify-between gap-3" style={{ borderColor: "oklch(0.22 0.03 250)" }}>
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold" style={{ background: "oklch(0.25 0.05 200)", color: "oklch(0.75 0.15 200)" }}>{activeMember?.name?.charAt(0).toUpperCase() || "?"}</div>
+                <div>
+                  <h2 className="text-base font-semibold" style={{ color: "oklch(0.90 0.02 250)" }}>{activeMember?.name ? `${activeMember.name}'s Priorities` : "Select your account to see priorities"}</h2>
+                  <p className="text-xs mt-0.5" style={{ color: "oklch(0.50 0.01 250)" }}>AI-prioritized actions from the latest daily briefing</p>
+                </div>
+              </div>
+              {activeMember && <span className="text-xs px-2 py-1 rounded-full" style={{ background: "oklch(0.20 0.04 280)", color: "oklch(0.75 0.12 280)" }}>{myTasks.length} task{myTasks.length !== 1 ? "s" : ""}</span>}
+            </div>
+            {!activeMember ? (
+              <div className="p-8 text-center text-sm" style={{ color: "oklch(0.50 0.01 250)" }}>Choose your member account from the sidebar to view your assigned daily priorities.</div>
+            ) : myTasks.length === 0 ? (
+              <div className="p-8 text-center">
+                <ListChecks className="w-8 h-8 mx-auto mb-2" style={{ color: "oklch(0.35 0.01 250)" }} />
+                <p className="text-sm" style={{ color: "oklch(0.60 0.01 250)" }}>No AI priorities assigned for you in the latest briefing.</p>
+                <p className="text-xs mt-1" style={{ color: "oklch(0.42 0.01 250)" }}>Generate today’s briefing after leads are assigned to refresh this view.</p>
+              </div>
+            ) : (
+              <ol className="divide-y divide-white/[0.06]">
+                {myTasks.map((task, index) => (
+                  <li key={`${task}-${index}`} className="px-5 py-4 flex items-start gap-3">
+                    <span className="w-6 h-6 rounded-full shrink-0 flex items-center justify-center text-xs font-bold" style={{ background: "oklch(0.20 0.04 280)", color: "oklch(0.75 0.12 280)" }}>{index + 1}</span>
+                    <p className="text-sm leading-relaxed" style={{ color: "oklch(0.82 0.02 250)" }}>{task}</p>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </div>
         </div>
       )}
 
