@@ -686,3 +686,13 @@ All items in this section must be completed before delivery.
 All items in this section must be completed before delivery.
 
 Note: The prior checkpoint 282641ff was not sufficient; the live deployment still shows React error #185 on `/leads`.
+
+## Dashboard Last-Payment Audit — Pending
+
+- [ ] Inspect the Dashboard last-payment metric, its source data, and date/timezone handling
+- [ ] Reconcile the displayed last payment against all raw stored payment records
+- [ ] Correct the metric if it excludes or misorders payments, without changing payment records
+- [ ] Add regression coverage for the last-payment ordering and date boundary
+- [ ] Validate the corrected dashboard and save a checkpoint
+
+All items in this section must be completed before delivery.
