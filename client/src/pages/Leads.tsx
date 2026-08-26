@@ -138,6 +138,50 @@ export default function Leads() {
   const [detailLeadId, setDetailLeadId] = useState<string | null>(null);
   const [location] = useLocation();
 
+  // Horizontal click-and-hold panning for the overflowing pipeline board.
+  // Card wrappers and interactive controls are excluded so native lead dragging
+  // and button clicks keep their existing behavior.
+  const pipelineBoardRef = useRef<HTMLDivElement>(null);
+  const boardPanRef = useRef<{ pointerId: number; startX: number; startScrollLeft: number; moved: boolean } | null>(null);
+  const [isPanningBoard, setIsPanningBoard] = useState(false);
+
+  const handleBoardPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return;
+    const target = event.target as HTMLElement;
+    if (target.closest("button, a, input, textarea, select, [draggable='true']")) return;
+    const board = pipelineBoardRef.current;
+    if (!board || board.scrollWidth <= board.clientWidth) return;
+    boardPanRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startScrollLeft: board.scrollLeft,
+      moved: false,
+    };
+    board.setPointerCapture(event.pointerId);
+    setIsPanningBoard(true);
+  };
+
+  const handleBoardPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const pan = boardPanRef.current;
+    const board = pipelineBoardRef.current;
+    if (!pan || !board || pan.pointerId !== event.pointerId) return;
+    const deltaX = event.clientX - pan.startX;
+    if (Math.abs(deltaX) > 3) pan.moved = true;
+    if (pan.moved) event.preventDefault();
+    board.scrollLeft = pan.startScrollLeft - deltaX;
+  };
+
+  const endBoardPan = (event: React.PointerEvent<HTMLDivElement>) => {
+    const pan = boardPanRef.current;
+    if (pan?.pointerId === event.pointerId) {
+      boardPanRef.current = null;
+      setIsPanningBoard(false);
+      if (pipelineBoardRef.current?.hasPointerCapture(event.pointerId)) {
+        pipelineBoardRef.current.releasePointerCapture(event.pointerId);
+      }
+    }
+  };
+
   // Auto-open lead panel when navigated to /leads?lead=ID (e.g. from global search)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -680,7 +724,15 @@ export default function Leads() {
       </div>
 
       {/* Pipeline columns — dynamic from DB */}
-      <div className="flex gap-4 overflow-x-auto pb-2" style={{ minHeight: 400 }}>
+      <div
+        ref={pipelineBoardRef}
+        className={`flex gap-4 overflow-x-auto pb-2 ${isPanningBoard ? "cursor-grabbing" : "cursor-grab"}`}
+        style={{ minHeight: 400, userSelect: isPanningBoard ? "none" : "auto", touchAction: "pan-y" }}
+        onPointerDown={handleBoardPointerDown}
+        onPointerMove={handleBoardPointerMove}
+        onPointerUp={endBoardPan}
+        onPointerCancel={endBoardPan}
+      >
         {/* Close gear popover when clicking outside */}
         {openGearStageId && (
           <div className="fixed inset-0 z-40" onClick={() => { setOpenGearStageId(null); setDeleteConfirmStageId(null); }} />

@@ -655,3 +655,12 @@ All items in this section must be completed before delivery.
 - [x] Save a checkpoint for the drag-and-drop and Lost Review layout fixes
 
 All items in this section must be completed before delivery.
+
+## Leads Board Mouse Panning — Pending
+
+- [x] Add click-and-hold mouse panning to the horizontally overflowing Leads pipeline board
+- [x] Keep card drag-and-drop and card controls from hijacking board-pan gestures
+- [x] Verify left/right panning, native scrollbar fallback, responsive rendering, and existing lead actions (automated validation; manual clicks remain access-gated)
+- [x] Save a checkpoint for the board-panning interaction
+
+All items in this section must be completed before delivery.
