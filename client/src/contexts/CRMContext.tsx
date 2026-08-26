@@ -5,6 +5,7 @@
    ============================================================ */
 import React, { createContext, useCallback, useContext, useState } from "react";
 import { trpc } from "@/lib/trpc";
+import { targetsEqual } from "@/lib/targetUtils";
 import {
   type Lead,
   type Payment,
@@ -217,11 +218,10 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
   // Fetch targets from DB — overrides localStorage once loaded
   const { data: dbTargetsData } = trpc.targets.get.useQuery();
   React.useEffect(() => {
-    if (dbTargetsData) {
-      setTargets(dbTargetsData);
-      saveTargets(dbTargetsData); // keep localStorage in sync as cache
-    }
-  }, [dbTargetsData]);
+    if (!dbTargetsData) return;
+    if (!targetsEqual(targets, dbTargetsData)) setTargets(dbTargetsData);
+    saveTargets(dbTargetsData); // keep localStorage in sync as cache
+  }, [dbTargetsData, targets]);
 
   const setTargetsMut = trpc.targets.set.useMutation({
     onSuccess: () => utils.targets.get.invalidate(),

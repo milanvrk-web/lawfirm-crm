@@ -12,7 +12,6 @@ import { PSTDatePicker } from "@/components/PSTDatePicker";
      - Overdue red border highlight
    ============================================================ */
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
-import { useLocation } from "wouter";
 import { useCRM } from "@/contexts/CRMContext";
 import {
   type Lead, type LeadStage, type CaseType, type FollowUp, type FollowUpStatus,
@@ -137,7 +136,6 @@ export default function Leads() {
 
   // ── Lead Detail Slide-Over ─────────────────────────────────
   const [detailLeadId, setDetailLeadId] = useState<string | null>(null);
-  const [location] = useLocation();
 
   // Horizontal click-and-hold panning for the overflowing pipeline board.
   // Card wrappers and interactive controls are excluded so native lead dragging
@@ -183,16 +181,16 @@ export default function Leads() {
     }
   };
 
-  // Auto-open lead panel when navigated to /leads?lead=ID (e.g. from global search)
+  // Auto-open lead panel when navigated to /leads?lead=ID (e.g. from global search).
+  // This is intentionally mount-only: replacing the URL must not feed back into route state.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const leadId = params.get("lead");
-    if (leadId) {
-      setDetailLeadId(leadId);
-      // Clean the URL so refreshing doesn't re-open the panel
-      window.history.replaceState({}, "", "/leads");
-    }
-  }, [location]);
+    if (!leadId) return;
+    setDetailLeadId(leadId);
+    // Clean the URL so refreshing doesn't re-open the panel.
+    window.history.replaceState({}, "", "/leads");
+  }, []);
 
   // ── Month selector for the summary card ─────────────────
   const nowPST = new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
@@ -203,6 +201,27 @@ export default function Leads() {
   // ── Dynamic pipeline stages from DB ──────────────────────
   const { data: dbStages = [] } = trpc.pipeline.getStages.useQuery();
   const { data: allChecklistTemplates = [] } = trpc.pipeline.getAllChecklistTemplates.useQuery();
+  const checklistLeadIdSignature = leads.map(lead => lead.id).sort().join(",");
+  const checklistCompletionInput = useMemo(
+    () => ({ leadIds: checklistLeadIdSignature ? checklistLeadIdSignature.split(",") : [] }),
+    [checklistLeadIdSignature],
+  );
+  const checklistCompletionQueryOptions = useMemo(
+    () => ({ enabled: checklistCompletionInput.leadIds.length > 0 }),
+    [checklistCompletionInput.leadIds.length],
+  );
+  const { data: allChecklistCompletions = [] } = trpc.pipeline.getCompletionsForLeads.useQuery(
+    checklistCompletionInput,
+    checklistCompletionQueryOptions,
+  );
+  const completedChecklistIdsByLead = useMemo(() => {
+    const byLead: Record<string, Set<string>> = {};
+    allChecklistCompletions.forEach(completion => {
+      if (!completion.completedAt) return;
+      (byLead[completion.leadId] ??= new Set()).add(completion.templateItemId);
+    });
+    return byLead;
+  }, [allChecklistCompletions]);
 
   // ── AI intelligence tier map (cached, no LLM call) ────────
   const { data: aiAnalyses = [] } = trpc.intelligence.getAll.useQuery(undefined, {
@@ -332,6 +351,9 @@ export default function Leads() {
   const createChecklistMut = trpc.pipeline.createChecklistTemplate.useMutation({ onSuccess: () => pipelineUtils.pipeline.getAllChecklistTemplates.invalidate() });
   const updateChecklistMut = trpc.pipeline.updateChecklistTemplate.useMutation({ onSuccess: () => pipelineUtils.pipeline.getAllChecklistTemplates.invalidate() });
   const deleteChecklistMut = trpc.pipeline.deleteChecklistTemplate.useMutation({ onSuccess: () => pipelineUtils.pipeline.getAllChecklistTemplates.invalidate() });
+  const toggleChecklistCompletionMut = trpc.pipeline.toggleCompletion.useMutation({
+    onSuccess: () => pipelineUtils.pipeline.getCompletionsForLeads.invalidate(),
+  });
   const bookConsultationMut = trpc.leads.bookConsultation.useMutation({
     onSuccess: async () => {
       await pipelineUtils.leads.list.invalidate();
@@ -395,6 +417,15 @@ export default function Leads() {
     setEditingChecklistId(null);
     setEditingChecklistLabel("");
   };
+
+  const handleToggleChecklistCompletion = useCallback((leadId: string, templateItemId: string, isCompleted: boolean) => {
+    toggleChecklistCompletionMut.mutate({
+      leadId,
+      templateItemId,
+      completedAt: isCompleted ? null : new Date().toISOString(),
+      completedBy: isCompleted ? null : (activeMember?.name ?? "Staff"),
+    });
+  }, [activeMember?.name, toggleChecklistCompletionMut]);
 
   const handleDragStart = (e: React.DragEvent, leadId: string) => {
     // Set both a namespaced key and the standard text payload so native mouse drag
@@ -944,6 +975,7 @@ export default function Leads() {
                     <LeadCard
                       lead={lead}
                       stageTemplates={stageTemplates}
+                      completedTemplateIds={completedChecklistIdsByLead[lead.id]}
                       stageColor={color}
                       rescheduleCount={rescheduleCounts[lead.id] ?? 0}
                       aiTier={aiTierMap[lead.id]}
@@ -953,6 +985,7 @@ export default function Leads() {
                       onConvert={() => setConvertLead(lead)}
                       onBookConsultation={() => openBookConsultation(lead)}
                       onMarkLost={() => setLostLeadPending(lead)}
+                      onToggleChecklistCompletion={(templateItemId, isCompleted) => handleToggleChecklistCompletion(lead.id, templateItemId, isCompleted)}
                       onMarkDone={handleMarkDone}
                       onReschedule={handleReschedule}
                       onSetFollowUpDate={(date) => setLeadFollowUpDate(lead.id, date)}
@@ -1254,10 +1287,11 @@ export default function Leads() {
 type ChecklistTemplate = { id: string; stageId: string; label: string; description: string | null; order: number; createdAt: Date; };
 
 function LeadCard({
-  lead, stageTemplates = [], stageColor: cardStageColor, rescheduleCount = 0, aiTier, onOpenDetail, onEdit, onDelete, onConvert, onBookConsultation, onMarkLost, onMarkDone, onReschedule, onSetFollowUpDate,
+  lead, stageTemplates = [], completedTemplateIds, stageColor: cardStageColor, rescheduleCount = 0, aiTier, onOpenDetail, onEdit, onDelete, onConvert, onBookConsultation, onMarkLost, onToggleChecklistCompletion, onMarkDone, onReschedule, onSetFollowUpDate,
 }: {
   lead: Lead;
   stageTemplates?: ChecklistTemplate[];
+  completedTemplateIds?: Set<string>;
   stageColor?: string;
   rescheduleCount?: number;
   aiTier?: { tier: string; score: number; headline: string };
@@ -1267,6 +1301,7 @@ function LeadCard({
   onConvert: () => void;
   onBookConsultation?: () => void;
   onMarkLost?: () => void;
+  onToggleChecklistCompletion?: (templateItemId: string, isCompleted: boolean) => void;
   onMarkDone: (fu: FollowUp) => void;
   onReschedule: (fu: FollowUp, newDate: string) => void;
   onSetFollowUpDate: (date: string | null) => void;
@@ -1278,6 +1313,11 @@ function LeadCard({
   const [showKanbanReschedule, setShowKanbanReschedule] = useState(false);
   const [pendingKanbanDate, setPendingKanbanDate] = useState<string>("");
   const fuDatePickerRef = useRef<HTMLDivElement>(null);
+  const legacyChecklistInput = useMemo(() => ({ leadId: lead.id }), [lead.id]);
+  const legacyChecklistQueryOptions = useMemo(
+    () => ({ enabled: isConvertedStage(lead.stage) && stageTemplates.length === 0 }),
+    [lead.stage, stageTemplates.length],
+  );
 
   // Close date picker on outside click
   useEffect(() => {
@@ -1293,25 +1333,17 @@ function LeadCard({
   const { payments: allPayments, followUps: allFollowUps, addLeadNote, setLeadFollowUpDate } = useCRM();
   const { activeMember } = useActiveMember();
 
-   // ── Dynamic stage checklist (works for any stage with templates) ──────
+  // ── Dynamic stage checklist (works for any stage with templates) ──────
   const hasTemplates = stageTemplates.length > 0;
-  const utils = trpc.useUtils();
-  const { data: completionData, refetch: refetchCompletions } = trpc.pipeline.getCompletions.useQuery(
-    { leadId: lead.id },
-    { enabled: hasTemplates }
-  );
-  const toggleCompletionMut = trpc.pipeline.toggleCompletion.useMutation({
-    onSuccess: () => { refetchCompletions(); utils.pipeline.getCompletions.invalidate({ leadId: lead.id }); }
-  });
-  const completedTemplateIds = new Set((completionData ?? []).filter(c => c.completedAt).map(c => c.templateItemId));
-  const completedCount = completedTemplateIds.size;
+  const completedIds = completedTemplateIds ?? new Set<string>();
+  const completedCount = completedIds.size;
   const totalSteps = stageTemplates.length;
   const allDone = totalSteps > 0 && completedCount === totalSteps;
 
   // Legacy Onboarding checklist (for leads using the old onboarding_checklist table)
   const { data: legacyChecklistData, refetch: refetchLegacy } = trpc.onboarding.getByLead.useQuery(
-    { leadId: lead.id },
-    { enabled: isConvertedStage(lead.stage) && !hasTemplates }
+    legacyChecklistInput,
+    legacyChecklistQueryOptions,
   );
   const ONBOARDING_STEPS = [
     { key: "consultation_booked" as const, label: "Consultation Booked" },
@@ -1333,15 +1365,9 @@ function LeadCard({
     });
   }, [legacyCompletedSteps, lead.id, activeMember, toggleStepMut]);
 
-  const handleToggleCompletion = useCallback((templateItemId: string) => {
-    const isCompleted = completedTemplateIds.has(templateItemId);
-    toggleCompletionMut.mutate({
-      leadId: lead.id,
-      templateItemId,
-      completedAt: isCompleted ? null : new Date().toISOString(),
-      completedBy: isCompleted ? null : (activeMember?.name ?? "Staff"),
-    });
-  }, [completedTemplateIds, lead.id, activeMember, toggleCompletionMut]);
+  const handleToggleCompletion = (templateItemId: string) => {
+    onToggleChecklistCompletion?.(templateItemId, completedIds.has(templateItemId));
+  };
   const totalReceived = allPayments
     .filter(payment => payment.leadId === lead.id)
     .filter(payment => lead.consultationFeeAppliedToRetainer || payment.receivedFor !== "Consultation Fee")
@@ -1606,23 +1632,18 @@ function LeadCard({
           </div>
           <div className="space-y-1.5">
             {stageTemplates.map(t => {
-              const done = completedTemplateIds.has(t.id);
-              const comp = (completionData ?? []).find(c => c.templateItemId === t.id && c.completedAt);
+              const done = completedIds.has(t.id);
               return (
                 <button
                   key={t.id}
                   onClick={e => { e.stopPropagation(); handleToggleCompletion(t.id); }}
                   className="w-full flex items-center gap-2 text-left transition-opacity hover:opacity-80"
-                  disabled={toggleCompletionMut.isPending}
                 >
                   {done
                     ? <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "oklch(0.55 0.18 145)" }} />
                     : <Circle className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "oklch(0.40 0.01 250)" }} />
                   }
                   <span className="text-xs flex-1" style={{ color: done ? "oklch(0.55 0.01 250)" : "oklch(0.80 0.005 250)", textDecoration: done ? "line-through" : "none" }}>{t.label}</span>
-                  {done && comp?.completedBy && (
-                    <span className="text-xs flex-shrink-0" style={{ color: "oklch(0.45 0.01 250)" }}>{comp.completedBy}</span>
-                  )}
                 </button>
               );
             })}

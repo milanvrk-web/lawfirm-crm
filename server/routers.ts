@@ -1081,6 +1081,13 @@ export const appRouter = router({
       .query(async ({ input }) => {
         return db.getStageChecklistCompletions(input.leadId);
       }),
+
+    /** Get checklist completions for all visible Leads cards in one request. */
+    getCompletionsForLeads: publicProcedure
+      .input(z.object({ leadIds: z.array(z.string()).max(500) }))
+      .query(async ({ input }) => {
+        return db.getStageChecklistCompletionsForLeads(input.leadIds);
+      }),
   }),
 
   // ─── AI Lead Intelligence ──────────────────────────────────────────────

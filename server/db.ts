@@ -1,4 +1,4 @@
-import { eq, desc, asc, lt, lte, gte, and, sql, like } from "drizzle-orm";
+import { eq, desc, asc, lt, lte, gte, and, inArray, sql, like } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   users,
@@ -635,6 +635,14 @@ export async function getStageChecklistCompletions(leadId: string) {
   const db = await getDb();
   if (!db) return [];
   return db.select().from(stageChecklistCompletions).where(eq(stageChecklistCompletions.leadId, leadId));
+}
+
+/** Read checklist completion state for the whole board in one stable query. */
+export async function getStageChecklistCompletionsForLeads(leadIds: string[]) {
+  const db = await getDb();
+  if (!db || leadIds.length === 0) return [];
+  return db.select().from(stageChecklistCompletions)
+    .where(inArray(stageChecklistCompletions.leadId, leadIds));
 }
 
 export async function upsertStageChecklistCompletion(data: InsertStageChecklistCompletion) {

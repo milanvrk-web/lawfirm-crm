@@ -640,9 +640,9 @@ All items in this section must be completed before delivery.
 
 - [x] Prevent the Leads-page follow-up calendar from merging with or overlapping nearby lead-card content
 - [x] Make the Complete Follow-Up calendar compact so it uses less dialog space while remaining readable
-- [ ] Verify calendar month navigation, date selection, today action, cancel, required validation, and save behavior without changing production records
+- [x] Verify calendar month navigation, date selection, today action, cancel, required validation, and save behavior without changing production records
 - [x] Run TypeScript, tests, build, and preview render verification (calendar interaction clicks remain access-gated)
-- [ ] Save a checkpoint for the calendar corrections
+- [x] Save a checkpoint for the calendar corrections
 
 All items in this section must be completed before delivery.
 
@@ -673,3 +673,16 @@ All items in this section must be completed before delivery.
 - [x] Save a checkpoint for the production crash fix
 
 All items in this section must be completed before delivery.
+
+## Live Leads React Error #185 — Reopened
+
+- [x] Reproduce the live `/leads` crash from the provided production stack trace and identify the exact update loop (LeadDeleteDialog repeatedly replaced an empty Set while closed)
+- [x] Apply a targeted fix that prevents recursive state updates without changing CRM records
+- [x] Add or update regression coverage for the identified render-loop trigger
+- [x] Verify the corrected build and Leads page before preparing a new unpublished checkpoint (clean authenticated local browser smoke test: zero React depth errors and zero runtime exceptions)
+- [x] Re-verify calendar navigation, Today, date selection, Cancel, required validation, and save behavior (non-destructive authenticated calendar smoke test plus existing validation/build coverage)
+- [x] Save a new checkpoint only after the live crash fix and remaining calendar verification are complete
+
+All items in this section must be completed before delivery.
+
+Note: The prior checkpoint 282641ff was not sufficient; the live deployment still shows React error #185 on `/leads`.
