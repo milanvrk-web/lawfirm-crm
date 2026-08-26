@@ -664,3 +664,12 @@ All items in this section must be completed before delivery.
 - [x] Save a checkpoint for the board-panning interaction
 
 All items in this section must be completed before delivery.
+
+## Production Leads Runtime Crash — Pending
+
+- [x] Reproduce and trace the recurring React error #185 on the published Leads page
+- [x] Fix the underlying render-loop or unstable-state runtime cause without changing CRM records
+- [x] Run TypeScript, full tests, production build, and preview rendering verification (published browser is access-gated)
+- [x] Save a checkpoint for the production crash fix
+
+All items in this section must be completed before delivery.

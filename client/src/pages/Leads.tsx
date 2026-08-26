@@ -41,6 +41,7 @@ import LeadDeleteDialog from "@/components/LeadDeleteDialog";
 
 const STAGES: LeadStage[] = ["New Lead", "Consultation", "Follow-Up", "Retained & Onboarding", "Lost"];
 const CASE_TYPES: CaseType[] = ["DA", "SIJS", "AOS", "AO", "K1/K2", "U-Visa", "Green Card", "BIA", "Other"];
+const SOURCE_OPTIONS = ["Referral", "Existing Client", "Google", "Facebook", "Instagram", "Website", "Walk-In", "Handler", "Other"] as const;
 
 const stageColor: Record<LeadStage, string> = {
   "New Lead": "oklch(0.55 0.18 250)",
@@ -60,7 +61,7 @@ function AssignedToSelect({ value, onChange, required = false }: { value: string
       </SelectTrigger>
       <SelectContent style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)" }}>
         {!required && <SelectItem value="__unassigned__">Unassigned</SelectItem>}
-        {members.map((m: { id: string; name: string }) => (
+        {members.filter((m: { id: string; name: string }) => m.id.trim() && m.name.trim()).map((m: { id: string; name: string }) => (
           <SelectItem key={m.id} value={m.name}>{m.name}</SelectItem>
         ))}
       </SelectContent>
@@ -598,7 +599,7 @@ export default function Leads() {
           </SelectTrigger>
           <SelectContent style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)" }}>
             <SelectItem value="All">All Stages</SelectItem>
-            {pipelineStageNames.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+            {pipelineStageNames.filter(s => s.trim()).map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
@@ -1111,14 +1112,15 @@ export default function Leads() {
             </div>
             <div>
               <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Source</Label>
-              <Select value={form.source || ""} onValueChange={val => setForm(f => ({ ...f, source: val === "__other__" ? "" : val }))}>
-                <SelectTrigger style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: form.source ? "oklch(0.93 0.005 250)" : "oklch(0.45 0.01 250)" }}>
-                  <SelectValue placeholder="Select source..." />
-                </SelectTrigger>
-                <SelectContent style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }}>
-                  {["Referral", "Existing Client", "Google", "Facebook", "Instagram", "Website", "Walk-In", "Handler", "Other"].map(opt => (
-                    <SelectItem key={opt} value={opt} style={{ color: "oklch(0.93 0.005 250)" }}>{opt}</SelectItem>
-                  ))}
+          <Select value={form.source || "__no_source__"} onValueChange={val => setForm(f => ({ ...f, source: val === "__no_source__" || val === "__other__" ? "" : val }))}>
+            <SelectTrigger style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }}>
+              <SelectValue placeholder="Select source" />
+            </SelectTrigger>
+            <SelectContent style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)" }}>
+              <SelectItem value="__no_source__" style={{ color: "oklch(0.93 0.005 250)" }}>Select source</SelectItem>
+              {SOURCE_OPTIONS.filter(opt => opt.trim()).map(opt => (
+                <SelectItem key={opt} value={opt} style={{ color: "oklch(0.93 0.005 250)" }}>{opt}</SelectItem>
+              ))}
                 </SelectContent>
               </Select>
             </div>
