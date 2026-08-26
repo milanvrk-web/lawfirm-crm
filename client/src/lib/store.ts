@@ -46,6 +46,10 @@ export interface Lead {
   name: string;
   phone: string;
   email: string;
+  alienNumber?: string;
+  dateOfBirth?: string;
+  address?: string;
+  preferredLanguage?: string;
   caseType: CaseType;
   caseNumber: string;
   source: string;

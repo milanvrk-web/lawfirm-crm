@@ -38,6 +38,10 @@ const LeadInput = z.object({
   name: z.string().min(1),
   phone: z.string().default(""),
   email: z.string().default(""),
+  alienNumber: z.string().default(""),
+  dateOfBirth: z.string().default(""),
+  address: z.string().default(""),
+  preferredLanguage: z.string().default(""),
   caseType: CaseTypeEnum,
   caseNumber: z.string().default(""),
   source: z.string().default(""),
@@ -68,6 +72,10 @@ const LeadUpdateInput = z.object({
   name: z.string().min(1).optional(),
   phone: z.string().optional(),
   email: z.string().optional(),
+  alienNumber: z.string().optional(),
+  dateOfBirth: z.string().optional(),
+  address: z.string().optional(),
+  preferredLanguage: z.string().optional(),
   caseType: CaseTypeEnum.optional(),
   caseNumber: z.string().optional(),
   source: z.string().optional(),
@@ -184,6 +192,41 @@ export const appRouter = router({
         assignedTo: (r as any).assignedTo ?? null,
       }));
     }),
+
+    searchClients: publicProcedure
+      .input(z.object({ query: z.string().min(2).max(120) }))
+      .query(async ({ input }) => {
+        const rows = await db.searchLeadsForClientPicker(input.query);
+        return rows.map(r => ({
+          ...r,
+          retainerBooked: Number(r.retainerBooked),
+          downpayment: Number(r.downpayment),
+          quotedAmount: Number(r.quotedAmount),
+          consultationFee: Number((r as any).consultationFee ?? 0),
+          assignedTo: (r as any).assignedTo ?? null,
+        }));
+      }),
+
+    getProfile: publicProcedure
+      .input(z.object({ id: z.string() }))
+      .query(async ({ input }) => {
+        const profile = await db.getClientProfile(input.id);
+        if (!profile) throw new TRPCError({ code: "NOT_FOUND", message: "Client record not found." });
+        const normalizeLead = (r: typeof profile.lead) => ({
+          ...r,
+          retainerBooked: Number(r.retainerBooked),
+          downpayment: Number(r.downpayment),
+          quotedAmount: Number(r.quotedAmount),
+          consultationFee: Number((r as any).consultationFee ?? 0),
+          assignedTo: (r as any).assignedTo ?? null,
+        });
+        const normalizePayment = (r: typeof profile.payments[number]) => ({ ...r, amount: Number(r.amount) });
+        return {
+          lead: normalizeLead(profile.lead),
+          relatedLeads: profile.relatedLeads.map(normalizeLead),
+          payments: profile.payments.map(normalizePayment),
+        };
+      }),
 
     create: publicProcedure.input(LeadInput).mutation(async ({ input }) => {
       if (!input.assignedTo?.trim()) {
@@ -611,6 +654,10 @@ export const appRouter = router({
         name: z.string(),
         phone: z.string().default(""),
         email: z.string().default(""),
+        alienNumber: z.string().default(""),
+        dateOfBirth: z.string().default(""),
+        address: z.string().default(""),
+        preferredLanguage: z.string().default(""),
         caseType: z.string(),
         caseNumber: z.string().default(""),
         source: z.string().default(""),
@@ -673,6 +720,10 @@ export const appRouter = router({
             name: lead.name,
             phone: lead.phone,
             email: lead.email,
+            alienNumber: lead.alienNumber,
+            dateOfBirth: lead.dateOfBirth,
+            address: lead.address,
+            preferredLanguage: lead.preferredLanguage,
             caseType: lead.caseType,
             caseNumber: lead.caseNumber,
             source: lead.source,

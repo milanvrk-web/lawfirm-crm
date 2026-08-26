@@ -724,3 +724,14 @@ All items in this section must be completed before delivery.
 - [x] Add regression coverage for success, failure, and duplicate-submit behavior
 - [x] Validate the payment form without altering the four historical missing payments
 - [x] Save a checkpoint for the form fix
+
+## Existing-Client Picker — Pending
+
+- [x] Map every form with a person/client name field and document the shared client/lead record strategy (Leads Add Lead, Dashboard Add Lead/Log Payment, Payments Log Payment; no separate case/matter form exists in the current route inventory)
+- [x] Add a searchable all-clients-and-leads typeahead with name, phone, A-number, and email matching plus keyboard navigation
+- [x] Fetch and apply the selected full record to all matching form fields without overwriting empty editable fields incorrectly
+- [x] Add an inline client preview with cases/leads, statuses, payment totals, and profile navigation
+- [x] Link new entries to the selected canonical record and preserve new-person creation without false duplicate alarms
+- [x] Add save-time master-record update confirmation for edited auto-filled fields
+- [x] Add regression coverage and test every acceptance check without modifying existing client records
+- [x] Save a checkpoint for the existing-client picker

@@ -58,8 +58,9 @@ const CRMContext = createContext<CRMContextValue | null>(null);
 // and add the `comments` array that the UI expects on FollowUp.
 
 type DbLead = {
-  id: string; name: string; phone: string; email: string; caseType: string;
-  caseNumber: string; source: string; stage: string; notes: string; date: string;
+  id: string; name: string; phone: string; email: string;
+  alienNumber?: string; dateOfBirth?: string; address?: string; preferredLanguage?: string;
+  caseType: string; caseNumber: string; source: string; stage: string; notes: string; date: string;
   retainerBooked: string | number; downpayment: string | number; quotedAmount: string | number;
   referredBy: string; convertedDate?: string | null; lostReason?: string | null;
   lostReasonDetail?: string | null; lostNote?: string | null; lostDate?: string | null;
@@ -98,6 +99,10 @@ type DbComment = {
 function normalizeLead(r: DbLead): Lead {
   return {
     id: r.id, name: r.name, phone: r.phone, email: r.email,
+    alienNumber: r.alienNumber ?? "",
+    dateOfBirth: r.dateOfBirth ?? "",
+    address: r.address ?? "",
+    preferredLanguage: r.preferredLanguage ?? "",
     caseType: r.caseType as Lead["caseType"],
     caseNumber: r.caseNumber, source: r.source,
     stage: r.stage as Lead["stage"],
@@ -238,6 +243,10 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
       name: lead.name,
       phone: lead.phone,
       email: lead.email,
+      alienNumber: lead.alienNumber ?? "",
+      dateOfBirth: lead.dateOfBirth ?? "",
+      address: lead.address ?? "",
+      preferredLanguage: lead.preferredLanguage ?? "",
       caseType: lead.caseType,
       caseNumber: lead.caseNumber,
       source: lead.source,

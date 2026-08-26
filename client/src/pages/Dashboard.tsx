@@ -60,7 +60,9 @@ import {
 import { Link, useLocation } from "wouter";
 import LeadDetailPanel from "@/components/LeadDetailPanel";
 import StaleLeadsDrawer from "@/components/StaleLeadsDrawer";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import ClientPicker from "@/components/ClientPicker";
+import { getChangedClientFields } from "@/lib/clientRecord";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -93,7 +95,7 @@ function downloadCSV(filename: string, rows: string[][]): void {
 }
 
 export default function Dashboard() {
-  const { leads, payments, dayCloses, targets, addLead, addPayment } = useCRM();
+  const { leads, payments, dayCloses, targets, addLead, updateLead, addPayment } = useCRM();
   const crmData = useMemo(() => ({ leads, payments, followUps: [], dayCloses }), [leads, payments, dayCloses]);
   const now = new Date();
   const nowPSTStr = now.toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" }); // YYYY-MM-DD
@@ -309,7 +311,7 @@ export default function Dashboard() {
   const LEAD_STAGES: LeadStage[] = (pipelineStages ?? []).map(s => s.name as LeadStage);
   const CASE_TYPES: CaseType[] = ["DA", "SIJS", "AOS", "AO", "K1/K2", "U-Visa", "Green Card", "BIA", "Other"];
   const emptyLeadForm: Omit<Lead, "id"> = {
-    name: "", phone: "", email: "", caseType: "DA", caseNumber: "", source: "",
+    name: "", phone: "", email: "", alienNumber: "", dateOfBirth: "", address: "", preferredLanguage: "", caseType: "DA", caseNumber: "", source: "",
     stage: "New Lead", notes: "", date: todayPST(),
     retainerBooked: 0, downpayment: 0, quotedAmount: 0, referredBy: "", consultationFee: 0,
   };
@@ -320,40 +322,72 @@ export default function Dashboard() {
   };
   const [showAddLead, setShowAddLead] = useState(false);
   const [leadForm, setLeadForm] = useState<Omit<Lead, "id">>(emptyLeadForm);
+  const [selectedLeadClientId, setSelectedLeadClientId] = useState<string | null>(null);
   const [showLogPayment, setShowLogPayment] = useState(false);
   const [paymentForm, setPaymentForm] = useState<Omit<Payment, "id">>(emptyPaymentForm);
   const [paymentClientSearch, setPaymentClientSearch] = useState("");
-  const [showPaymentClientDrop, setShowPaymentClientDrop] = useState(false);
+  const [selectedPaymentClientId, setSelectedPaymentClientId] = useState<string | null>(null);
 
-  const retainedLeads = useMemo(() => leads.filter(l => isConvertedStage(l.stage)), [leads]);
-  const paymentClientMatches = useMemo(() => {
-    if (paymentClientSearch.length < 2) return [];
-    return retainedLeads.filter(l => l.name.toLowerCase().includes(paymentClientSearch.toLowerCase())).slice(0, 6);
-  }, [retainedLeads, paymentClientSearch]);
-
-  const handleAddLead = useCallback(() => {
+  const handleAddLead = useCallback(async () => {
     if (!leadForm.name.trim()) { toast.error("Name is required"); return; }
-    addLead(leadForm);
+    if (selectedLeadClientId) {
+      const selected = leads.find(lead => lead.id === selectedLeadClientId);
+      if (selected) {
+        const changed = getChangedClientFields(selected, leadForm).length > 0;
+        if (changed) {
+          const updateMaster = window.confirm(`This person already exists as ${selected.name}. Press OK to update the existing client record. Press Cancel to keep the existing record unchanged and avoid a duplicate lead.`);
+          if (!updateMaster) return;
+          await updateLead(selected.id, {
+            name: leadForm.name,
+            phone: leadForm.phone,
+            email: leadForm.email,
+            alienNumber: leadForm.alienNumber,
+            dateOfBirth: leadForm.dateOfBirth,
+            address: leadForm.address,
+            preferredLanguage: leadForm.preferredLanguage,
+            caseType: leadForm.caseType,
+            caseNumber: leadForm.caseNumber,
+            source: leadForm.source,
+            referredBy: leadForm.referredBy,
+            actorName: "Dashboard",
+          });
+          toast.success("Existing client updated; no duplicate lead created.");
+        } else toast.info("Existing client selected; no duplicate lead created.");
+        setSelectedLeadClientId(null);
+        setShowAddLead(false);
+        setLeadForm(emptyLeadForm);
+        return;
+      }
+    }
+    await addLead(leadForm);
     toast.success("Lead added");
     setShowAddLead(false);
     setLeadForm(emptyLeadForm);
-  }, [leadForm, addLead]);
+  }, [leadForm, addLead, updateLead, leads, selectedLeadClientId]);
 
-  const handleLogPayment = useCallback(() => {
+  const handleLogPayment = useCallback(async () => {
     if (!paymentForm.clientName.trim()) { toast.error("Client name is required"); return; }
     if (paymentForm.amount <= 0) { toast.error("Amount must be greater than 0"); return; }
     if (!paymentForm.receivedFor.trim()) { toast.error("Please specify what the payment is for"); return; }
-    addPayment(paymentForm);
-    toast.success("Payment logged");
+    if (selectedPaymentClientId) {
+      const selected = leads.find(lead => lead.id === selectedPaymentClientId);
+      if (selected && getChangedClientFields(selected, { name: paymentForm.clientName, caseType: paymentForm.caseType, caseNumber: paymentForm.caseNumber }, ["name", "caseType", "caseNumber"]).length > 0) {
+        const updateMaster = window.confirm(`You edited fields from ${selected.name}. Press OK to update the master client record. Press Cancel to keep the edited values only on this payment.`);
+        if (updateMaster) await updateLead(selected.id, { name: paymentForm.clientName, caseType: paymentForm.caseType, caseNumber: paymentForm.caseNumber, actorName: "Dashboard" });
+      }
+    }
+    await addPayment(paymentForm);
+    toast.success("Payment logged and saved");
     setShowLogPayment(false);
     setPaymentForm(emptyPaymentForm);
     setPaymentClientSearch("");
-  }, [paymentForm, addPayment]);
+    setSelectedPaymentClientId(null);
+  }, [paymentForm, addPayment, updateLead, leads, selectedPaymentClientId]);
 
-  const linkPaymentClient = useCallback((lead: typeof retainedLeads[0]) => {
-    setPaymentForm(f => ({ ...f, clientName: lead.name, leadId: lead.id, caseType: lead.caseType, caseNumber: lead.caseNumber }));
+  const linkPaymentClient = useCallback((lead: Lead) => {
+    setSelectedPaymentClientId(lead.id);
+    setPaymentForm(f => ({ ...f, clientName: lead.name, leadId: lead.id, caseType: lead.caseType, caseNumber: lead.caseNumber, paymentType: isConvertedStage(lead.stage) ? "Existing Client" : "New Client" }));
     setPaymentClientSearch(lead.name);
-    setShowPaymentClientDrop(false);
   }, []);
 
   // ── Day Navigator state ──────────────────────────────────
@@ -540,7 +574,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {/* Add Lead — opens inline modal */}
         <button
-          onClick={() => { setLeadForm(emptyLeadForm); setShowAddLead(true); }}
+          onClick={() => { setSelectedLeadClientId(null); setLeadForm(emptyLeadForm); setShowAddLead(true); }}
           className="flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] text-left w-full"
           style={{ background: "oklch(0.20 0.030 250)", borderColor: "oklch(0.72 0.12 75 / 25%)", boxShadow: "0 1px 8px oklch(0 0 0 / 20%)" }}
         >
@@ -554,7 +588,7 @@ export default function Dashboard() {
         </button>
         {/* Log Payment — opens inline modal */}
         <button
-          onClick={() => { setPaymentForm(emptyPaymentForm); setPaymentClientSearch(""); setShowLogPayment(true); }}
+          onClick={() => { setSelectedPaymentClientId(null); setPaymentForm(emptyPaymentForm); setPaymentClientSearch(""); setShowLogPayment(true); }}
           className="flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] text-left w-full"
           style={{ background: "oklch(0.20 0.030 250)", borderColor: "oklch(0.72 0.12 75 / 25%)", boxShadow: "0 1px 8px oklch(0 0 0 / 20%)" }}
         >
@@ -1791,17 +1825,25 @@ export default function Dashboard() {
     <StaleLeadsDrawer open={staleDrawerOpen} onClose={() => setStaleDrawerOpen(false)} />
 
     {/* ── Add Lead Modal ───────────────────────────────── */}
-    <Dialog open={showAddLead} onOpenChange={open => { setShowAddLead(open); if (!open) setLeadForm(emptyLeadForm); }}>
+    <Dialog open={showAddLead} onOpenChange={open => { setShowAddLead(open); if (!open) { setSelectedLeadClientId(null); setLeadForm(emptyLeadForm); } }}>
       <DialogContent style={{ background: "oklch(0.18 0.030 250)", borderColor: "oklch(1 0 0 / 12%)", maxWidth: "520px" }}>
         <DialogHeader>
           <DialogTitle style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.93 0.005 250)" }}>Add New Lead</DialogTitle>
+          <DialogDescription className="sr-only">Search an existing person to auto-fill this lead form, or enter a new lead.</DialogDescription>
         </DialogHeader>
         <div className="space-y-3 mt-2">
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
-              <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Full Name *</Label>
-              <Input value={leadForm.name} onChange={e => setLeadForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Mandeep Singh"
-                style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
+              <ClientPicker
+                label="Full Name *"
+                value={leadForm.name}
+                selectedLeadId={selectedLeadClientId}
+                leads={leads}
+                payments={payments}
+                onValueChange={value => { setSelectedLeadClientId(null); setLeadForm(f => ({ ...f, name: value })); }}
+                onSelect={lead => { setSelectedLeadClientId(lead.id); setLeadForm(f => ({ ...f, name: lead.name, phone: lead.phone, email: lead.email, alienNumber: lead.alienNumber ?? "", dateOfBirth: lead.dateOfBirth ?? "", address: lead.address ?? "", preferredLanguage: lead.preferredLanguage ?? "", caseType: lead.caseType, caseNumber: lead.caseNumber, source: lead.source, referredBy: lead.referredBy, notes: lead.notes })); }}
+                placeholder="Search name, phone, A-number, or email"
+              />
             </div>
             <div>
               <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Phone</Label>
@@ -1811,6 +1853,26 @@ export default function Dashboard() {
             <div>
               <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Email</Label>
               <Input value={leadForm.email} onChange={e => setLeadForm(f => ({ ...f, email: e.target.value }))} placeholder="email@example.com"
+                style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
+            </div>
+            <div>
+              <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>A-Number</Label>
+              <Input value={leadForm.alienNumber ?? ""} onChange={e => setLeadForm(f => ({ ...f, alienNumber: e.target.value }))} placeholder="A# 215-XXX-XXX"
+                style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
+            </div>
+            <div>
+              <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Date of Birth</Label>
+              <Input type="date" value={leadForm.dateOfBirth ?? ""} onChange={e => setLeadForm(f => ({ ...f, dateOfBirth: e.target.value }))}
+                style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
+            </div>
+            <div className="col-span-2">
+              <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Current Address</Label>
+              <Input value={leadForm.address ?? ""} onChange={e => setLeadForm(f => ({ ...f, address: e.target.value }))} placeholder="Street, city, state, ZIP"
+                style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
+            </div>
+            <div>
+              <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Preferred Language</Label>
+              <Input value={leadForm.preferredLanguage ?? ""} onChange={e => setLeadForm(f => ({ ...f, preferredLanguage: e.target.value }))} placeholder="English, Punjabi, Spanish"
                 style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
             </div>
             <div>
@@ -1860,10 +1922,11 @@ export default function Dashboard() {
     </Dialog>
 
     {/* ── Log Payment Modal ─────────────────────────────── */}
-    <Dialog open={showLogPayment} onOpenChange={open => { setShowLogPayment(open); if (!open) { setPaymentForm(emptyPaymentForm); setPaymentClientSearch(""); } }}>
+    <Dialog open={showLogPayment} onOpenChange={open => { setShowLogPayment(open); if (!open) { setSelectedPaymentClientId(null); setPaymentForm(emptyPaymentForm); setPaymentClientSearch(""); } }}>
       <DialogContent style={{ background: "oklch(0.18 0.030 250)", borderColor: "oklch(1 0 0 / 12%)", maxWidth: "520px" }}>
         <DialogHeader>
           <DialogTitle style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.93 0.005 250)" }}>Log Payment</DialogTitle>
+          <DialogDescription className="sr-only">Search an existing person to link this payment and view their history.</DialogDescription>
         </DialogHeader>
         <div className="space-y-3 mt-2">
           {/* New / Existing toggle */}
@@ -1877,39 +1940,17 @@ export default function Dashboard() {
                 }>{t}</button>
             ))}
           </div>
-          {/* Client name with autocomplete */}
-          <div className="relative">
-            <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Client Name *</Label>
-            <div className="relative">
-              <Input
-                value={paymentClientSearch || paymentForm.clientName}
-                onChange={e => {
-                  const v = e.target.value;
-                  setPaymentClientSearch(v);
-                  setPaymentForm(f => ({ ...f, clientName: v, leadId: undefined }));
-                  setShowPaymentClientDrop(v.length >= 2);
-                }}
-                onFocus={() => setShowPaymentClientDrop(paymentClientSearch.length >= 2)}
-                placeholder="Type client name"
-                style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }}
-              />
-              {paymentForm.leadId && (
-                <button className="absolute right-2 top-1/2 -translate-y-1/2" onClick={() => { setPaymentForm(f => ({ ...f, leadId: undefined, clientName: "" })); setPaymentClientSearch(""); }} style={{ color: "oklch(0.55 0.01 250)" }}>
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-            {showPaymentClientDrop && paymentClientMatches.length > 0 && (
-              <div className="absolute z-50 w-full mt-1 rounded-lg border shadow-xl overflow-hidden" style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 15%)" }}>
-                {paymentClientMatches.map(lead => (
-                  <button key={lead.id} onClick={() => linkPaymentClient(lead)} className="w-full text-left px-3 py-2.5 hover:bg-white/5 transition-colors">
-                    <div className="text-sm font-medium" style={{ color: "oklch(0.93 0.005 250)" }}>{lead.name}</div>
-                    <div className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>{lead.caseType} · #{lead.caseNumber} · Retainer: {formatCurrency(lead.retainerBooked)}</div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          <ClientPicker
+            label="Client Name *"
+            value={paymentClientSearch || paymentForm.clientName}
+            selectedLeadId={selectedPaymentClientId}
+            leads={leads}
+            payments={payments}
+            onValueChange={value => { setSelectedPaymentClientId(null); setPaymentClientSearch(value); setPaymentForm(f => ({ ...f, clientName: value, leadId: undefined })); }}
+            onSelect={linkPaymentClient}
+            onClear={() => { setSelectedPaymentClientId(null); setPaymentForm(f => ({ ...f, leadId: undefined, clientName: "" })); setPaymentClientSearch(""); }}
+            placeholder="Search name, phone, A-number, or email"
+          />
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Case Type</Label>

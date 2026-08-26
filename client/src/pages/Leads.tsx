@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import LeadDetailPanel from "@/components/LeadDetailPanel";
 import { useActiveMember } from "@/contexts/ActiveMemberContext";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { trpc } from "@/lib/trpc";
 import { isConvertedStage, isActiveLeadStage } from "@shared/const";
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import LostLeadDialog from "@/components/LostLeadDialog";
 import LeadDeleteDialog from "@/components/LeadDeleteDialog";
+import ClientPicker from "@/components/ClientPicker";
+import { getChangedClientFields } from "@/lib/clientRecord";
 
 const STAGES: LeadStage[] = ["New Lead", "Consultation", "Follow-Up", "Retained & Onboarding", "Lost"];
 const CASE_TYPES: CaseType[] = ["DA", "SIJS", "AOS", "AO", "K1/K2", "U-Visa", "Green Card", "BIA", "Other"];
@@ -69,7 +71,8 @@ function AssignedToSelect({ value, onChange, required = false }: { value: string
 }
 
 const emptyLead: Omit<Lead, "id"> = {
-  name: "", phone: "", email: "", caseType: "DA", caseNumber: "", source: "",
+  name: "", phone: "", email: "", alienNumber: "", dateOfBirth: "", address: "", preferredLanguage: "",
+  caseType: "DA", caseNumber: "", source: "",
   stage: "New Lead", notes: "", date: todayPST(),
   retainerBooked: 0, downpayment: 0, quotedAmount: 0, referredBy: "", consultationFee: 0,
   assignedTo: null, followUpDate: todayPST(),
@@ -125,6 +128,7 @@ export default function Leads() {
   const [convertLead, setConvertLead] = useState<Lead | null>(null);
   const [consultationLead, setConsultationLead] = useState<Lead | null>(null);
   const [form, setForm] = useState<Omit<Lead, "id">>(emptyLead);
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [convertForm, setConvertForm] = useState({ retainerBooked: "", downpayment: "", caseNumber: "", notes: "", applyConsultationFee: false });
   const [consultationForm, setConsultationForm] = useState({ fee: 150 as 150 | 200, scheduledFor: todayPST(), notes: "" });
   const [search, setSearch] = useState("");
@@ -499,6 +503,44 @@ export default function Leads() {
 
   const handleSave = async () => {
     if (!form.name.trim()) { toast.error("Name is required"); return; }
+    if (!editLead && selectedClientId) {
+      const selected = leads.find(lead => lead.id === selectedClientId);
+      if (!selected) { setSelectedClientId(null); }
+      else {
+        const changedFields = getChangedClientFields(selected, form);
+        if (changedFields.length > 0) {
+          const updateMaster = window.confirm(`This person already exists as ${selected.name}. Update the existing client record with the edited fields? Choose Cancel to keep the form open without saving.`);
+          if (!updateMaster) return;
+          try {
+            await updateLead(selected.id, {
+              name: form.name,
+              phone: form.phone,
+              email: form.email,
+              alienNumber: form.alienNumber,
+              dateOfBirth: form.dateOfBirth,
+              address: form.address,
+              preferredLanguage: form.preferredLanguage,
+              caseType: form.caseType,
+              caseNumber: form.caseNumber,
+              source: form.source,
+              referredBy: form.referredBy,
+              actorName: activeMember?.name ?? "Team",
+            });
+          } catch (error) {
+            toast.error(error instanceof Error ? error.message : "Unable to update the existing client record.");
+            return;
+          }
+          toast.success("Existing client record updated; no duplicate lead created.");
+        } else {
+          toast.info("Existing client selected; no duplicate lead was created.");
+        }
+        setSelectedClientId(null);
+        setEditLead(null);
+        setShowAdd(false);
+        setForm(emptyLead);
+        return;
+      }
+    }
     if (editLead) {
       // If changing to Lost stage, prompt for reason
       if (form.stage === "Lost" && editLead.stage !== "Lost") {
@@ -1089,18 +1131,34 @@ export default function Leads() {
 
 
       {/* ── Add/Edit Lead Modal ─────────────────────────────── */}
-      <Dialog open={showAdd} onOpenChange={open => { if (!open) { setShowAdd(false); setEditLead(null); setForm(emptyLead); } }}>
+      <Dialog open={showAdd} onOpenChange={open => { if (!open) { setShowAdd(false); setEditLead(null); setSelectedClientId(null); setForm(emptyLead); } }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" style={{ background: "oklch(0.18 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }}>
           <DialogHeader>
             <DialogTitle style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.93 0.005 250)" }}>
               {editLead ? "Edit Lead" : "Add New Lead"}
             </DialogTitle>
+            <DialogDescription className="sr-only">Search an existing person to auto-fill this lead form, or enter a new lead.</DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-4 mt-2">
             <div className="col-span-2">
-              <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Client Name *</Label>
-              <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Full name"
-                style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
+              {editLead ? (
+                <>
+                  <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Client Name *</Label>
+                  <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Full name"
+                    style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
+                </>
+              ) : (
+                <ClientPicker
+                  label="Client Name *"
+                  value={form.name}
+                  selectedLeadId={selectedClientId}
+                  leads={leads}
+                  payments={payments}
+                  onValueChange={value => { setSelectedClientId(null); setForm(f => ({ ...f, name: value })); }}
+                  onSelect={lead => { setSelectedClientId(lead.id); setForm(f => ({ ...f, name: lead.name, phone: lead.phone, email: lead.email, alienNumber: lead.alienNumber ?? "", dateOfBirth: lead.dateOfBirth ?? "", address: lead.address ?? "", preferredLanguage: lead.preferredLanguage ?? "", caseType: lead.caseType, caseNumber: lead.caseNumber, source: lead.source, referredBy: lead.referredBy, notes: lead.notes })); }}
+                  placeholder="Search name, phone, A-number, or email"
+                />
+              )}
             </div>
             <div>
               <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Phone</Label>
@@ -1110,6 +1168,26 @@ export default function Leads() {
             <div>
               <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Email</Label>
               <Input value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="email@example.com"
+                style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
+            </div>
+            <div>
+              <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>A-Number</Label>
+              <Input value={form.alienNumber ?? ""} onChange={e => setForm(f => ({ ...f, alienNumber: e.target.value }))} placeholder="A# 215-XXX-XXX"
+                style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
+            </div>
+            <div>
+              <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Date of Birth</Label>
+              <Input type="date" value={form.dateOfBirth ?? ""} onChange={e => setForm(f => ({ ...f, dateOfBirth: e.target.value }))}
+                style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
+            </div>
+            <div className="col-span-2">
+              <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Current Address</Label>
+              <Input value={form.address ?? ""} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="Street, city, state, ZIP"
+                style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
+            </div>
+            <div>
+              <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Preferred Language</Label>
+              <Input value={form.preferredLanguage ?? ""} onChange={e => setForm(f => ({ ...f, preferredLanguage: e.target.value }))} placeholder="English, Punjabi, Spanish"
                 style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
             </div>
             <div>
@@ -1185,7 +1263,11 @@ export default function Leads() {
               <PSTDatePicker value={form.followUpDate ?? ""} onChange={v => setForm(f => ({ ...f, followUpDate: v }))} minDate={todayPST()} inline />
             </div>}
           </div>
-          {/* Note: Case notes are edited from the Lead Detail Panel, not here, to prevent accidental overwrites */}
+          <div className="mt-4">
+            <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Case / Intake Notes</Label>
+            <Textarea value={form.notes} onChange={event => setForm(f => ({ ...f, notes: event.target.value }))} rows={3} placeholder="Stored intake details and case notes"
+              style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
+          </div>
           <div className="flex gap-3 mt-4">
             <Button onClick={handleSave} disabled={!editLead && (!form.assignedTo?.trim() || !form.followUpDate || form.followUpDate < todayPST())} style={{ background: "oklch(0.72 0.12 75)", color: "oklch(0.13 0.025 250)" }}>
               {editLead ? "Save Changes" : "Add Lead"}
@@ -1202,7 +1284,8 @@ export default function Leads() {
       <Dialog open={!!consultationLead} onOpenChange={open => { if (!open) setConsultationLead(null); }}>
         <DialogContent style={{ background: "oklch(0.18 0.025 250)", borderColor: "oklch(0.72 0.12 75 / 35%)", color: "oklch(0.93 0.005 250)" }}>
           <DialogHeader>
-            <DialogTitle style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.93 0.005 250)" }}>Book Consultation — {consultationLead?.name}</DialogTitle>
+            <DialogTitle style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.93 0.005 250)" }}>Book Consultation</DialogTitle>
+            <DialogDescription className="sr-only">Record the paid consultation fee and confirmed date before scheduling.</DialogDescription>
           </DialogHeader>
           <p className="text-sm" style={{ color: "oklch(0.65 0.01 250)" }}>Record the paid upfront fee, then select the confirmed consultation date. A consultation is not scheduled until the fee is paid.</p>
           <div className="space-y-4 mt-2">

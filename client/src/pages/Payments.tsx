@@ -8,11 +8,11 @@ import { PSTDatePicker } from "@/components/PSTDatePicker";
 
 import { useState, useMemo } from "react";
 import { useCRM } from "@/contexts/CRMContext";
-import { type Payment, type CaseType, type PaymentType, formatCurrency, formatDate } from "@/lib/store";
+import { type Lead, type Payment, type CaseType, type PaymentType, formatCurrency, formatDate } from "@/lib/store";
 import { isConvertedStage } from "@shared/const";
 import { toast } from "sonner";
 import { DollarSign, Plus, Search, Filter, Edit2, Trash2, X, Users, Building } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { persistPayment } from "@/lib/paymentSubmission";
+import ClientPicker from "@/components/ClientPicker";
+import { getChangedClientFields } from "@/lib/clientRecord";
 
 const CASE_TYPES: CaseType[] = ["DA", "SIJS", "AOS", "AO", "K1/K2", "U-Visa", "Green Card", "BIA", "Other"];
 
@@ -36,31 +38,16 @@ const emptyPayment: Omit<Payment, "id"> = {
 };
 
 export default function Payments() {
-  const { leads, payments, addPayment, updatePayment, deletePayment } = useCRM();
+  const { leads, payments, addPayment, updatePayment, updateLead, deletePayment } = useCRM();
   const [showAdd, setShowAdd] = useState(false);
   const [editPayment, setEditPayment] = useState<Payment | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Payment | null>(null);
   const [form, setForm] = useState<Omit<Payment, "id">>(emptyPayment);
   const [clientSearch, setClientSearch] = useState("");
-  const [showClientDropdown, setShowClientDropdown] = useState(false);
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<PaymentType | "All">("All");
   const [isSaving, setIsSaving] = useState(false);
-
-  // New payments link to non-converted leads; existing-client payments link to retained clients.
-  const filteredLeads = useMemo(() => {
-    if (form.paymentType === "New Client") {
-      return leads.filter(l => !isConvertedStage(l.stage));
-    } else {
-      return leads.filter(l => isConvertedStage(l.stage));
-    }
-  }, [leads, form.paymentType]);
-  const clientSearchScope = form.paymentType === "New Client" ? "non-converted leads" : "retained clients";
-
-  const clientMatches = useMemo(() => {
-    if (clientSearch.length < 2) return [];
-    return filteredLeads.filter(l => l.name.toLowerCase().includes(clientSearch.toLowerCase())).slice(0, 6);
-  }, [filteredLeads, clientSearch]);
 
   const filtered = useMemo(() => {
     return payments.filter(p => {
@@ -83,6 +70,13 @@ export default function Payments() {
 
     setIsSaving(true);
     try {
+      if (selectedClientId) {
+        const selected = leads.find(lead => lead.id === selectedClientId);
+        if (selected && getChangedClientFields(selected, { name: form.clientName, caseType: form.caseType, caseNumber: form.caseNumber }, ["name", "caseType", "caseNumber"]).length > 0) {
+          const updateMaster = window.confirm(`You edited fields from ${selected.name}. Press OK to update the master client record. Press Cancel to keep the edited values only on this payment.`);
+          if (updateMaster) await updateLead(selected.id, { name: form.clientName, caseType: form.caseType, caseNumber: form.caseNumber, actorName: "Payments" });
+        }
+      }
       const result = await persistPayment({
         editPaymentId: editPayment?.id,
         draft: form,
@@ -94,6 +88,7 @@ export default function Payments() {
       setShowAdd(false);
       setForm(emptyPayment);
       setClientSearch("");
+      setSelectedClientId(null);
     } catch (error) {
       const message = error instanceof Error ? error.message : "The payment could not be saved. Please try again.";
       toast.error(message);
@@ -106,20 +101,15 @@ export default function Payments() {
     setEditPayment(p);
     const { id, ...rest } = p;
     setForm(rest);
+    setSelectedClientId(p.leadId ?? null);
     setClientSearch(p.clientName);
     setShowAdd(true);
   };
 
-  const linkClient = (lead: typeof filteredLeads[0]) => {
-    setForm(f => ({
-      ...f,
-      clientName: lead.name,
-      leadId: lead.id,
-      caseType: lead.caseType,
-      caseNumber: lead.caseNumber,
-    }));
+  const linkClient = (lead: Lead) => {
+    setSelectedClientId(lead.id);
+    setForm(f => ({ ...f, clientName: lead.name, leadId: lead.id, caseType: lead.caseType, caseNumber: lead.caseNumber, paymentType: isConvertedStage(lead.stage) ? "Existing Client" : "New Client" }));
     setClientSearch(lead.name);
-    setShowClientDropdown(false);
   };
 
   return (
@@ -134,7 +124,7 @@ export default function Payments() {
             {payments.length} total payments
           </p>
         </div>
-        <Button onClick={() => { setEditPayment(null); setForm(emptyPayment); setClientSearch(""); setShowAdd(true); }}
+        <Button onClick={() => { setEditPayment(null); setSelectedClientId(null); setForm(emptyPayment); setClientSearch(""); setShowAdd(true); }}
           style={{ background: "oklch(0.72 0.12 75)", color: "oklch(0.13 0.025 250)" }}>
           <Plus className="w-4 h-4 mr-2" /> Log Payment
         </Button>
@@ -293,12 +283,13 @@ export default function Payments() {
       </AlertDialog>
 
       {/* ── Add/Edit Payment Modal ──────────────────────────── */}
-      <Dialog open={showAdd} onOpenChange={open => { if (!open) { setShowAdd(false); setEditPayment(null); setForm(emptyPayment); setClientSearch(""); } }}>
+      <Dialog open={showAdd} onOpenChange={open => { if (!open) { setShowAdd(false); setEditPayment(null); setSelectedClientId(null); setForm(emptyPayment); setClientSearch(""); } }}>
         <DialogContent className="max-w-lg" style={{ background: "oklch(0.18 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }}>
           <DialogHeader>
             <DialogTitle style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.93 0.005 250)" }}>
               {editPayment ? "Edit Payment" : "Log Payment"}
             </DialogTitle>
+            <DialogDescription className="sr-only">Search an existing person to link this payment and view their history.</DialogDescription>
           </DialogHeader>
 
           {/* New/Existing toggle */}
@@ -325,40 +316,17 @@ export default function Payments() {
           </div>
 
           <div className="space-y-3 mt-2">
-            {/* Client search */}
-            <div className="relative">
-              <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>
-                Client Name * {form.leadId && <span style={{ color: "oklch(0.55 0.18 145)" }}>● Linked to record</span>}
-              </Label>
-              <div className="relative">
-                <Input
-                  value={clientSearch}
-                  onChange={e => {
-                    setClientSearch(e.target.value);
-                    setForm(f => ({ ...f, clientName: e.target.value, leadId: undefined }));
-                    setShowClientDropdown(true);
-                  }}
-                  onFocus={() => setShowClientDropdown(true)}
-                placeholder={`Type client name (2+ chars to search ${clientSearchScope})`}
-                  style={{ background: "oklch(0.22 0.025 250)", borderColor: form.leadId ? "oklch(0.55 0.18 145 / 50%)" : "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }}
-                />
-                {form.leadId && (
-                  <button className="absolute right-2 top-1/2 -translate-y-1/2" onClick={() => { setForm(f => ({ ...f, leadId: undefined, clientName: "" })); setClientSearch(""); }} style={{ color: "oklch(0.55 0.01 250)" }}>
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-              {showClientDropdown && clientMatches.length > 0 && (
-                <div className="absolute z-50 w-full mt-1 rounded-lg border shadow-xl overflow-hidden" style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 15%)" }}>
-                  {clientMatches.map(lead => (
-                    <button key={lead.id} onClick={() => linkClient(lead)} className="w-full text-left px-3 py-2.5 hover:bg-white/5 transition-colors">
-                      <div className="text-sm font-medium" style={{ color: "oklch(0.93 0.005 250)" }}>{lead.name}</div>
-                      <div className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>{lead.caseType} · #{lead.caseNumber} · Retainer: {formatCurrency(lead.retainerBooked)}</div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            <ClientPicker
+              label={`Client Name *${form.leadId ? " · Linked to canonical record" : ""}`}
+              value={clientSearch || form.clientName}
+              selectedLeadId={selectedClientId}
+              leads={leads}
+              payments={payments}
+              onValueChange={value => { setSelectedClientId(null); setClientSearch(value); setForm(f => ({ ...f, clientName: value, leadId: undefined })); }}
+              onSelect={linkClient}
+              onClear={() => { setSelectedClientId(null); setClientSearch(""); setForm(f => ({ ...f, clientName: "", leadId: undefined })); }}
+              placeholder="Search name, phone, A-number, or email"
+            />
 
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -408,7 +376,7 @@ export default function Payments() {
             <Button onClick={handleSave} disabled={isSaving} style={{ background: "oklch(0.72 0.12 75)", color: "oklch(0.13 0.025 250)" }}>
               {isSaving ? "Saving…" : editPayment ? "Save Changes" : "Log Payment"}
             </Button>
-            <Button variant="outline" disabled={isSaving} onClick={() => { setShowAdd(false); setEditPayment(null); setForm(emptyPayment); setClientSearch(""); }}
+            <Button variant="outline" disabled={isSaving} onClick={() => { setShowAdd(false); setEditPayment(null); setSelectedClientId(null); setForm(emptyPayment); setClientSearch(""); }}
               style={{ borderColor: "oklch(1 0 0 / 15%)", color: "oklch(0.65 0.01 250)" }}>
               Cancel
             </Button>

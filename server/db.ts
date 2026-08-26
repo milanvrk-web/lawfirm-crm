@@ -1,4 +1,4 @@
-import { eq, desc, asc, lt, lte, gte, and, inArray, sql, like } from "drizzle-orm";
+import { eq, desc, asc, lt, lte, gte, and, or, inArray, sql, like } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   users,
@@ -131,6 +131,57 @@ export async function getLeadById(id: string) {
   if (!db) return undefined;
   const result = await db.select().from(leads).where(eq(leads.id, id)).limit(1);
   return result[0];
+}
+
+export async function searchLeadsForClientPicker(query: string) {
+  const db = await getDb();
+  if (!db) return [];
+  const trimmed = query.trim();
+  if (trimmed.length < 2) return [];
+  const rawDigits = trimmed.replace(/[^0-9]/g, "");
+  const rawCompact = trimmed.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const phonePattern = `%${rawDigits || rawCompact}%`;
+  const compactPattern = `%${rawCompact}%`;
+  return db.select().from(leads)
+    .where(or(
+      like(leads.name, `%${trimmed}%`),
+      like(leads.email, `%${trimmed}%`),
+      like(leads.alienNumber, `%${trimmed}%`),
+      sql`REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(${leads.phone}), ' ', ''), '-', ''), '(', ''), ')', ''), '+', '') LIKE ${phonePattern}`,
+      sql`REPLACE(REPLACE(REPLACE(LOWER(${leads.alienNumber}), ' ', ''), '-', ''), '#', '') LIKE ${compactPattern}`,
+    ))
+    .orderBy(desc(leads.updatedAt), desc(leads.createdAt))
+    .limit(20);
+}
+
+export async function getClientProfile(leadId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const lead = await getLeadById(leadId);
+  if (!lead) return undefined;
+  const all = await db.select().from(leads).orderBy(desc(leads.updatedAt), desc(leads.createdAt));
+  const normalize = (value: string | null | undefined) => (value ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const name = normalize(lead.name);
+  const phone = normalize(lead.phone);
+  const email = normalize(lead.email);
+  const alienNumber = normalize(lead.alienNumber);
+  const relatedLeads = all.filter(item => {
+    if (item.id === lead.id) return true;
+    return Boolean(
+      (phone && normalize(item.phone) === phone) ||
+      (email && normalize(item.email) === email) ||
+      (alienNumber && normalize(item.alienNumber) === alienNumber) ||
+      (name && normalize(item.name) === name),
+    );
+  });
+  const relatedIds = relatedLeads.map(item => item.id);
+  const relatedPayments = await db.select().from(payments)
+    .where(or(
+      inArray(payments.leadId, relatedIds),
+      sql`LOWER(${payments.clientName}) = LOWER(${lead.name})`,
+    ))
+    .orderBy(desc(payments.date), desc(payments.createdAt));
+  return { lead, relatedLeads, payments: relatedPayments };
 }
 
 export async function createLead(data: InsertLead) {
