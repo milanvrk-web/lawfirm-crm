@@ -709,3 +709,18 @@ All items in this section must be completed before delivery.
 - [x] Compare report entries with raw CRM payment records using client, date, amount, and purpose
 - [x] Classify exact matches, missing CRM records, duplicates, and business-date mismatches without changing CRM data
 - [x] Report the reconciliation findings and request approval before any data repair
+
+## Missing Manually Entered Payments Investigation — Pending
+
+- [x] Audit the payment-entry persistence, client-side save, and deletion paths
+- [x] Check database history, timestamps, and project/version context for the reported August 20–21 entries
+- [x] Determine the most likely cause and document safe repair options without modifying payment data
+- [x] Report findings and wait for explicit approval before any repair or re-entry
+
+## Payment Form Persistence Fix — Pending
+
+- [x] Make payment submission await the database mutation before closing or showing success
+- [x] Keep the form editable on failure and prevent duplicate submissions while saving
+- [x] Add regression coverage for success, failure, and duplicate-submit behavior
+- [x] Validate the payment form without altering the four historical missing payments
+- [x] Save a checkpoint for the form fix

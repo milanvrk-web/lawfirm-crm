@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { persistPayment } from "@/lib/paymentSubmission";
 
 const CASE_TYPES: CaseType[] = ["DA", "SIJS", "AOS", "AO", "K1/K2", "U-Visa", "Green Card", "BIA", "Other"];
 
@@ -44,6 +45,7 @@ export default function Payments() {
   const [showClientDropdown, setShowClientDropdown] = useState(false);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<PaymentType | "All">("All");
+  const [isSaving, setIsSaving] = useState(false);
 
   // New payments link to non-converted leads; existing-client payments link to retained clients.
   const filteredLeads = useMemo(() => {
@@ -73,22 +75,31 @@ export default function Payments() {
   const totalNew = filtered.filter(p => p.paymentType === "New Client").reduce((s, p) => s + p.amount, 0);
   const totalExisting = filtered.filter(p => p.paymentType === "Existing Client").reduce((s, p) => s + p.amount, 0);
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (isSaving) return;
     if (!form.clientName.trim()) { toast.error("Client name is required"); return; }
     if (form.amount <= 0) { toast.error("Amount must be greater than 0"); return; }
     if (!form.receivedFor.trim()) { toast.error("Please specify what the payment is for"); return; }
 
-    if (editPayment) {
-      updatePayment(editPayment.id, form);
-      toast.success("Payment updated");
+    setIsSaving(true);
+    try {
+      const result = await persistPayment({
+        editPaymentId: editPayment?.id,
+        draft: form,
+        addPayment,
+        updatePayment: async (id, draft) => updatePayment(id, draft),
+      });
+      toast.success(result === "updated" ? "Payment updated" : "Payment logged and saved");
       setEditPayment(null);
-    } else {
-      addPayment(form);
-      toast.success("Payment logged");
       setShowAdd(false);
+      setForm(emptyPayment);
+      setClientSearch("");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "The payment could not be saved. Please try again.";
+      toast.error(message);
+    } finally {
+      setIsSaving(false);
     }
-    setForm(emptyPayment);
-    setClientSearch("");
   };
 
   const openEdit = (p: Payment) => {
@@ -394,10 +405,10 @@ export default function Payments() {
           </div>
 
           <div className="flex gap-3 mt-4">
-            <Button onClick={handleSave} style={{ background: "oklch(0.72 0.12 75)", color: "oklch(0.13 0.025 250)" }}>
-              {editPayment ? "Save Changes" : "Log Payment"}
+            <Button onClick={handleSave} disabled={isSaving} style={{ background: "oklch(0.72 0.12 75)", color: "oklch(0.13 0.025 250)" }}>
+              {isSaving ? "Saving…" : editPayment ? "Save Changes" : "Log Payment"}
             </Button>
-            <Button variant="outline" onClick={() => { setShowAdd(false); setEditPayment(null); setForm(emptyPayment); setClientSearch(""); }}
+            <Button variant="outline" disabled={isSaving} onClick={() => { setShowAdd(false); setEditPayment(null); setForm(emptyPayment); setClientSearch(""); }}
               style={{ borderColor: "oklch(1 0 0 / 15%)", color: "oklch(0.65 0.01 250)" }}>
               Cancel
             </Button>
