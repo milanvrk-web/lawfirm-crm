@@ -80,6 +80,8 @@ interface PSTDatePickerProps {
   onClose?: () => void;
   /** If true, the calendar is always visible (no trigger button) */
   inline?: boolean;
+  /** Reduce spacing and cell sizing for compact modal/card layouts */
+  compact?: boolean;
   disabled?: boolean;
 }
 
@@ -92,6 +94,7 @@ export function PSTDatePicker({
   triggerContent,
   onClose,
   inline = false,
+  compact = false,
   disabled = false,
 }: PSTDatePickerProps) {
   const parsed = parseDateStr(value);
@@ -166,17 +169,17 @@ export function PSTDatePicker({
 
   const calendar = (
     <div
-      className="p-3 rounded-xl shadow-2xl"
+      className={compact ? "p-2 rounded-lg shadow-xl" : "p-3 rounded-xl shadow-2xl"}
       style={{
         background: "oklch(0.18 0.025 250)",
         border: "1px solid oklch(1 0 0 / 14%)",
-        minWidth: "240px",
+        minWidth: compact ? "220px" : "240px",
         userSelect: "none",
       }}
       onClick={e => e.stopPropagation()}
     >
       {/* Month navigation */}
-      <div className="flex items-center justify-between mb-3">
+      <div className={`flex items-center justify-between ${compact ? "mb-2" : "mb-3"}`}>
         <button
           onClick={handlePrevMonth}
           className="p-1 rounded hover:bg-white/10 transition-colors"
@@ -185,7 +188,7 @@ export function PSTDatePicker({
         >
           <ChevronLeft className="w-4 h-4" />
         </button>
-        <span className="text-sm font-semibold" style={{ color: "oklch(0.90 0.005 250)" }}>
+        <span className={`${compact ? "text-xs" : "text-sm"} font-semibold`} style={{ color: "oklch(0.90 0.005 250)" }}>
           {MONTH_NAMES[viewMonth - 1]} {viewYear}
         </span>
         <button
@@ -203,7 +206,7 @@ export function PSTDatePicker({
         {DAY_NAMES.map(d => (
           <div
             key={d}
-            className="text-center text-[10px] font-semibold py-1"
+            className={`text-center text-[10px] font-semibold ${compact ? "py-0.5" : "py-1"}`}
             style={{ color: "oklch(0.45 0.01 250)" }}
           >
             {d}
@@ -212,7 +215,7 @@ export function PSTDatePicker({
       </div>
 
       {/* Day cells */}
-      <div className="grid grid-cols-7 gap-y-0.5">
+      <div className={`grid grid-cols-7 ${compact ? "gap-y-0" : "gap-y-0.5"}`}>
         {/* Leading empty cells */}
         {Array.from({ length: startDow }).map((_, i) => (
           <div key={`empty-${i}`} />
@@ -231,7 +234,7 @@ export function PSTDatePicker({
               type="button"
               disabled={isDisabled}
               onClick={() => handleDayClick(day)}
-              className="w-full aspect-square flex items-center justify-center text-xs rounded transition-colors"
+              className={`w-full aspect-square flex items-center justify-center ${compact ? "text-[11px]" : "text-xs"} rounded transition-colors`}
               style={{
                 background: isSelected
                   ? "oklch(0.72 0.12 75)"
@@ -257,14 +260,14 @@ export function PSTDatePicker({
       </div>
 
       {/* Today shortcut */}
-      <div className="mt-2 pt-2 border-t" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
+      <div className={`${compact ? "mt-1 pt-1" : "mt-2 pt-2"} border-t`} style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
         <button
           type="button"
           onClick={() => {
             onChange(todayPST);
             if (!inline) setOpen(false);
           }}
-          className="w-full text-xs py-1 rounded transition-colors hover:bg-white/8"
+          className={`w-full text-xs ${compact ? "py-0.5" : "py-1"} rounded transition-colors hover:bg-white/8`}
           style={{ color: "oklch(0.65 0.15 200)" }}
         >
           Today (PST)

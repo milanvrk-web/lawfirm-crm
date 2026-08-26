@@ -176,7 +176,7 @@ function CompleteFollowUpModal({
               );
             })}
           </div>
-          <PSTDatePicker value={nextDate} onChange={setNextDate} minDate={today} inline />
+          <PSTDatePicker value={nextDate} onChange={setNextDate} minDate={today} inline compact />
           {!nextDate && (
             <p className="text-[10px] mt-1" style={{ color: "oklch(0.50 0.01 250)" }}>Required — set when to follow up next</p>
           )}
@@ -315,7 +315,7 @@ function RescheduleModal({
               );
             })}
           </div>
-          <PSTDatePicker value={newDate} onChange={setNewDate} minDate={today} inline />
+          <PSTDatePicker value={newDate} onChange={setNewDate} minDate={today} inline compact />
         </div>
 
         <div className="flex gap-2 pt-1">

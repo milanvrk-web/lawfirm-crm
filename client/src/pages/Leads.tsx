@@ -352,9 +352,14 @@ export default function Leads() {
   };
 
   const handleDragStart = (e: React.DragEvent, leadId: string) => {
+    // Set both a namespaced key and the standard text payload so native mouse drag
+    // works consistently across Chromium drag/drop surfaces.
     e.dataTransfer.setData("leadId", leadId);
+    e.dataTransfer.setData("text/plain", leadId);
     e.dataTransfer.effectAllowed = "move";
   };
+
+  const handleDragEnd = () => setDragOverStage(null);
 
   const openBookConsultation = (lead: Lead) => {
     setConsultationLead(lead);
@@ -382,7 +387,7 @@ export default function Leads() {
 
   const handleDrop = (e: React.DragEvent, targetStage: LeadStage) => {
     e.preventDefault();
-    const leadId = e.dataTransfer.getData("leadId");
+    const leadId = e.dataTransfer.getData("leadId") || e.dataTransfer.getData("text/plain");
     const lead = leads.find(l => l.id === leadId);
     if (!lead || lead.stage === targetStage) { setDragOverStage(null); return; }
     if (targetStage === "Consultation Scheduled" || targetStage === "Consultation") {
@@ -880,6 +885,7 @@ export default function Leads() {
                     key={lead.id}
                     draggable
                     onDragStart={e => handleDragStart(e, lead.id)}
+                    onDragEnd={handleDragEnd}
                     style={{ cursor: "grab" }}
                   >
                     <LeadCard
@@ -978,7 +984,7 @@ export default function Leads() {
           {lostLeadsForReview.length === 0 ? (
             <div className="col-span-full text-center py-7 text-sm" style={{ color: dragOverStage === "Lost" ? "oklch(0.80 0.22 25)" : "oklch(0.45 0.01 250)" }}>{dragOverStage === "Lost" ? "Drop here to record the required loss reason" : "No lost leads match this review filter."}</div>
           ) : lostLeadsForReview.map(lead => (
-            <div key={lead.id} draggable onDragStart={e => handleDragStart(e, lead.id)} style={{ cursor: "grab" }}>
+            <div key={lead.id} draggable onDragStart={e => handleDragStart(e, lead.id)} onDragEnd={handleDragEnd} style={{ cursor: "grab" }}>
               <LeadCard lead={lead} stageColor="oklch(0.70 0.22 25)" rescheduleCount={rescheduleCounts[lead.id] ?? 0} aiTier={aiTierMap[lead.id]} onOpenDetail={() => openDetail(lead)} onEdit={() => openEdit(lead)} onDelete={() => setLeadPendingDelete(lead)} onConvert={() => setConvertLead(lead)} onMarkDone={handleMarkDone} onReschedule={handleReschedule} onSetFollowUpDate={date => setLeadFollowUpDate(lead.id, date)} />
             </div>
           ))}
@@ -1214,6 +1220,7 @@ function LeadCard({
   const [editingDueDate, setEditingDueDate] = useState(false);
   const [showFUDatePicker, setShowFUDatePicker] = useState(false);
   const [fuDateInput, setFUDateInput] = useState(lead.followUpDate ?? "");
+  const [fuCalendarPosition, setFUCalendarPosition] = useState({ top: 0, left: 0 });
   const [showKanbanReschedule, setShowKanbanReschedule] = useState(false);
   const [pendingKanbanDate, setPendingKanbanDate] = useState<string>("");
   const fuDatePickerRef = useRef<HTMLDivElement>(null);
@@ -1303,7 +1310,7 @@ function LeadCard({
       }}
     >
       {/* Card header */}
-      <div className="flex items-start justify-between gap-2">
+      <div className={lead.stage === "Lost" ? "flex flex-col gap-2" : "flex items-start justify-between gap-2"}>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             {/* Clickable name opens detail panel */}
@@ -1369,7 +1376,7 @@ function LeadCard({
         </div>
 
         {lead.stage === "Lost" && (
-          <div className="mt-3 rounded-md px-2.5 py-2" style={{ background: "oklch(0.60 0.22 25 / 8%)", border: "1px solid oklch(0.60 0.22 25 / 20%)" }}>
+          <div className="w-full min-w-0 mt-0 rounded-md px-2.5 py-2" style={{ background: "oklch(0.60 0.22 25 / 8%)", border: "1px solid oklch(0.60 0.22 25 / 20%)", overflowWrap: "anywhere" }}>
             <div className="flex items-center justify-between gap-2">
               <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "oklch(0.72 0.22 25)" }}>Loss review</span>
               {lead.lostDate && <span className="text-[10px]" style={{ color: "oklch(0.50 0.01 250)" }}>{formatDate(lead.lostDate)}</span>}
@@ -1429,7 +1436,21 @@ function LeadCard({
         <span className="text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>Follow-up:</span>
         <div ref={fuDatePickerRef} className="relative">
           <button
-            onClick={e => { e.stopPropagation(); setFUDateInput(lead.followUpDate ?? ""); setShowFUDatePicker(p => !p); }}
+            onClick={e => {
+              e.stopPropagation();
+              setFUDateInput(lead.followUpDate ?? "");
+              if (!showFUDatePicker) {
+                const rect = fuDatePickerRef.current?.getBoundingClientRect();
+                const calendarHeight = 350;
+                const calendarWidth = 240;
+                const top = rect && rect.bottom + calendarHeight + 8 > window.innerHeight
+                  ? Math.max(8, rect.top - calendarHeight - 8)
+                  : (rect?.bottom ?? 0) + 8;
+                const left = rect ? Math.min(Math.max(8, rect.left), window.innerWidth - calendarWidth - 8) : 8;
+                setFUCalendarPosition({ top, left });
+              }
+              setShowFUDatePicker(p => !p);
+            }}
             className="text-xs px-2 py-0.5 rounded border transition-colors hover:opacity-90"
             style={{
               background: "oklch(0.22 0.025 250)",
@@ -1442,8 +1463,10 @@ function LeadCard({
 
           {showFUDatePicker && (
             <div
-              className="absolute left-0 top-full mt-1 z-50 rounded-xl shadow-2xl p-3 min-w-[220px]"
+              className="fixed z-[70] rounded-xl shadow-2xl p-2.5 w-[240px]"
               style={{
+                top: fuCalendarPosition.top,
+                left: fuCalendarPosition.left,
                 background: "oklch(0.18 0.025 250)",
                 border: "1px solid oklch(1 0 0 / 14%)",
               }}
@@ -1453,7 +1476,7 @@ function LeadCard({
                 Set follow-up date
               </p>
               {/* PST-safe calendar — no native date input */}
-              <PSTDatePicker value={fuDateInput} onChange={setFUDateInput} inline />
+              <PSTDatePicker value={fuDateInput} onChange={setFUDateInput} inline compact />
               <div className="flex gap-2">
                 <button
                   onClick={e => {

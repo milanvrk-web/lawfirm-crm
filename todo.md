@@ -635,3 +635,23 @@ All items in this section must be completed before delivery.
 - [x] Save a checkpoint for the completed reporting enhancement
 
 All items in this section must be completed before delivery.
+
+## Calendar UI Corrections — Pending
+
+- [x] Prevent the Leads-page follow-up calendar from merging with or overlapping nearby lead-card content
+- [x] Make the Complete Follow-Up calendar compact so it uses less dialog space while remaining readable
+- [ ] Verify calendar month navigation, date selection, today action, cancel, required validation, and save behavior without changing production records
+- [x] Run TypeScript, tests, build, and preview render verification (calendar interaction clicks remain access-gated)
+- [ ] Save a checkpoint for the calendar corrections
+
+All items in this section must be completed before delivery.
+
+## Pipeline Dragging & Lost Review Card Layout — Pending
+
+- [x] Enable reliable mouse drag-and-drop movement between pipeline columns in both directions
+- [x] Preserve stage safeguards when a lead is dragged, including paid-consultation and Lost requirements
+- [x] Fix Lost Review card banners and metadata so loss-review text never overlaps card content
+- [x] Run TypeScript, full tests, production build, and preview render verification without changing production CRM records; browser interaction clicks remain access-gated
+- [x] Save a checkpoint for the drag-and-drop and Lost Review layout fixes
+
+All items in this section must be completed before delivery.
