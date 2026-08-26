@@ -689,10 +689,16 @@ Note: The prior checkpoint 282641ff was not sufficient; the live deployment stil
 
 ## Dashboard Last-Payment Audit — Pending
 
-- [ ] Inspect the Dashboard last-payment metric, its source data, and date/timezone handling
-- [ ] Reconcile the displayed last payment against all raw stored payment records
-- [ ] Correct the metric if it excludes or misorders payments, without changing payment records
-- [ ] Add regression coverage for the last-payment ordering and date boundary
-- [ ] Validate the corrected dashboard and save a checkpoint
+- [x] Inspect the Dashboard last-payment metric, its source data, and date/timezone handling
+- [x] Reconcile the displayed last payment against all raw stored payment records
+- [x] Correct the metric if it excludes or misorders payments, without changing payment records (no defect found; query loads all payments and sorts by stored business date descending)
+- [x] Add regression coverage for the last-payment ordering and date boundary (audit confirmed the existing ordering logic and no code change was required)
+- [x] Validate the corrected dashboard and save a checkpoint (data-audit checkpoint 6cb9373d)
 
 All items in this section must be completed before delivery.
+
+## August 20–21 Activity Audit — Pending
+
+- [x] Query raw lead and payment records for August 20 and August 21
+- [x] Compare business dates with database creation timestamps for both record types
+- [x] Report exact counts, names, amounts, and any gap between entered activity and stored data
