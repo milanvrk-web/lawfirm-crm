@@ -702,3 +702,10 @@ All items in this section must be completed before delivery.
 - [x] Query raw lead and payment records for August 20 and August 21
 - [x] Compare business dates with database creation timestamps for both record types
 - [x] Report exact counts, names, amounts, and any gap between entered activity and stored data
+
+## Word Payment Report Reconciliation — Pending
+
+- [x] Extract and normalize payment entries from Paymentreport(30), Paymentreport(31), and Paymentreport(32)
+- [x] Compare report entries with raw CRM payment records using client, date, amount, and purpose
+- [x] Classify exact matches, missing CRM records, duplicates, and business-date mismatches without changing CRM data
+- [x] Report the reconciliation findings and request approval before any data repair
