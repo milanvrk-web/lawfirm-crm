@@ -12,6 +12,7 @@ import {
   getLossReasonDetailLabel,
   getLossReasonDetailPlaceholder,
   getLossReasonValidationMessage,
+  shouldShowLossReasonDetail,
 } from "@/lib/lossReasons";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -72,7 +73,7 @@ export default function LostLeadDialog({ lead, onClose, onMarkedLost }: LostLead
       await updateLead(lead.id, {
         stage: "Lost",
         lostReason: reason,
-        lostReasonDetail: reason === LOSS_REASON_DETAIL_REQUIRED ? customReason.trim() || null : null,
+        lostReasonDetail: shouldShowLossReasonDetail(reason) ? customReason.trim() || null : null,
         lostNote: note.trim(),
         lostDate: lead.lostDate ?? todayPST(),
         followUpDate: null,
@@ -119,7 +120,7 @@ export default function LostLeadDialog({ lead, onClose, onMarkedLost }: LostLead
                   type="button"
                   role="radio"
                   aria-checked={selected}
-                  onClick={() => { setReason(option); setAttemptedSubmit(false); }}
+                  onClick={() => { setReason(option); if (!shouldShowLossReasonDetail(option)) setCustomReason(""); setAttemptedSubmit(false); }}
                   className="min-h-10 text-left px-3 py-2 rounded-lg text-xs font-medium opacity-100 cursor-pointer transition-colors hover:border-[oklch(0.72_0.12_75/70%)] hover:text-[oklch(0.92_0.12_75)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[oklch(0.72_0.12_75)]"
                   style={{
                     background: selected ? "oklch(0.70 0.22 25 / 22%)" : "oklch(0.25 0.035 250)",

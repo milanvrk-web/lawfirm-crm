@@ -742,3 +742,10 @@ All items in this section must be completed before delivery.
 - [x] Make Additional Notes mandatory for every loss reason, with clear inline validation when missing
 - [x] Prevent dialog submission/closure as a completed loss until both a reason and notes are provided
 - [x] Add regression tests and browser validation for ordinary and service-not-provided loss reasons
+
+## Lost Lead Confirmation Failure — New Report
+
+- [x] Reproduce the reported failure with a selected reason, specific explanation, and required additional notes
+- [x] Trace and fix any client/server payload or validation mismatch preventing a valid Lost transition
+- [x] Add a successful end-to-end confirmation regression test plus incomplete-form safeguards
+- [x] Re-run the full validation suite and save a corrected final checkpoint
