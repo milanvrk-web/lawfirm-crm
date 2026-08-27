@@ -19,7 +19,7 @@ const COLOR_OPTIONS = [
   { label: "Teal",   value: "oklch(0.60 0.15 195)" },
 ];
 
-const ROLE_OPTIONS = ["Staff", "Paralegal", "Attorney", "Manager", "Owner"];
+export const ROLE_OPTIONS = ["Staff", "Paralegal", "Attorney", "Manager", "Owner", "Admin"] as const;
 
 function getInitials(name: string) {
   return name.trim().split(/\s+/).map(w => w[0]?.toUpperCase() ?? "").slice(0, 2).join("");

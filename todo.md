@@ -757,3 +757,10 @@ All items in this section must be completed before delivery.
 - [x] Preserve genuinely new custom sources while preventing accidental category fragmentation
 - [x] Add inline source editing in Lead Detail so Dashboard funnel leads can be corrected without navigating to Leads
 - [x] Validate the new options, guidance, direct Dashboard correction path, TypeScript, full tests, and production build
+
+## CRM Team Profile — New Request
+
+- [x] Inspect the existing member-management flow and role validation
+- [x] Add a team profile named Jaya with the Admin role
+- [x] Verify Jaya appears correctly without changing existing member roles or records
+- [x] Save a checkpoint for the new profile
