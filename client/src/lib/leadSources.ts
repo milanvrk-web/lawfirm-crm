@@ -25,6 +25,12 @@ const aliases: Array<{ category: LeadSourceCategory; terms: string[] }> = [
   { category: "Handler", terms: ["handler"] },
 ];
 
+export function canonicalizeLeadSource(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return "Unknown";
+  return suggestLeadSourceCategory(trimmed) ?? trimmed;
+}
+
 export function suggestLeadSourceCategory(value: string): LeadSourceCategory | null {
   const normalized = value.trim().toLowerCase();
   if (!normalized) return null;

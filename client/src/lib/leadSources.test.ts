@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getLeadSourceGuidance, LEAD_SOURCE_OPTIONS, suggestLeadSourceCategory } from "./leadSources";
+import { canonicalizeLeadSource, getLeadSourceGuidance, LEAD_SOURCE_OPTIONS, suggestLeadSourceCategory } from "./leadSources";
 
 describe("lead source taxonomy", () => {
   it("includes the standardized Website, combined social, AI Tools, and Email categories", () => {
@@ -12,6 +12,14 @@ describe("lead source taxonomy", () => {
     expect(LEAD_SOURCE_OPTIONS).not.toContain("Facebook");
     expect(LEAD_SOURCE_OPTIONS).not.toContain("Instagram");
     expect(LEAD_SOURCE_OPTIONS).not.toContain("Calendly");
+  });
+
+  it("canonicalizes legacy and empty values for source filtering", () => {
+    expect(canonicalizeLeadSource("Calendly booking")).toBe("Website (Calendly)");
+    expect(canonicalizeLeadSource("Instagram DM")).toBe("Facebook / Instagram");
+    expect(canonicalizeLeadSource("ChatGPT inquiry")).toBe("AI Tools (ChatGPT, Claude, etc.)");
+    expect(canonicalizeLeadSource(" ")).toBe("Unknown");
+    expect(canonicalizeLeadSource("local community event")).toBe("local community event");
   });
 
   it("classifies Calendly as the Website scheduling source", () => {

@@ -814,3 +814,20 @@ All items in this section must be completed before delivery.
 - [x] Preserve mandatory supporting notes and server-side validation for the new reason
 - [x] Ensure consultation-to-lost reporting remains distinct from retained conversion reporting
 - [x] Add regression coverage, validate the workflow, and save a checkpoint
+
+## Monthly Dashboard Reporting Reconciliation — New Request
+
+- [ ] Audit Dashboard lead, source, pipeline, Lost-reason, and revenue calculations against raw CRM records
+- [ ] Reconcile July, August, and prior-month lead/payment business dates and revenue classifications
+- [ ] Separate new-client, existing-client, consultation, and pipeline-value reporting with explicit definitions
+- [ ] Preserve clickable source/outcome/Lost-reason drill-downs to the underlying leads
+- [ ] Add regression coverage and validate month switching, totals, and browser presentation
+- [ ] Save a checkpoint for the reconciled Dashboard reporting release
+
+## Leads Pipeline Source Filter — New Request
+
+- [x] Add a clickable Lead Source filter group alongside case-type filters
+- [x] Populate source filters from CRM lead data and show standardized category labels consistently
+- [x] Make source filtering compose correctly with search, case type, stage, and Kanban interactions
+- [x] Add regression coverage and browser validation for source filtering and empty states
+- [x] Save a checkpoint for the Leads Pipeline source-filter feature

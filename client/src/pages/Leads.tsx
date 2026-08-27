@@ -40,7 +40,7 @@ import LeadDeleteDialog from "@/components/LeadDeleteDialog";
 import ClientPicker from "@/components/ClientPicker";
 import LeadSourceField from "@/components/LeadSourceField";
 import { getChangedClientFields } from "@/lib/clientRecord";
-import { LEAD_SOURCE_OPTIONS } from "@/lib/leadSources";
+import { LEAD_SOURCE_OPTIONS, canonicalizeLeadSource } from "@/lib/leadSources";
 
 const STAGES: LeadStage[] = ["New Lead", "Consultation", "Follow-Up", "Retained & Onboarding", "Lost"];
 const CASE_TYPES: CaseType[] = ["DA", "SIJS", "AOS", "AO", "K1/K2", "U-Visa", "Green Card", "BIA", "Other"];
@@ -136,6 +136,7 @@ export default function Leads() {
   const [search, setSearch] = useState("");
   const [filterStage, setFilterStage] = useState<LeadStage | "All">("All");
   const [filterCaseType, setFilterCaseType] = useState<string>("All");
+  const [filterSource, setFilterSource] = useState<string>("All");
   const [lostLeadPending, setLostLeadPending] = useState<Lead | null>(null);
   const [lostReasonFilter, setLostReasonFilter] = useState("All Reasons");
   const [leadPendingDelete, setLeadPendingDelete] = useState<Lead | null>(null);
@@ -290,9 +291,18 @@ export default function Leads() {
         l.phone.includes(search) || l.caseNumber.toLowerCase().includes(search.toLowerCase());
       const matchStage = filterStage === "All" || l.stage === filterStage;
       const matchCase = filterCaseType === "All" || l.caseType === filterCaseType;
-      return matchSearch && matchStage && matchCase;
+      const matchSource = filterSource === "All" || canonicalizeLeadSource(l.source) === filterSource;
+      return matchSearch && matchStage && matchCase && matchSource;
     });
-  }, [leads, search, filterStage, filterCaseType]);
+  }, [leads, search, filterStage, filterCaseType, filterSource]);
+
+  const leadSourceFilters = useMemo(() => {
+    const values = new Set(leads.map(lead => canonicalizeLeadSource(lead.source)));
+    const ordered = LEAD_SOURCE_OPTIONS.filter(source => values.has(source));
+    const custom = Array.from(values).filter(source => source !== "Unknown" && !LEAD_SOURCE_OPTIONS.includes(source as (typeof LEAD_SOURCE_OPTIONS)[number])).sort();
+    if (values.has("Unknown")) custom.push("Unknown");
+    return [...ordered, ...custom];
+  }, [leads]);
 
   const lostLeads = useMemo(() => filtered.filter(lead => lead.stage === "Lost"), [filtered]);
   const lossReasonOptions = useMemo(() => Array.from(new Set(lostLeads.map(lead => lead.lostReason || "Reason not recorded"))).sort(), [lostLeads]);
@@ -701,6 +711,31 @@ export default function Leads() {
             )}
           </button>
         ))}
+      </div>
+      {/* Lead source quick-filter chips */}
+      <div className="space-y-1.5" aria-label="Lead source filters">
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "oklch(0.48 0.01 250)" }}>Lead Sources</span>
+          {filterSource !== "All" && <button onClick={() => setFilterSource("All")} className="text-[10px] hover:underline" style={{ color: "oklch(0.72 0.12 75)" }}>Clear source</button>}
+        </div>
+        <div className="flex gap-1.5 flex-wrap">
+          {["All", ...leadSourceFilters].map(source => (
+            <button
+              key={source}
+              onClick={() => setFilterSource(source)}
+              aria-pressed={filterSource === source}
+              className="text-xs px-2.5 py-1 rounded-full font-medium transition-all"
+              style={{
+                background: filterSource === source ? "oklch(0.65 0.15 250 / 20%)" : "oklch(0.18 0.025 250)",
+                color: filterSource === source ? "oklch(0.72 0.15 250)" : "oklch(0.55 0.01 250)",
+                border: `1px solid ${filterSource === source ? "oklch(0.65 0.15 250 / 55%)" : "oklch(1 0 0 / 10%)"}`,
+              }}
+            >
+              {source === "All" ? "All Sources" : source}
+              {source !== "All" && <span className="ml-1 opacity-60">({leads.filter(lead => canonicalizeLeadSource(lead.source) === source).length})</span>}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* ── Lead Bifurcation Summary Card ─────────────────────── */}
