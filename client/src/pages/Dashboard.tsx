@@ -12,8 +12,6 @@ import { todayPST, addDaysPST, formatDate as fmtDate } from "@/lib/timezone";
 import { PSTDatePicker } from "@/components/PSTDatePicker";
 import {
   formatCurrency,
-  getMonthLeads,
-  getMonthPayments,
   getWeeksInMonth,
   getTargetStatus,
   type Lead, type Payment, type CaseType, type PaymentType, type LeadStage,
@@ -63,7 +61,7 @@ import StaleLeadsDrawer from "@/components/StaleLeadsDrawer";
 import ClientPicker from "@/components/ClientPicker";
 import LeadSourceField from "@/components/LeadSourceField";
 import { getChangedClientFields } from "@/lib/clientRecord";
-import { LEAD_SOURCE_OPTIONS } from "@/lib/leadSources";
+import { LEAD_SOURCE_OPTIONS, canonicalizeLeadSource } from "@/lib/leadSources";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -71,6 +69,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { isConvertedStage, isActiveLeadStage } from "@shared/const";
+import { getMonthlyLeadCohort, getMonthlyPaymentCohort, getMonthlyLifecycleLeads, getMonthlyRevenue } from "@/lib/dashboardMetrics";
 
 
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
@@ -98,7 +97,6 @@ function downloadCSV(filename: string, rows: string[][]): void {
 
 export default function Dashboard() {
   const { leads, payments, dayCloses, targets, addLead, updateLead, addPayment } = useCRM();
-  const crmData = useMemo(() => ({ leads, payments, followUps: [], dayCloses }), [leads, payments, dayCloses]);
   const now = new Date();
   const nowPSTStr = now.toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" }); // YYYY-MM-DD
   const [selectedYear, setSelectedYear] = useState(parseInt(nowPSTStr.split("-")[0]));
@@ -111,36 +109,24 @@ export default function Dashboard() {
   const [drillDown, setDrillDown] = useState<DrillKey>(null); // current month
   const [staleDrawerOpen, setStaleDrawerOpen] = useState(false);
 
-  const monthLeads = useMemo(() => getMonthLeads(crmData as any, selectedYear, selectedMonth), [crmData, selectedYear, selectedMonth]);
-  const monthPayments = useMemo(() => getMonthPayments(crmData as any, selectedYear, selectedMonth), [crmData, selectedYear, selectedMonth]);
+  const monthLeads = useMemo(() => getMonthlyLeadCohort(leads, selectedYear, selectedMonth), [leads, selectedYear, selectedMonth]);
+  const monthPayments = useMemo(() => getMonthlyPaymentCohort(payments, selectedYear, selectedMonth), [payments, selectedYear, selectedMonth]);
+  const monthlyLifecycle = useMemo(() => getMonthlyLifecycleLeads(leads, selectedYear, selectedMonth), [leads, selectedYear, selectedMonth]);
+  const monthlyRevenue = useMemo(() => getMonthlyRevenue(monthPayments), [monthPayments]);
 
   // Stats
   const totalLeads = monthLeads.length;
   // Converted: leads that were converted in this month (by convertedDate or date).
   // Both Retained AND Onboarding are converted clients — include both.
-  const converted = useMemo(() => {
-    return leads.filter(l => {
-      if (!isConvertedStage(l.stage)) return false;
-      const dateToCheck = l.convertedDate || l.date;
-      const d = new Date(dateToCheck + "T12:00:00");
-      return d.getFullYear() === selectedYear && d.getMonth() + 1 === selectedMonth;
-    }).length;
-  }, [leads, selectedYear, selectedMonth]);
+  const converted = monthlyLifecycle.converted.length;
   const convRate = totalLeads > 0 ? Math.round((converted / totalLeads) * 100) : 0;
   // Revenue Booked: sum retainerBooked for leads converted in the selected month.
   // Both Retained AND Onboarding are converted clients — include both.
-  const revenueBooked = useMemo(() => {
-    return leads.filter(l => {
-      if (!isConvertedStage(l.stage)) return false;
-      const dateToCheck = l.convertedDate || l.date;
-      const d = new Date(dateToCheck + "T12:00:00");
-      return d.getFullYear() === selectedYear && d.getMonth() + 1 === selectedMonth;
-    }).reduce((s, l) => s + l.retainerBooked, 0);
-  }, [leads, selectedYear, selectedMonth]);
-  const newClientRev = monthPayments.filter(p => p.paymentType === "New Client").reduce((s, p) => s + p.amount, 0);
-  const existingClientRev = monthPayments.filter(p => p.paymentType === "Existing Client").reduce((s, p) => s + p.amount, 0);
-  const consultationFeeRevenue = monthPayments.filter(p => p.receivedFor === "Consultation Fee").reduce((s, p) => s + p.amount, 0);
-  const totalReceived = newClientRev + existingClientRev;
+  const revenueBooked = monthlyLifecycle.converted.reduce((sum, lead) => sum + Number(lead.retainerBooked || 0), 0);
+  const newClientRev = monthlyRevenue.newClient;
+  const existingClientRev = monthlyRevenue.existingClient;
+  const consultationFeeRevenue = monthlyRevenue.consultation;
+  const totalReceived = monthlyRevenue.total;
   const pctOfBooked = revenueBooked > 0 ? Math.round((totalReceived / revenueBooked) * 100) : 0;
 
   // ── All-time pipeline bifurcation (for the lead status overview card) ──
@@ -154,26 +140,11 @@ export default function Dashboard() {
   // ── Monthly pipeline bifurcation (for the lead status overview card — month view) ──
   // Leads added this month = monthLeads (already computed above)
   // Converted this month = leads whose convertedDate (or date) falls in selected month AND are converted stage
-  const monthConverted = useMemo(() => {
-    return leads.filter(l => {
-      if (!isConvertedStage(l.stage)) return false;
-      const dateToCheck = l.convertedDate || l.date;
-      const d = new Date(dateToCheck + "T12:00:00");
-      return d.getFullYear() === selectedYear && d.getMonth() + 1 === selectedMonth;
-    }).length;
-  }, [leads, selectedYear, selectedMonth]);
+  const monthConverted = monthlyLifecycle.converted.length;
   // Lost this month = leads whose lostDate (or date) falls in selected month AND stage is Lost
-  const monthLost = useMemo(() => {
-    return leads.filter(l => {
-      if (l.stage !== "Lost") return false;
-      // Use lostDate if available, otherwise fall back to lead date
-      const dateToCheck = (l as any).lostDate || l.date;
-      const d = new Date(dateToCheck + "T12:00:00");
-      return d.getFullYear() === selectedYear && d.getMonth() + 1 === selectedMonth;
-    }).length;
-  }, [leads, selectedYear, selectedMonth]);
+  const monthLost = monthlyLifecycle.lost.length;
   const monthConsultationsBooked = useMemo(
-    () => new Set(monthPayments.filter(payment => payment.receivedFor === "Consultation Fee" && payment.leadId).map(payment => payment.leadId)).size,
+    () => new Set(monthPayments.filter(payment => payment.leadId && payment.receivedFor.trim().toLowerCase().includes("consultation")).map(payment => payment.leadId)).size,
     [monthPayments]
   );
   const monthConsultationsConverted = useMemo(() => leads.filter(lead => {
@@ -231,15 +202,18 @@ export default function Dashboard() {
 
   // Case type revenue breakdown
   const caseTypeData = useMemo(() => {
-    const map: Record<string, { revenue: number; count: number }> = {};
+    const map: Record<string, { revenue: number; count: number; newRevenue: number; existingRevenue: number }> = {};
     monthPayments.forEach(p => {
       const ct = p.caseType || "Unknown";
-      if (!map[ct]) map[ct] = { revenue: 0, count: 0 };
-      map[ct].revenue += p.amount;
+      if (!map[ct]) map[ct] = { revenue: 0, count: 0, newRevenue: 0, existingRevenue: 0 };
+      const amount = Number(p.amount || 0);
+      map[ct].revenue += amount;
       map[ct].count += 1;
+      if (p.paymentType === "New Client") map[ct].newRevenue += amount;
+      if (p.paymentType === "Existing Client") map[ct].existingRevenue += amount;
     });
     return Object.entries(map)
-      .map(([caseType, { revenue, count }]) => ({ caseType, revenue, count, pct: totalReceived > 0 ? Math.round((revenue / totalReceived) * 100) : 0 }))
+      .map(([caseType, data]) => ({ caseType, ...data, pct: totalReceived > 0 ? Math.round((data.revenue / totalReceived) * 100) : 0 }))
       .sort((a, b) => b.revenue - a.revenue);
   }, [monthPayments, totalReceived]);
 
@@ -1431,7 +1405,9 @@ export default function Dashboard() {
                   <tr style={{ borderBottom: "1px solid oklch(1 0 0 / 10%)" }}>
                     <th className="text-left py-2 pr-4 font-semibold" style={{ color: "oklch(0.72 0.12 75)" }}>Case Type</th>
                     <th className="text-right py-2 pr-4 font-semibold" style={{ color: "oklch(0.72 0.12 75)" }}>Payments</th>
-                    <th className="text-right py-2 pr-4 font-semibold" style={{ color: "oklch(0.72 0.12 75)" }}>Revenue</th>
+                    <th className="text-right py-2 pr-4 font-semibold" style={{ color: "oklch(0.72 0.12 75)" }}>Total</th>
+                    <th className="text-right py-2 pr-4 font-semibold" style={{ color: "oklch(0.55 0.18 145)" }}>New</th>
+                    <th className="text-right py-2 pr-4 font-semibold" style={{ color: "oklch(0.65 0.15 250)" }}>Existing</th>
                     <th className="text-right py-2 font-semibold" style={{ color: "oklch(0.72 0.12 75)" }}>% of Total</th>
                   </tr>
                 </thead>
@@ -1443,6 +1419,8 @@ export default function Dashboard() {
                       </td>
                       <td className="text-right py-2 pr-4" style={{ color: "oklch(0.65 0.01 250)" }}>{row.count}</td>
                       <td className="text-right py-2 pr-4 font-semibold" style={{ color: "oklch(0.93 0.005 250)" }}>{formatCurrency(row.revenue)}</td>
+                      <td className="text-right py-2 pr-4" style={{ color: "oklch(0.65 0.18 145)" }}>{formatCurrency(row.newRevenue)}</td>
+                      <td className="text-right py-2 pr-4" style={{ color: "oklch(0.65 0.15 250)" }}>{formatCurrency(row.existingRevenue)}</td>
                       <td className="text-right py-2">
                         <div className="flex items-center justify-end gap-2">
                           <div className="w-16 h-1.5 rounded-full overflow-hidden" style={{ background: "oklch(1 0 0 / 8%)" }}>
@@ -1457,6 +1435,8 @@ export default function Dashboard() {
                     <td className="pt-2 pr-4 font-semibold" style={{ color: "oklch(0.72 0.12 75)" }}>Total</td>
                     <td className="text-right pt-2 pr-4" style={{ color: "oklch(0.65 0.01 250)" }}>{caseTypeData.reduce((s, r) => s + r.count, 0)}</td>
                     <td className="text-right pt-2 pr-4 font-semibold" style={{ color: "oklch(0.72 0.12 75)" }}>{formatCurrency(totalReceived)}</td>
+                    <td className="text-right pt-2 pr-4" style={{ color: "oklch(0.65 0.18 145)" }}>{formatCurrency(newClientRev)}</td>
+                    <td className="text-right pt-2 pr-4" style={{ color: "oklch(0.65 0.15 250)" }}>{formatCurrency(existingClientRev)}</td>
                     <td className="text-right pt-2" style={{ color: "oklch(0.65 0.01 250)" }}>100%</td>
                   </tr>
                 </tbody>
@@ -1480,28 +1460,26 @@ export default function Dashboard() {
             <span className="text-xs" style={{ color: "oklch(0.45 0.01 250)" }}>{MONTHS[selectedMonth - 1]} {selectedYear}</span>
           </div>
           {(() => {
-            // Filter leads created in the selected month/year
-            const monthLeads = leads.filter(l => {
-              const d = new Date(l.date + "T12:00:00");
-              return d.getFullYear() === selectedYear && (d.getMonth() + 1) === selectedMonth;
-            });
             type SourceOutcome = "all" | "consulted" | "consultedWon" | "won" | "lost" | "open";
-            type SourceRow = { leads: number; consultations: number; consultationsConverted: number; converted: number; lost: number; inProgress: number; revenue: number; leadIds: Record<SourceOutcome, string[]> };
+            type SourceRow = { leads: number; consultations: number; consultationsConverted: number; converted: number; lost: number; inProgress: number; revenue: number; newRevenue: number; existingRevenue: number; leadIds: Record<SourceOutcome, string[]> };
             const emptyLeadIds = (): Record<SourceOutcome, string[]> => ({ all: [], consulted: [], consultedWon: [], won: [], lost: [], open: [] });
             const sourceMap: Record<string, SourceRow> = {};
             monthLeads.forEach(l => {
-              const src = l.source || "Unknown";
-              if (!sourceMap[src]) sourceMap[src] = { leads: 0, consultations: 0, consultationsConverted: 0, converted: 0, lost: 0, inProgress: 0, revenue: 0, leadIds: emptyLeadIds() };
+              const src = canonicalizeLeadSource(l.source);
+              if (!sourceMap[src]) sourceMap[src] = { leads: 0, consultations: 0, consultationsConverted: 0, converted: 0, lost: 0, inProgress: 0, revenue: 0, newRevenue: 0, existingRevenue: 0, leadIds: emptyLeadIds() };
               const row = sourceMap[src];
-              const consulted = Boolean(l.consultationBookedDate || payments.some(payment => payment.leadId === l.id && payment.receivedFor === "Consultation Fee"));
+              const linkedPayments = monthPayments.filter(payment => payment.leadId === l.id);
+              const consulted = Boolean(l.consultationBookedDate || linkedPayments.some(payment => payment.receivedFor.trim().toLowerCase().includes("consultation")));
               row.leads += 1;
               row.leadIds.all.push(l.id);
+              row.newRevenue += linkedPayments.filter(payment => payment.paymentType === "New Client").reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+              row.existingRevenue += linkedPayments.filter(payment => payment.paymentType === "Existing Client").reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+              row.revenue = row.newRevenue + row.existingRevenue;
               if (consulted) { row.consultations += 1; row.leadIds.consulted.push(l.id); }
               if (isConvertedStage(l.stage)) {
                 row.converted += 1;
                 row.leadIds.won.push(l.id);
                 if (consulted) { row.consultationsConverted += 1; row.leadIds.consultedWon.push(l.id); }
-                row.revenue += l.retainerBooked || 0;
               } else if (l.stage === "Lost") {
                 row.lost += 1;
                 row.leadIds.lost.push(l.id);
@@ -1512,8 +1490,7 @@ export default function Dashboard() {
             });
             const rows = Object.entries(sourceMap)
               .map(([src, d]) => ({ src, ...d, convRate: d.leads > 0 ? Math.round((d.converted / d.leads) * 100) : 0 }))
-              .sort((a, b) => b.revenue - a.revenue)
-              .slice(0, 6);
+              .sort((a, b) => b.revenue - a.revenue || b.leads - a.leads);
             if (rows.length === 0) return <p className="text-sm text-center py-6" style={{ color: "oklch(0.45 0.01 250)" }}>No lead source data for this month.</p>;
             return (
               <div>
@@ -1521,7 +1498,8 @@ export default function Dashboard() {
                 <div className="space-y-1.5">
                   {rows.map(row => (
                     <div key={row.src} className="rounded px-3 py-2" style={{ background: "oklch(0.20 0.025 250)" }}>
-                      <div className="flex justify-between gap-3"><span className="text-xs font-medium truncate" style={{ color: "oklch(0.80 0.005 250)" }}>{row.src}</span><span className="text-xs font-semibold shrink-0" style={{ color: "oklch(0.72 0.12 75)" }}>{formatCurrency(row.revenue)}</span></div>
+                      <div className="flex justify-between gap-3"><span className="text-xs font-medium truncate" style={{ color: "oklch(0.80 0.005 250)" }}>{row.src}</span><span className="text-xs font-semibold shrink-0" style={{ color: "oklch(0.72 0.12 75)" }}>{formatCurrency(row.revenue)} received</span></div>
+                      <div className="text-[10px] mt-0.5" style={{ color: "oklch(0.48 0.01 250)" }}>New {formatCurrency(row.newRevenue)} · Existing {formatCurrency(row.existingRevenue)}</div>
                       <div className="text-xs mt-1 flex flex-wrap gap-x-2 gap-y-1" style={{ color: "oklch(0.60 0.01 250)" }}>
                         {([
                           ["all", `Leads ${row.leads}`, "oklch(0.60 0.01 250)"],
@@ -1556,7 +1534,7 @@ export default function Dashboard() {
           <div className="flex items-center gap-2 mb-4">
             <BookOpen className="w-4 h-4" style={{ color: "oklch(0.72 0.12 75)" }} />
             <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "oklch(0.72 0.12 75)" }}>Pipeline Value</h2>
-            <span className="text-xs" style={{ color: "oklch(0.45 0.01 250)" }}>active leads</span>
+            <span className="text-xs" style={{ color: "oklch(0.45 0.01 250)" }}>{MONTHS[selectedMonth - 1]} cohort</span>
           </div>
 {(() => {
             // Active pipeline = all stages except Retained, Onboarding, and Lost.
@@ -1565,7 +1543,7 @@ export default function Dashboard() {
               s => !isConvertedStage(s.name) && s.name !== "Lost"
             );
             const activeStageName = activePipelineStages.map(s => s.name);
-            const activeLeads = leads.filter(l => activeStageName.includes(l.stage));
+            const activeLeads = monthLeads.filter(l => activeStageName.includes(l.stage));
             const totalPipeline = activeLeads.reduce((s, l) => s + (l.quotedAmount || 0), 0);
             const stageBreakdown = activePipelineStages.map(s => {
               const stageLeads = activeLeads.filter(l => l.stage === s.name);
@@ -1613,7 +1591,7 @@ export default function Dashboard() {
 
       {/* ── Lost Reasons Breakdown ────────────────────────────────── */}
       {(() => {
-        const lostLeads = leads.filter(l => l.stage === "Lost");
+        const lostLeads = monthlyLifecycle.lost;
         if (lostLeads.length === 0) return null;
         const reasonMap: Record<string, number> = {};
         lostLeads.forEach(l => {
@@ -1636,7 +1614,7 @@ export default function Dashboard() {
             <div className="flex items-center gap-2 mb-4">
               <AlertCircle className="w-4 h-4" style={{ color: "oklch(0.70 0.22 25)" }} />
               <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "oklch(0.72 0.12 75)" }}>Lost Lead Reasons</h2>
-              <span className="text-xs" style={{ color: "oklch(0.45 0.01 250)" }}>{lostLeads.length} lost leads</span>
+              <span className="text-xs" style={{ color: "oklch(0.45 0.01 250)" }}>{lostLeads.length} lost leads · {MONTHS[selectedMonth - 1]} {selectedYear}</span>
               {needsReviewCount > 0 && <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "oklch(0.60 0.22 25 / 18%)", color: "oklch(0.78 0.22 25)" }}>{needsReviewCount} need review</span>}
             </div>
             <div className="space-y-2">

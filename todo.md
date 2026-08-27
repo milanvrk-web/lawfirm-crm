@@ -817,12 +817,12 @@ All items in this section must be completed before delivery.
 
 ## Monthly Dashboard Reporting Reconciliation — New Request
 
-- [ ] Audit Dashboard lead, source, pipeline, Lost-reason, and revenue calculations against raw CRM records
-- [ ] Reconcile July, August, and prior-month lead/payment business dates and revenue classifications
-- [ ] Separate new-client, existing-client, consultation, and pipeline-value reporting with explicit definitions
-- [ ] Preserve clickable source/outcome/Lost-reason drill-downs to the underlying leads
-- [ ] Add regression coverage and validate month switching, totals, and browser presentation
-- [ ] Save a checkpoint for the reconciled Dashboard reporting release
+- [x] Audit Dashboard lead, source, pipeline, Lost-reason, and revenue calculations against raw CRM records
+- [x] Reconcile July, August, and prior-month lead/payment business dates and revenue classifications
+- [x] Separate new-client, existing-client, consultation, and pipeline-value reporting with explicit definitions
+- [x] Preserve clickable source/outcome/Lost-reason drill-downs to the underlying leads
+- [x] Add regression coverage and validate month switching, totals, and browser presentation
+- [x] Save a checkpoint for the reconciled Dashboard reporting release
 
 ## Leads Pipeline Source Filter — New Request
 
