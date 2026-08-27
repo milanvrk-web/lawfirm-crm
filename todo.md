@@ -831,3 +831,11 @@ All items in this section must be completed before delivery.
 - [x] Make source filtering compose correctly with search, case type, stage, and Kanban interactions
 - [x] Add regression coverage and browser validation for source filtering and empty states
 - [x] Save a checkpoint for the Leads Pipeline source-filter feature
+
+## Leads Source Pipeline Overview — New Request
+
+- [x] Show source-specific counts for all pipeline buckets, not only leads, converted, and lost
+- [x] Add clickable bucket counts that open matching lead lists or lead details
+- [x] Keep source filtering compatible with stage, case type, search, and Kanban interactions
+- [x] Add regression and browser coverage for source-specific pipeline drill-downs
+- [x] Save a checkpoint for the complete source pipeline overview

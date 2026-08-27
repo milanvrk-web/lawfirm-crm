@@ -137,6 +137,7 @@ export default function Leads() {
   const [filterStage, setFilterStage] = useState<LeadStage | "All">("All");
   const [filterCaseType, setFilterCaseType] = useState<string>("All");
   const [filterSource, setFilterSource] = useState<string>("All");
+  const [expandedSourceBucket, setExpandedSourceBucket] = useState<string | null>(null);
   const [lostLeadPending, setLostLeadPending] = useState<Lead | null>(null);
   const [lostReasonFilter, setLostReasonFilter] = useState("All Reasons");
   const [leadPendingDelete, setLeadPendingDelete] = useState<Lead | null>(null);
@@ -303,6 +304,15 @@ export default function Leads() {
     if (values.has("Unknown")) custom.push("Unknown");
     return [...ordered, ...custom];
   }, [leads]);
+
+  const sourceOverviewLeads = useMemo(() => filterSource === "All" ? leads : leads.filter(lead => canonicalizeLeadSource(lead.source) === filterSource), [leads, filterSource]);
+  const sourceOverviewBuckets = useMemo(() => {
+    const buckets = pipelineStageNames.map(stage => ({ key: stage, label: stage, leads: sourceOverviewLeads.filter(lead => lead.stage === stage) }));
+    const converted = sourceOverviewLeads.filter(lead => isConvertedStage(lead.stage));
+    const lost = sourceOverviewLeads.filter(lead => lead.stage === "Lost");
+    const consulted = sourceOverviewLeads.filter(lead => Boolean(lead.consultationBookedDate || payments.some(payment => payment.leadId === lead.id && payment.receivedFor.trim().toLowerCase().includes("consultation"))));
+    return [...buckets, { key: "__converted__", label: "Converted (summary)", leads: converted }, { key: "__lost__", label: "Lost (summary)", leads: lost }, { key: "__consulted__", label: "Consultations booked", leads: consulted }];
+  }, [pipelineStageNames, sourceOverviewLeads, payments]);
 
   const lostLeads = useMemo(() => filtered.filter(lead => lead.stage === "Lost"), [filtered]);
   const lossReasonOptions = useMemo(() => Array.from(new Set(lostLeads.map(lead => lead.lostReason || "Reason not recorded"))).sort(), [lostLeads]);
@@ -737,6 +747,47 @@ export default function Leads() {
           ))}
         </div>
       </div>
+
+      {/* Source-specific pipeline overview */}
+      {filterSource !== "All" && (
+        <div className="rounded-lg border p-4" style={{ background: "oklch(0.16 0.025 250)", borderColor: "oklch(0.65 0.15 250 / 35%)" }}>
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <div>
+              <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "oklch(0.72 0.15 250)" }}>Pipeline Overview · {filterSource}</h2>
+              <p className="text-xs mt-1" style={{ color: "oklch(0.50 0.01 250)" }}>Click any bucket to filter the Kanban or inspect its leads.</p>
+            </div>
+            <span className="text-xs font-semibold" style={{ color: "oklch(0.80 0.005 250)" }}>{sourceOverviewLeads.length} leads</span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+            {sourceOverviewBuckets.map(bucket => {
+              const isExpanded = expandedSourceBucket === bucket.key;
+              return (
+                <div key={bucket.key} className="min-w-0">
+                  <button
+                    onClick={() => {
+                      setExpandedSourceBucket(isExpanded ? null : bucket.key);
+                      if (!bucket.key.startsWith("__") && bucket.leads.length > 0) setFilterStage(bucket.key as LeadStage);
+                    }}
+                    aria-expanded={isExpanded}
+                    className="w-full rounded-md p-2 text-left transition-colors hover:bg-white/5"
+                    style={{ background: isExpanded ? "oklch(0.22 0.04 250)" : "oklch(0.19 0.03 250)", border: `1px solid ${isExpanded ? "oklch(0.65 0.15 250 / 55%)" : "oklch(1 0 0 / 8%)"}` }}
+                  >
+                    <div className="text-[10px] uppercase tracking-wide truncate" style={{ color: "oklch(0.55 0.01 250)" }}>{bucket.label}</div>
+                    <div className="text-lg font-bold" style={{ color: bucket.key === "__lost__" ? "oklch(0.70 0.22 25)" : bucket.key === "__converted__" ? "oklch(0.65 0.18 145)" : "oklch(0.85 0.01 250)" }}>{bucket.leads.length}</div>
+                  </button>
+                  {isExpanded && (
+                    <div className="mt-1 rounded-md p-2 space-y-1 max-h-36 overflow-auto" style={{ background: "oklch(0.13 0.02 250)", border: "1px solid oklch(1 0 0 / 8%)" }}>
+                      {bucket.leads.length === 0 ? <span className="text-[11px]" style={{ color: "oklch(0.45 0.01 250)" }}>No leads in this bucket.</span> : bucket.leads.map(lead => (
+                        <button key={lead.id} onClick={() => setDetailLeadId(lead.id)} className="block w-full text-left text-[11px] truncate hover:underline" style={{ color: "oklch(0.86 0.01 250)" }}>{lead.name} · {lead.caseType} · {lead.stage}</button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ── Lead Bifurcation Summary Card ─────────────────────── */}
       <div className="rounded-lg border overflow-hidden" style={{ background: "oklch(0.16 0.025 250)", borderColor: "oklch(0.72 0.12 75 / 25%)" }}>
