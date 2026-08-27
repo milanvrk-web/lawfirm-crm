@@ -773,3 +773,9 @@ All items in this section must be completed before delivery.
 - [x] Update reporting and source-correction labels consistently
 - [x] Add regression coverage and validate selectors, guidance, and existing-record compatibility
 - [x] Save a checkpoint for the revised source taxonomy
+
+## Website (Calendly) Label Refinement — New Request
+
+- [x] Rename the Website source category to Website (Calendly) in selectors and reports
+- [x] Update Calendly matching and duplicate-category guidance to use Website (Calendly)
+- [x] Update regression coverage and save a validated checkpoint

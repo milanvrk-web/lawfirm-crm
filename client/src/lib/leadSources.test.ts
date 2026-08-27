@@ -4,7 +4,7 @@ import { getLeadSourceGuidance, LEAD_SOURCE_OPTIONS, suggestLeadSourceCategory }
 describe("lead source taxonomy", () => {
   it("includes the standardized Website, combined social, AI Tools, and Email categories", () => {
     expect(LEAD_SOURCE_OPTIONS).toEqual(expect.arrayContaining([
-      "Website",
+      "Website (Calendly)",
       "Facebook / Instagram",
       "AI Tools (ChatGPT, Claude, etc.)",
       "Email",
@@ -15,7 +15,7 @@ describe("lead source taxonomy", () => {
   });
 
   it("classifies Calendly as the Website scheduling source", () => {
-    expect(suggestLeadSourceCategory("Calendly booking")).toBe("Website");
+    expect(suggestLeadSourceCategory("Calendly booking")).toBe("Website (Calendly)");
     expect(getLeadSourceGuidance("Calendly", "Other")).toContain("Website");
   });
 
