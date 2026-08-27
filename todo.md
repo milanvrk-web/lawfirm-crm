@@ -793,3 +793,17 @@ All items in this section must be completed before delivery.
 - [x] Preserve mandatory additional notes and support legacy high-price records safely
 - [x] Add regression tests and validate client/server loss submission behavior
 - [x] Save a checkpoint for the structured payment-refusal workflow
+
+## Lost Lead Comment Reconciliation — New Request
+
+- [x] Audit every follow-up comment attached to leads currently in Lost
+- [x] Classify only high-confidence comments into the existing loss reason and payment sub-reason taxonomy
+- [x] Apply evidence-based updates with a clear audit record and leave ambiguous cases unchanged
+- [x] Verify corrected and unresolved records, then provide the manual-review list
+
+## Lost Lead Comment Reconciliation — Completed
+
+- [x] Audited every Lost lead, including follow-up comments, lost notes, and existing reason fields
+- [x] Applied nine high-confidence loss-reason corrections without changing stages, notes, payments, or unrelated lead fields
+- [x] Preserved ambiguous cases for manual review, including 97 blank records, Varun Sood, and the conflicting Akashdeep Singh record
+- [x] Verified the post-reconciliation reason distribution and prepared the manual-review list
