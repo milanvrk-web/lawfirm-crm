@@ -19,6 +19,7 @@ const LEGACY_NO_SERVICE_NEEDED_REASON = "Client said he doesn't need the service
 const CLIENT_DOES_NOT_NEED_SERVICE_REASON = "Client doesn't need the service";
 const LEGACY_HIGH_PRICE_REASON = "Client denied the service due to high price";
 const CLIENT_DOES_NOT_WANT_TO_PAY_REASON = "Client doesn't want to pay";
+const CONSULTATION_NEEDED_REASON = "Consultation needed";
 const PAYMENT_REFUSAL_SUBREASONS = [
   "Client denied paying the consultation fee",
   "Client said the price is too high",
@@ -28,6 +29,7 @@ const LossReasonEnum = z.enum([
   "Client CNC not reachable",
   CLIENT_DOES_NOT_WANT_TO_PAY_REASON,
   CLIENT_DOES_NOT_NEED_SERVICE_REASON,
+  CONSULTATION_NEEDED_REASON,
   "Client is going with another attorney",
   "We don't provide that service",
   "Client unhappy with our customer support",

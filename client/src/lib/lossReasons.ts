@@ -2,6 +2,7 @@ export const LEGACY_NO_SERVICE_NEEDED_REASON = "Client said he doesn't need the 
 export const CLIENT_DOES_NOT_NEED_SERVICE_REASON = "Client doesn't need the service" as const;
 export const LEGACY_HIGH_PRICE_REASON = "Client denied the service due to high price" as const;
 export const CLIENT_DOES_NOT_WANT_TO_PAY_REASON = "Client doesn't want to pay" as const;
+export const CONSULTATION_NEEDED_REASON = "Consultation needed" as const;
 
 export const PAYMENT_REFUSAL_SUBREASONS = [
   "Client denied paying the consultation fee",
@@ -15,6 +16,7 @@ export const LOSS_REASON_OPTIONS = [
   "Client CNC not reachable",
   CLIENT_DOES_NOT_WANT_TO_PAY_REASON,
   CLIENT_DOES_NOT_NEED_SERVICE_REASON,
+  CONSULTATION_NEEDED_REASON,
   "Client is going with another attorney",
   "We don't provide that service",
   "Client unhappy with our customer support",

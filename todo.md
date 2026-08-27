@@ -807,3 +807,10 @@ All items in this section must be completed before delivery.
 - [x] Applied nine high-confidence loss-reason corrections without changing stages, notes, payments, or unrelated lead fields
 - [x] Preserved ambiguous cases for manual review, including 97 blank records, Varun Sood, and the conflicting Akashdeep Singh record
 - [x] Verified the post-reconciliation reason distribution and prepared the manual-review list
+
+## Consultation-Only Loss Reason — New Request
+
+- [x] Add “Consultation needed” as a distinct selectable loss reason
+- [x] Preserve mandatory supporting notes and server-side validation for the new reason
+- [x] Ensure consultation-to-lost reporting remains distinct from retained conversion reporting
+- [x] Add regression coverage, validate the workflow, and save a checkpoint

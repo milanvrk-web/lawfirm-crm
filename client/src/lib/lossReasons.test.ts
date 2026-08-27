@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   CLIENT_DOES_NOT_NEED_SERVICE_REASON,
   CLIENT_DOES_NOT_WANT_TO_PAY_REASON,
+  CONSULTATION_NEEDED_REASON,
   LEGACY_HIGH_PRICE_REASON,
   LEGACY_NO_SERVICE_NEEDED_REASON,
   LOSS_REASON_OPTIONS,
@@ -27,6 +28,13 @@ describe("loss reason validation", () => {
     expect(isLossReasonComplete(CLIENT_DOES_NOT_WANT_TO_PAY_REASON, PAYMENT_REFUSAL_SUBREASONS[0], "")).toBe(false);
     expect(isLossReasonComplete(CLIENT_DOES_NOT_WANT_TO_PAY_REASON, PAYMENT_REFUSAL_SUBREASONS[0], "Client requested a free consultation.")).toBe(true);
     expect(getLossReasonValidationMessage(CLIENT_DOES_NOT_WANT_TO_PAY_REASON, "", "Client refused to pay.")).toBe("Select a payment refusal reason before continuing.");
+  });
+
+  it("adds Consultation needed as a distinct reason and requires supporting notes", () => {
+    expect(LOSS_REASON_OPTIONS).toContain(CONSULTATION_NEEDED_REASON);
+    expect(CONSULTATION_NEEDED_REASON).not.toBe(CLIENT_DOES_NOT_NEED_SERVICE_REASON);
+    expect(isLossReasonComplete(CONSULTATION_NEEDED_REASON, "", "")).toBe(false);
+    expect(isLossReasonComplete(CONSULTATION_NEEDED_REASON, "", "Client only needed a consultation and did not need ongoing services.")).toBe(true);
   });
 
   it("uses the shorter no-service-needed label and normalizes legacy labels", () => {
