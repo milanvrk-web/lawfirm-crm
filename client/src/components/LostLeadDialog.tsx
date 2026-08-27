@@ -5,7 +5,14 @@ import { useCRM } from "@/contexts/CRMContext";
 import { useActiveMember } from "@/contexts/ActiveMemberContext";
 import { type Lead, formatCurrency } from "@/lib/store";
 import { todayPST } from "@/lib/timezone";
-import { LOSS_REASON_OPTIONS, LOSS_REASON_DETAIL_REQUIRED, getLossReasonDetailLabel, getLossReasonDetailPlaceholder, isLossReasonComplete } from "@/lib/lossReasons";
+import {
+  LOSS_REASON_OPTIONS,
+  LOSS_REASON_DETAIL_REQUIRED,
+  getLossReasonDetailError,
+  getLossReasonDetailLabel,
+  getLossReasonDetailPlaceholder,
+  getLossReasonValidationMessage,
+} from "@/lib/lossReasons";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,7 +31,14 @@ export default function LostLeadDialog({ lead, onClose, onMarkedLost }: LostLead
   const [reason, setReason] = useState("");
   const [customReason, setCustomReason] = useState("");
   const [note, setNote] = useState("");
-  const isComplete = isLossReasonComplete(reason, customReason);
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const validationMessage = getLossReasonValidationMessage(reason, customReason, note);
+  const reasonError = attemptedSubmit && !reason ? "Select a loss reason before continuing." : null;
+  const detailError = attemptedSubmit && reason && getLossReasonDetailError(reason) && !customReason.trim()
+    ? getLossReasonDetailError(reason)
+    : null;
+  const noteError = attemptedSubmit && !note.trim() ? "Additional notes are required to explain why this lead was lost." : null;
 
   useEffect(() => {
     if (!lead) return;
@@ -33,33 +47,44 @@ export default function LostLeadDialog({ lead, onClose, onMarkedLost }: LostLead
     setReason(isStandardReason ? savedReason : "");
     setCustomReason(isStandardReason ? (lead.lostReasonDetail ?? "") : "");
     setNote(lead.lostNote ?? "");
+    setAttemptedSubmit(false);
+    setSaving(false);
   }, [lead]);
 
   const close = () => {
     setReason("");
     setCustomReason("");
     setNote("");
+    setAttemptedSubmit(false);
+    setSaving(false);
     onClose();
   };
 
   const handleConfirm = async () => {
-    if (!lead || !isComplete) {
-      toast.error("Choose a valid loss reason. The out-of-scope service reason requires the requested case type.");
+    setAttemptedSubmit(true);
+    if (!lead || validationMessage) {
+      toast.error(validationMessage ?? "Select a loss reason and add supporting notes before continuing.");
       return;
     }
-    const isExistingLostLead = lead.stage === "Lost";
-    await updateLead(lead.id, {
-      stage: "Lost",
-      lostReason: reason,
-      lostReasonDetail: reason === LOSS_REASON_DETAIL_REQUIRED ? customReason.trim() || null : null,
-      lostNote: note.trim() || null,
-      lostDate: lead.lostDate ?? todayPST(),
-      followUpDate: null,
-      actorName: activeMember?.name ?? "Team",
-    });
-    toast.success(isExistingLostLead ? `${lead.name}'s loss review updated` : `${lead.name} marked as Lost with a reviewable reason`);
-    onMarkedLost?.();
-    close();
+    setSaving(true);
+    try {
+      const isExistingLostLead = lead.stage === "Lost";
+      await updateLead(lead.id, {
+        stage: "Lost",
+        lostReason: reason,
+        lostReasonDetail: reason === LOSS_REASON_DETAIL_REQUIRED ? customReason.trim() || null : null,
+        lostNote: note.trim(),
+        lostDate: lead.lostDate ?? todayPST(),
+        followUpDate: null,
+        actorName: activeMember?.name ?? "Team",
+      });
+      toast.success(isExistingLostLead ? `${lead.name}'s loss review updated` : `${lead.name} marked as Lost with a reviewable reason`);
+      onMarkedLost?.();
+      close();
+    } catch (error) {
+      setSaving(false);
+      toast.error(error instanceof Error ? error.message : "Could not save the loss review. Please try again.");
+    }
   };
 
   return (
@@ -72,7 +97,7 @@ export default function LostLeadDialog({ lead, onClose, onMarkedLost }: LostLead
           </DialogTitle>
         </DialogHeader>
         <p className="text-sm" style={{ color: "oklch(0.60 0.01 250)" }}>
-          {lead?.stage === "Lost" ? "Complete or correct this loss record so reporting remains accurate." : "This removes the lead from active work. Choose a reason; case context is required only when we do not provide the requested service."}
+          {lead?.stage === "Lost" ? "Complete or correct this loss record so reporting remains accurate." : "This removes the lead from active work. Choose a reason and document the supporting conversation before confirming."}
         </p>
 
         {((lead?.consultationFee ?? 0) > 0 || (lead?.quotedAmount ?? 0) > 0) && (
@@ -84,28 +109,53 @@ export default function LostLeadDialog({ lead, onClose, onMarkedLost }: LostLead
         )}
 
         <div className="space-y-2">
-          <Label className="text-xs" style={{ color: "oklch(0.75 0.01 250)" }}>Primary loss reason *</Label>
-          <div className="grid grid-cols-2 gap-2">
-            {LOSS_REASON_OPTIONS.map(option => (
-              <button key={option} onClick={() => setReason(option)} className="text-left px-3 py-2 rounded-lg text-xs transition-all" style={{ background: reason === option ? "oklch(0.70 0.22 25 / 20%)" : "oklch(0.22 0.025 250)", border: reason === option ? "1px solid oklch(0.70 0.22 25 / 60%)" : "1px solid oklch(1 0 0 / 8%)", color: reason === option ? "oklch(0.82 0.22 25)" : "oklch(0.75 0.01 250)" }}>{option}</button>
-            ))}
+          <Label className="text-xs" style={{ color: "oklch(0.75 0.01 250)" }}>Primary loss reason <span style={{ color: "oklch(0.70 0.22 25)" }}>*</span></Label>
+          <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Primary loss reason">
+            {LOSS_REASON_OPTIONS.map(option => {
+              const selected = reason === option;
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  onClick={() => { setReason(option); setAttemptedSubmit(false); }}
+                  className="min-h-10 text-left px-3 py-2 rounded-lg text-xs font-medium opacity-100 cursor-pointer transition-colors hover:border-[oklch(0.72_0.12_75/70%)] hover:text-[oklch(0.92_0.12_75)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[oklch(0.72_0.12_75)]"
+                  style={{
+                    background: selected ? "oklch(0.70 0.22 25 / 22%)" : "oklch(0.25 0.035 250)",
+                    border: selected ? "1px solid oklch(0.70 0.22 25 / 75%)" : "1px solid oklch(1 0 0 / 22%)",
+                    color: selected ? "oklch(0.92 0.12 75)" : "oklch(0.84 0.01 250)",
+                  }}
+                >{option}</button>
+              );
+            })}
           </div>
+          {reasonError && <p className="text-xs" role="alert" style={{ color: "oklch(0.78 0.16 25)" }}>{reasonError}</p>}
           {reason === LOSS_REASON_DETAIL_REQUIRED && (
             <div className="space-y-1.5">
               <Label className="text-xs" style={{ color: "oklch(0.75 0.01 250)" }}>{getLossReasonDetailLabel(reason)}</Label>
-              <Input value={customReason} onChange={e => setCustomReason(e.target.value)} placeholder={getLossReasonDetailPlaceholder(reason)} style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
+              <Input value={customReason} onChange={e => setCustomReason(e.target.value)} placeholder={getLossReasonDetailPlaceholder(reason)} aria-invalid={!!detailError} style={{ background: "oklch(0.22 0.025 250)", borderColor: detailError ? "oklch(0.70 0.22 25)" : "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
+              {detailError && <p className="text-xs" role="alert" style={{ color: "oklch(0.78 0.16 25)" }}>{detailError}</p>}
+            </div>
+          )}
+          {reason === "Attorney declined to take the case" && (
+            <div className="space-y-1.5">
+              <Label className="text-xs" style={{ color: "oklch(0.75 0.01 250)" }}>Why did the attorney decline to take the case? *</Label>
+              <Input value={customReason} onChange={e => setCustomReason(e.target.value)} placeholder="Explain why the attorney declined..." aria-invalid={!!detailError} style={{ background: "oklch(0.22 0.025 250)", borderColor: detailError ? "oklch(0.70 0.22 25)" : "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
+              {detailError && <p className="text-xs" role="alert" style={{ color: "oklch(0.78 0.16 25)" }}>{detailError}</p>}
             </div>
           )}
         </div>
 
         <div>
-          <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.75 0.01 250)" }}>Additional note <span style={{ color: "oklch(0.50 0.01 250)" }}>(optional)</span></Label>
-          <Textarea value={note} onChange={e => setNote(e.target.value)} rows={3} placeholder="Optional context, conversation details, or future review note." style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
+          <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.75 0.01 250)" }}>Additional notes <span style={{ color: "oklch(0.70 0.22 25)" }}>* required</span></Label>
+          <Textarea value={note} onChange={e => setNote(e.target.value)} rows={4} placeholder="Explain what happened, what was discussed, and why the lead was lost..." aria-invalid={!!noteError} style={{ background: "oklch(0.22 0.025 250)", borderColor: noteError ? "oklch(0.70 0.22 25)" : "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
+          {noteError && <p className="text-xs mt-1.5" role="alert" style={{ color: "oklch(0.78 0.16 25)" }}>{noteError}</p>}
         </div>
 
         <div className="flex gap-3 mt-1">
-          <Button onClick={handleConfirm} disabled={!isComplete} style={{ background: "oklch(0.60 0.22 25)", color: "oklch(0.98 0 0)" }}>{lead?.stage === "Lost" ? "Save Loss Review" : "Confirm Lost"}</Button>
-          <Button variant="outline" onClick={close} style={{ borderColor: "oklch(1 0 0 / 20%)", color: "oklch(0.65 0.01 250)" }}>Cancel</Button>
+          <Button onClick={handleConfirm} disabled={saving} style={{ background: "oklch(0.60 0.22 25)", color: "oklch(0.98 0 0)" }}>{saving ? "Saving…" : lead?.stage === "Lost" ? "Save Loss Review" : "Confirm Lost"}</Button>
+          <Button variant="outline" onClick={close} disabled={saving} style={{ borderColor: "oklch(1 0 0 / 20%)", color: "oklch(0.65 0.01 250)" }}>Cancel</Button>
         </div>
       </DialogContent>
     </Dialog>

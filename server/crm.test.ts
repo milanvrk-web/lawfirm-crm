@@ -178,20 +178,39 @@ describe("CRM Router", () => {
       });
     });
 
-    it("allows a standard Lost-stage reason with an optional note", async () => {
+    it("requires supporting notes for a standard Lost-stage reason", async () => {
       const { vi } = await import("vitest");
       const dbModule = await import("./db");
-      vi.mocked(dbModule.getLeadById).mockResolvedValueOnce({ id: "lead-2", stage: "Follow-Up" } as never);
+      const caller = appRouter.createCaller(createAuthContext());
+
+      vi.mocked(dbModule.getLeadById).mockResolvedValueOnce({ id: "lead-2a", stage: "Follow-Up" } as never);
+      await expect(caller.leads.update({
+        id: "lead-2a",
+        data: { stage: "Lost", lostReason: "Client CNC not reachable", lostDate: "2026-08-25", actorName: "Case Team" },
+      })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+
+      vi.mocked(dbModule.getLeadById).mockResolvedValueOnce({ id: "lead-2b", stage: "Follow-Up" } as never);
+      await expect(caller.leads.update({
+        id: "lead-2b",
+        data: { stage: "Lost", lostReason: "Client CNC not reachable", lostNote: "Client stopped responding after three calls.", lostDate: "2026-08-25", actorName: "Case Team" },
+      })).resolves.toEqual({ success: true });
+      expect(dbModule.updateLead).toHaveBeenCalledWith("lead-2b", expect.objectContaining({
+        stage: "Lost",
+        lostReason: "Client CNC not reachable",
+        lostNote: "Client stopped responding after three calls.",
+      }));
+    });
+
+    it("accepts the attorney-declined loss reason with its required explanation and notes", async () => {
+      const { vi } = await import("vitest");
+      const dbModule = await import("./db");
+      vi.mocked(dbModule.getLeadById).mockResolvedValueOnce({ id: "lead-2c", stage: "Follow-Up" } as never);
       const caller = appRouter.createCaller(createAuthContext());
 
       await expect(caller.leads.update({
-        id: "lead-2",
-        data: { stage: "Lost", lostReason: "Client CNC not reachable", lostDate: "2026-08-25", actorName: "Case Team" },
+        id: "lead-2c",
+        data: { stage: "Lost", lostReason: "Attorney declined to take the case", lostReasonDetail: "Outside the firm's practice scope", lostNote: "Attorney reviewed the facts and declined.", actorName: "Case Team" },
       })).resolves.toEqual({ success: true });
-      expect(dbModule.updateLead).toHaveBeenCalledWith("lead-2", expect.objectContaining({
-        stage: "Lost",
-        lostReason: "Client CNC not reachable",
-      }));
     });
 
     it("requires the requested case context when the out-of-scope service reason is selected", async () => {

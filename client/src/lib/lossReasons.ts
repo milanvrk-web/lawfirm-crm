@@ -13,8 +13,9 @@ export type LossReason = (typeof LOSS_REASON_OPTIONS)[number];
 export const LOSS_REASON_DETAIL_REQUIRED = "We don't provide that service" as const;
 export const LOSS_REASON_ATTORNEY_DETAIL_REQUIRED = "Attorney declined to take the case" as const;
 
-export function isLossReasonComplete(reason: string, context: string): boolean {
+export function isLossReasonComplete(reason: string, context: string, note = ""): boolean {
   if (!LOSS_REASON_OPTIONS.includes(reason as LossReason)) return false;
+  if (!note.trim()) return false;
   return !([LOSS_REASON_DETAIL_REQUIRED, LOSS_REASON_ATTORNEY_DETAIL_REQUIRED] as readonly string[]).includes(reason) || context.trim().length > 0;
 }
 
@@ -59,9 +60,10 @@ export function isLossReasonDetailRequired(reason: string): boolean {
   return ([LOSS_REASON_DETAIL_REQUIRED, LOSS_REASON_ATTORNEY_DETAIL_REQUIRED] as readonly string[]).includes(reason);
 }
 
-export function getLossReasonValidationMessage(reason: string, context: string): string | null {
+export function getLossReasonValidationMessage(reason: string, context: string, note = ""): string | null {
   if (!LOSS_REASON_OPTIONS.includes(reason as LossReason)) return "Select a valid Lost reason.";
-  return isLossReasonComplete(reason, context) ? null : getLossReasonDetailError(reason);
+  if (!note.trim()) return "Additional notes are required to explain why this lead was lost.";
+  return getLossReasonDetailError(reason) && !context.trim() ? getLossReasonDetailError(reason) : null;
 }
 
 export function getLossReasonSummary(reason: string, context: string): string {

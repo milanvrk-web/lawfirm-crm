@@ -735,3 +735,10 @@ All items in this section must be completed before delivery.
 - [x] Add save-time master-record update confirmation for edited auto-filled fields
 - [x] Add regression coverage and test every acceptance check without modifying existing client records
 - [x] Save a checkpoint for the existing-client picker
+
+## Lost Lead Dialog — New Request
+
+- [x] Make every loss-reason option use the same enabled, readable, selectable visual state
+- [x] Make Additional Notes mandatory for every loss reason, with clear inline validation when missing
+- [x] Prevent dialog submission/closure as a completed loss until both a reason and notes are provided
+- [x] Add regression tests and browser validation for ordinary and service-not-provided loss reasons
