@@ -764,3 +764,12 @@ All items in this section must be completed before delivery.
 - [x] Add a team profile named Jaya with the Admin role
 - [x] Verify Jaya appears correctly without changing existing member roles or records
 - [x] Save a checkpoint for the new profile
+
+## Lead Source Taxonomy Refinement — New Request
+
+- [x] Rename the Calendly category/guidance to identify it as the website scheduling source
+- [x] Combine Facebook and Instagram into one shared category and preserve legacy values safely
+- [x] Label the AI source as AI Tools (ChatGPT, Claude, etc.) in selectors and reminders
+- [x] Update reporting and source-correction labels consistently
+- [x] Add regression coverage and validate selectors, guidance, and existing-record compatibility
+- [x] Save a checkpoint for the revised source taxonomy
