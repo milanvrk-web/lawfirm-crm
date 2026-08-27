@@ -61,7 +61,9 @@ import { Link, useLocation } from "wouter";
 import LeadDetailPanel from "@/components/LeadDetailPanel";
 import StaleLeadsDrawer from "@/components/StaleLeadsDrawer";
 import ClientPicker from "@/components/ClientPicker";
+import LeadSourceField from "@/components/LeadSourceField";
 import { getChangedClientFields } from "@/lib/clientRecord";
+import { LEAD_SOURCE_OPTIONS } from "@/lib/leadSources";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -322,6 +324,7 @@ export default function Dashboard() {
   };
   const [showAddLead, setShowAddLead] = useState(false);
   const [leadForm, setLeadForm] = useState<Omit<Lead, "id">>(emptyLeadForm);
+  const [leadCustomSource, setLeadCustomSource] = useState("");
   const [selectedLeadClientId, setSelectedLeadClientId] = useState<string | null>(null);
   const [showLogPayment, setShowLogPayment] = useState(false);
   const [paymentForm, setPaymentForm] = useState<Omit<Payment, "id">>(emptyPaymentForm);
@@ -330,6 +333,7 @@ export default function Dashboard() {
 
   const handleAddLead = useCallback(async () => {
     if (!leadForm.name.trim()) { toast.error("Name is required"); return; }
+    const sourceForSave = leadForm.source === "Other" ? leadCustomSource.trim() || "Other" : leadForm.source;
     if (selectedLeadClientId) {
       const selected = leads.find(lead => lead.id === selectedLeadClientId);
       if (selected) {
@@ -347,7 +351,7 @@ export default function Dashboard() {
             preferredLanguage: leadForm.preferredLanguage,
             caseType: leadForm.caseType,
             caseNumber: leadForm.caseNumber,
-            source: leadForm.source,
+            source: sourceForSave,
             referredBy: leadForm.referredBy,
             actorName: "Dashboard",
           });
@@ -356,14 +360,16 @@ export default function Dashboard() {
         setSelectedLeadClientId(null);
         setShowAddLead(false);
         setLeadForm(emptyLeadForm);
+        setLeadCustomSource("");
         return;
       }
     }
-    await addLead(leadForm);
+    await addLead({ ...leadForm, source: sourceForSave });
     toast.success("Lead added");
     setShowAddLead(false);
     setLeadForm(emptyLeadForm);
-  }, [leadForm, addLead, updateLead, leads, selectedLeadClientId]);
+    setLeadCustomSource("");
+  }, [leadForm, leadCustomSource, addLead, updateLead, leads, selectedLeadClientId]);
 
   const handleLogPayment = useCallback(async () => {
     if (!paymentForm.clientName.trim()) { toast.error("Client name is required"); return; }
@@ -574,7 +580,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {/* Add Lead — opens inline modal */}
         <button
-          onClick={() => { setSelectedLeadClientId(null); setLeadForm(emptyLeadForm); setShowAddLead(true); }}
+          onClick={() => { setSelectedLeadClientId(null); setLeadCustomSource(""); setLeadForm(emptyLeadForm); setShowAddLead(true); }}
           className="flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] text-left w-full"
           style={{ background: "oklch(0.20 0.030 250)", borderColor: "oklch(0.72 0.12 75 / 25%)", boxShadow: "0 1px 8px oklch(0 0 0 / 20%)" }}
         >
@@ -1825,7 +1831,7 @@ export default function Dashboard() {
     <StaleLeadsDrawer open={staleDrawerOpen} onClose={() => setStaleDrawerOpen(false)} />
 
     {/* ── Add Lead Modal ───────────────────────────────── */}
-    <Dialog open={showAddLead} onOpenChange={open => { setShowAddLead(open); if (!open) { setSelectedLeadClientId(null); setLeadForm(emptyLeadForm); } }}>
+    <Dialog open={showAddLead} onOpenChange={open => { setShowAddLead(open); if (!open) { setSelectedLeadClientId(null); setLeadCustomSource(""); setLeadForm(emptyLeadForm); } }}>
       <DialogContent style={{ background: "oklch(0.18 0.030 250)", borderColor: "oklch(1 0 0 / 12%)", maxWidth: "520px" }}>
         <DialogHeader>
           <DialogTitle style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.93 0.005 250)" }}>Add New Lead</DialogTitle>
@@ -1841,7 +1847,7 @@ export default function Dashboard() {
                 leads={leads}
                 payments={payments}
                 onValueChange={value => { setSelectedLeadClientId(null); setLeadForm(f => ({ ...f, name: value })); }}
-                onSelect={lead => { setSelectedLeadClientId(lead.id); setLeadForm(f => ({ ...f, name: lead.name, phone: lead.phone, email: lead.email, alienNumber: lead.alienNumber ?? "", dateOfBirth: lead.dateOfBirth ?? "", address: lead.address ?? "", preferredLanguage: lead.preferredLanguage ?? "", caseType: lead.caseType, caseNumber: lead.caseNumber, source: lead.source, referredBy: lead.referredBy, notes: lead.notes })); }}
+                onSelect={lead => { setSelectedLeadClientId(lead.id); setLeadCustomSource(LEAD_SOURCE_OPTIONS.includes(lead.source as (typeof LEAD_SOURCE_OPTIONS)[number]) ? "" : lead.source); setLeadForm(f => ({ ...f, name: lead.name, phone: lead.phone, email: lead.email, alienNumber: lead.alienNumber ?? "", dateOfBirth: lead.dateOfBirth ?? "", address: lead.address ?? "", preferredLanguage: lead.preferredLanguage ?? "", caseType: lead.caseType, caseNumber: lead.caseNumber, source: lead.source, referredBy: lead.referredBy, notes: lead.notes })); }}
                 placeholder="Search name, phone, A-number, or email"
               />
             </div>
@@ -1894,9 +1900,12 @@ export default function Dashboard() {
               </Select>
             </div>
             <div>
-              <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Source</Label>
-              <Input value={leadForm.source} onChange={e => setLeadForm(f => ({ ...f, source: e.target.value }))} placeholder="e.g. Referral, Google"
-                style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }} />
+              <LeadSourceField
+                value={leadForm.source}
+                customValue={leadCustomSource}
+                onChange={value => setLeadForm(f => ({ ...f, source: value }))}
+                onCustomValueChange={setLeadCustomSource}
+              />
             </div>
             <div>
               <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Quoted Amount ($)</Label>

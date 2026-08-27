@@ -749,3 +749,11 @@ All items in this section must be completed before delivery.
 - [x] Trace and fix any client/server payload or validation mismatch preventing a valid Lost transition
 - [x] Add a successful end-to-end confirmation regression test plus incomplete-form safeguards
 - [x] Re-run the full validation suite and save a corrected final checkpoint
+
+## Lead Source Category Improvements — New Request
+
+- [x] Add AI Tools, Email, and Calendly to the shared lead-source category taxonomy
+- [x] Add Other-category guidance and similar-category reminders for Calendly, AI tools, Email, and other existing categories
+- [x] Preserve genuinely new custom sources while preventing accidental category fragmentation
+- [x] Add inline source editing in Lead Detail so Dashboard funnel leads can be corrected without navigating to Leads
+- [x] Validate the new options, guidance, direct Dashboard correction path, TypeScript, full tests, and production build

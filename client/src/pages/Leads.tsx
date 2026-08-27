@@ -38,11 +38,12 @@ import { Label } from "@/components/ui/label";
 import LostLeadDialog from "@/components/LostLeadDialog";
 import LeadDeleteDialog from "@/components/LeadDeleteDialog";
 import ClientPicker from "@/components/ClientPicker";
+import LeadSourceField from "@/components/LeadSourceField";
 import { getChangedClientFields } from "@/lib/clientRecord";
+import { LEAD_SOURCE_OPTIONS } from "@/lib/leadSources";
 
 const STAGES: LeadStage[] = ["New Lead", "Consultation", "Follow-Up", "Retained & Onboarding", "Lost"];
 const CASE_TYPES: CaseType[] = ["DA", "SIJS", "AOS", "AO", "K1/K2", "U-Visa", "Green Card", "BIA", "Other"];
-const SOURCE_OPTIONS = ["Referral", "Existing Client", "Google", "Facebook", "Instagram", "Website", "Walk-In", "Handler", "Other"] as const;
 
 const stageColor: Record<LeadStage, string> = {
   "New Lead": "oklch(0.55 0.18 250)",
@@ -129,6 +130,7 @@ export default function Leads() {
   const [consultationLead, setConsultationLead] = useState<Lead | null>(null);
   const [form, setForm] = useState<Omit<Lead, "id">>(emptyLead);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const [customSource, setCustomSource] = useState("");
   const [convertForm, setConvertForm] = useState({ retainerBooked: "", downpayment: "", caseNumber: "", notes: "", applyConsultationFee: false });
   const [consultationForm, setConsultationForm] = useState({ fee: 150 as 150 | 200, scheduledFor: todayPST(), notes: "" });
   const [search, setSearch] = useState("");
@@ -503,6 +505,7 @@ export default function Leads() {
 
   const handleSave = async () => {
     if (!form.name.trim()) { toast.error("Name is required"); return; }
+    const sourceForSave = form.source === "Other" ? customSource.trim() || "Other" : form.source;
     if (!editLead && selectedClientId) {
       const selected = leads.find(lead => lead.id === selectedClientId);
       if (!selected) { setSelectedClientId(null); }
@@ -522,7 +525,7 @@ export default function Leads() {
               preferredLanguage: form.preferredLanguage,
               caseType: form.caseType,
               caseNumber: form.caseNumber,
-              source: form.source,
+              source: sourceForSave,
               referredBy: form.referredBy,
               actorName: activeMember?.name ?? "Team",
             });
@@ -551,7 +554,7 @@ export default function Leads() {
       // Exclude 'notes' from edit dialog updates — case notes are only editable
       // from the LeadDetailPanel dedicated notes editor to prevent accidental wipes.
       const { notes: _notes, ...formWithoutNotes } = form;
-      updateLead(editLead.id, { ...formWithoutNotes, actorName: activeMember?.name ?? "Team" });
+      updateLead(editLead.id, { ...formWithoutNotes, source: sourceForSave, actorName: activeMember?.name ?? "Team" });
       toast.success("Lead updated");
       // Auto-log consultation fee when stage changes to Consultation via edit form
       if (form.stage === "Consultation" && editLead.stage !== "Consultation" && (form.consultationFee ?? 0) > 0) {
@@ -577,7 +580,7 @@ export default function Leads() {
       if (!form.assignedTo?.trim()) { toast.error("Assign a team member before creating this lead."); return; }
       if (!form.followUpDate || form.followUpDate < todayPST()) { toast.error("Set a follow-up date of today or later before creating this lead."); return; }
       if (form.stage === "Lost") { toast.error("Create the lead in the active pipeline, then use Mark Lost so the required review is recorded."); return; }
-      await addLead(form);
+      await addLead({ ...form, source: sourceForSave });
       toast.success("Lead added");
       setShowAdd(false);
     }
@@ -620,6 +623,7 @@ export default function Leads() {
     setEditLead(lead);
     const { id, ...rest } = lead;
     setForm(rest);
+    setCustomSource(LEAD_SOURCE_OPTIONS.includes(lead.source as (typeof LEAD_SOURCE_OPTIONS)[number]) ? "" : lead.source);
     setShowAdd(true);
   };
 
@@ -1222,18 +1226,12 @@ export default function Leads() {
               </Select>
             </div>
             <div>
-              <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Source</Label>
-          <Select value={form.source || "__no_source__"} onValueChange={val => setForm(f => ({ ...f, source: val === "__no_source__" || val === "__other__" ? "" : val }))}>
-            <SelectTrigger style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }}>
-              <SelectValue placeholder="Select source" />
-            </SelectTrigger>
-            <SelectContent style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)" }}>
-              <SelectItem value="__no_source__" style={{ color: "oklch(0.93 0.005 250)" }}>Select source</SelectItem>
-              {SOURCE_OPTIONS.filter(opt => opt.trim()).map(opt => (
-                <SelectItem key={opt} value={opt} style={{ color: "oklch(0.93 0.005 250)" }}>{opt}</SelectItem>
-              ))}
-                </SelectContent>
-              </Select>
+              <LeadSourceField
+                value={form.source}
+                customValue={customSource}
+                onChange={value => setForm(f => ({ ...f, source: value }))}
+                onCustomValueChange={setCustomSource}
+              />
             </div>
             <div>
               <Label className="text-xs mb-1.5 block" style={{ color: "oklch(0.65 0.01 250)" }}>Referred By</Label>

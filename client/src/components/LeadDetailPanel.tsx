@@ -40,6 +40,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import LeadSourceField from "@/components/LeadSourceField";
+import { LEAD_SOURCE_OPTIONS } from "@/lib/leadSources";
 import LostLeadDialog from "@/components/LostLeadDialog";
 import {
   FileText, X, Phone, Edit2, CheckCircle, CheckCircle2, Circle,
@@ -449,11 +451,21 @@ export default function LeadDetailPanel({
   // Inline contact info editing (phone / email)
   const [editingContactField, setEditingContactField] = useState<"phone" | "email" | "assignedTo" | null>(null);
   const [contactEditValue, setContactEditValue] = useState("");
+  const [editingSource, setEditingSource] = useState(false);
+  const [sourceEditValue, setSourceEditValue] = useState("");
+  const [sourceCustomValue, setSourceCustomValue] = useState("");
   const handleSaveContactField = async (field: "phone" | "email") => {
     if (!lead) return;
     await updateLead(lead.id, { [field]: contactEditValue.trim() });
     setEditingContactField(null);
     toast.success(`${field === "phone" ? "Phone" : "Email"} updated`);
+  };
+  const handleSaveSource = async () => {
+    if (!lead) return;
+    const source = sourceEditValue === "Other" ? sourceCustomValue.trim() || "Other" : sourceEditValue;
+    await updateLead(lead.id, { source, actorName: activeMember?.name ?? "Team" });
+    setEditingSource(false);
+    toast.success("Lead source updated");
   };
   const [installmentsExpanded, setInstallmentsExpanded] = useState(false);
   const [showInlineConvert, setShowInlineConvert] = useState(false);
@@ -820,7 +832,7 @@ export default function LeadDetailPanel({
                   { label: "Loss Reason", value: lead.lostReason || "Reason not recorded" },
                   ...(lead.lostDate ? [{ label: "Marked Lost", value: formatDate(lead.lostDate) }] : []),
                 ] : []),
-              ].map(({ label, value }) => (
+              ].filter(({ label }) => label !== "Source").map(({ label, value }) => (
                 <div
                   key={label}
                   className="rounded-lg p-2.5"
@@ -840,6 +852,22 @@ export default function LeadDetailPanel({
                   </div>
                 </div>
               ))}
+              {/* Source — inline editable so Dashboard funnel corrections stay in context */}
+              <div className="rounded-lg p-2.5" style={{ background: "oklch(0.18 0.025 250)" }}>
+                <div className="flex items-center justify-between mb-0.5">
+                  <div className="text-[10px] uppercase tracking-wider" style={{ color: "oklch(0.40 0.01 250)" }}>Source</div>
+                  {!editingSource && <button onClick={() => { setEditingSource(true); setSourceEditValue(lead.source || ""); setSourceCustomValue(LEAD_SOURCE_OPTIONS.includes(lead.source as (typeof LEAD_SOURCE_OPTIONS)[number]) ? "" : lead.source || ""); }} className="text-[10px] px-1 py-0.5 rounded" style={{ color: "oklch(0.72 0.12 75)", border: "1px solid oklch(0.72 0.12 75 / 30%)" }}>{lead.source ? "Edit" : "+ Add"}</button>}
+                </div>
+                {editingSource ? (
+                  <div className="space-y-1.5 mt-1">
+                    <LeadSourceField value={sourceEditValue} customValue={sourceCustomValue} onChange={setSourceEditValue} onCustomValueChange={setSourceCustomValue} />
+                    <div className="flex gap-1">
+                      <button onClick={handleSaveSource} className="px-2 py-1 rounded text-xs font-semibold" style={{ background: "oklch(0.72 0.12 75)", color: "oklch(0.13 0.025 250)" }}>Save</button>
+                      <button onClick={() => setEditingSource(false)} className="px-2 py-1 rounded text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>Cancel</button>
+                    </div>
+                  </div>
+                ) : <div className="text-sm font-medium truncate" style={{ color: lead.source ? "oklch(0.82 0.005 250)" : "oklch(0.40 0.01 250)" }}>{lead.source || "—"}</div>}
+              </div>
               {/* Phone — inline editable */}
               <div className="rounded-lg p-2.5" style={{ background: "oklch(0.18 0.025 250)" }}>
                 <div className="flex items-center justify-between mb-0.5">
