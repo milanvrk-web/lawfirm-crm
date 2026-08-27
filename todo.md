@@ -779,3 +779,17 @@ All items in this section must be completed before delivery.
 - [x] Rename the Website source category to Website (Calendly) in selectors and reports
 - [x] Update Calendly matching and duplicate-category guidance to use Website (Calendly)
 - [x] Update regression coverage and save a validated checkpoint
+
+## Lost Reason Label Refinement — New Request
+
+- [x] Rename the user-facing loss reason to “Client doesn’t need the service” in the dialog and review surfaces
+- [x] Preserve the existing stored reason semantics and backward-compatible reporting behavior
+- [x] Update regression coverage, validate the loss workflow, and save a checkpoint
+
+## Payment Refusal Loss Category — New Request
+
+- [x] Add the primary loss reason “Client doesn’t want to pay”
+- [x] Add required sub-reasons for denied consultation fee, price too high, and no money
+- [x] Preserve mandatory additional notes and support legacy high-price records safely
+- [x] Add regression tests and validate client/server loss submission behavior
+- [x] Save a checkpoint for the structured payment-refusal workflow

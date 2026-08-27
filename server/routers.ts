@@ -15,20 +15,37 @@ const LeadStageEnum = z.string().min(1);
 const CaseTypeEnum = z.enum(["DA", "SIJS", "AOS", "AO", "K1/K2", "U-Visa", "Green Card", "BIA", "Other"]);
 const PaymentTypeEnum = z.enum(["New Client", "Existing Client"]);
 const FollowUpStatusEnum = z.enum(["Pending", "Done", "Snoozed"]);
+const LEGACY_NO_SERVICE_NEEDED_REASON = "Client said he doesn't need the service anymore";
+const CLIENT_DOES_NOT_NEED_SERVICE_REASON = "Client doesn't need the service";
+const LEGACY_HIGH_PRICE_REASON = "Client denied the service due to high price";
+const CLIENT_DOES_NOT_WANT_TO_PAY_REASON = "Client doesn't want to pay";
+const PAYMENT_REFUSAL_SUBREASONS = [
+  "Client denied paying the consultation fee",
+  "Client said the price is too high",
+  "Client said he doesn't have money",
+] as const;
 const LossReasonEnum = z.enum([
   "Client CNC not reachable",
-  "Client denied the service due to high price",
-  "Client said he doesn't need the service anymore",
+  CLIENT_DOES_NOT_WANT_TO_PAY_REASON,
+  CLIENT_DOES_NOT_NEED_SERVICE_REASON,
   "Client is going with another attorney",
   "We don't provide that service",
   "Client unhappy with our customer support",
   "Case too complicated",
   "Attorney declined to take the case",
+  LEGACY_NO_SERVICE_NEEDED_REASON,
+  LEGACY_HIGH_PRICE_REASON,
 ]);
+function normalizeLossReason(reason?: string | null) {
+  if (reason === LEGACY_NO_SERVICE_NEEDED_REASON) return CLIENT_DOES_NOT_NEED_SERVICE_REASON;
+  if (reason === LEGACY_HIGH_PRICE_REASON) return CLIENT_DOES_NOT_WANT_TO_PAY_REASON;
+  return reason;
+}
 function isValidLossSelection(reason?: string | null, detail?: string | null, note?: string | null) {
-  const parsed = LossReasonEnum.safeParse(reason);
+  const parsed = LossReasonEnum.safeParse(normalizeLossReason(reason));
   return parsed.success
     && Boolean(note?.trim())
+    && (parsed.data !== CLIENT_DOES_NOT_WANT_TO_PAY_REASON || PAYMENT_REFUSAL_SUBREASONS.includes(detail as (typeof PAYMENT_REFUSAL_SUBREASONS)[number]))
     && (parsed.data !== "We don't provide that service" || Boolean(detail?.trim()))
     && (parsed.data !== "Attorney declined to take the case" || Boolean(detail?.trim()));
 }
@@ -250,7 +267,7 @@ export const appRouter = router({
         downpayment: String(input.downpayment),
         quotedAmount: String(input.quotedAmount),
         convertedDate: input.convertedDate ?? null,
-        lostReason: input.lostReason ?? null,
+        lostReason: normalizeLossReason(input.lostReason) ?? null,
         lostReasonDetail: input.lostReasonDetail ?? null,
         lostNote: input.lostNote ?? null,
         lostDate: input.lostDate ?? null,
@@ -276,6 +293,7 @@ export const appRouter = router({
         }
         const { actorName, ...leadChanges } = input.data;
         const data: Record<string, unknown> = { ...leadChanges };
+        if (input.data.lostReason !== undefined) data.lostReason = normalizeLossReason(input.data.lostReason) ?? null;
         if (input.data.retainerBooked !== undefined) data.retainerBooked = String(input.data.retainerBooked);
         if (input.data.downpayment !== undefined) data.downpayment = String(input.data.downpayment);
         if (input.data.quotedAmount !== undefined) data.quotedAmount = String(input.data.quotedAmount);

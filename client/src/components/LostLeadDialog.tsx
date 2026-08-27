@@ -13,12 +13,16 @@ import {
   getLossReasonDetailPlaceholder,
   getLossReasonValidationMessage,
   shouldShowLossReasonDetail,
+  normalizeLossReason,
+  PAYMENT_REFUSAL_SUBREASONS,
+  isPaymentRefusalReason,
 } from "@/lib/lossReasons";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface LostLeadDialogProps {
   lead: Lead | null;
@@ -43,7 +47,7 @@ export default function LostLeadDialog({ lead, onClose, onMarkedLost }: LostLead
 
   useEffect(() => {
     if (!lead) return;
-    const savedReason = lead.lostReason?.trim() ?? "";
+    const savedReason = normalizeLossReason(lead.lostReason?.trim() ?? "");
     const isStandardReason = LOSS_REASON_OPTIONS.some(option => option === savedReason);
     setReason(isStandardReason ? savedReason : "");
     setCustomReason(isStandardReason ? (lead.lostReasonDetail ?? "") : "");
@@ -72,7 +76,7 @@ export default function LostLeadDialog({ lead, onClose, onMarkedLost }: LostLead
       const isExistingLostLead = lead.stage === "Lost";
       await updateLead(lead.id, {
         stage: "Lost",
-        lostReason: reason,
+        lostReason: normalizeLossReason(reason),
         lostReasonDetail: shouldShowLossReasonDetail(reason) ? customReason.trim() || null : null,
         lostNote: note.trim(),
         lostDate: lead.lostDate ?? todayPST(),
@@ -120,7 +124,7 @@ export default function LostLeadDialog({ lead, onClose, onMarkedLost }: LostLead
                   type="button"
                   role="radio"
                   aria-checked={selected}
-                  onClick={() => { setReason(option); if (!shouldShowLossReasonDetail(option)) setCustomReason(""); setAttemptedSubmit(false); }}
+                  onClick={() => { setReason(option); setCustomReason(""); setAttemptedSubmit(false); }}
                   className="min-h-10 text-left px-3 py-2 rounded-lg text-xs font-medium opacity-100 cursor-pointer transition-colors hover:border-[oklch(0.72_0.12_75/70%)] hover:text-[oklch(0.92_0.12_75)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[oklch(0.72_0.12_75)]"
                   style={{
                     background: selected ? "oklch(0.70 0.22 25 / 22%)" : "oklch(0.25 0.035 250)",
@@ -132,6 +136,20 @@ export default function LostLeadDialog({ lead, onClose, onMarkedLost }: LostLead
             })}
           </div>
           {reasonError && <p className="text-xs" role="alert" style={{ color: "oklch(0.78 0.16 25)" }}>{reasonError}</p>}
+          {isPaymentRefusalReason(reason) && (
+            <div className="space-y-1.5">
+              <Label className="text-xs" style={{ color: "oklch(0.75 0.01 250)" }}>Why didn't the client want to pay? <span style={{ color: "oklch(0.70 0.22 25)" }}>*</span></Label>
+              <Select value={customReason} onValueChange={setCustomReason}>
+                <SelectTrigger aria-invalid={!!detailError} style={{ background: "oklch(0.22 0.025 250)", borderColor: detailError ? "oklch(0.70 0.22 25)" : "oklch(1 0 0 / 12%)", color: "oklch(0.93 0.005 250)" }}>
+                  <SelectValue placeholder="Select a payment refusal reason..." />
+                </SelectTrigger>
+                <SelectContent style={{ background: "oklch(0.22 0.025 250)", borderColor: "oklch(1 0 0 / 12%)" }}>
+                  {PAYMENT_REFUSAL_SUBREASONS.map(subreason => <SelectItem key={subreason} value={subreason}>{subreason}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {detailError && <p className="text-xs" role="alert" style={{ color: "oklch(0.78 0.16 25)" }}>{detailError}</p>}
+            </div>
+          )}
           {reason === LOSS_REASON_DETAIL_REQUIRED && (
             <div className="space-y-1.5">
               <Label className="text-xs" style={{ color: "oklch(0.75 0.01 250)" }}>{getLossReasonDetailLabel(reason)}</Label>
