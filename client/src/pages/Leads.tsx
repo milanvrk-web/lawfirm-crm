@@ -41,6 +41,7 @@ import ClientPicker from "@/components/ClientPicker";
 import LeadSourceField from "@/components/LeadSourceField";
 import { getChangedClientFields } from "@/lib/clientRecord";
 import { LEAD_SOURCE_OPTIONS, canonicalizeLeadSource } from "@/lib/leadSources";
+import { getPipelineRange } from "@/lib/leadPipelineRange";
 
 const STAGES: LeadStage[] = ["New Lead", "Consultation", "Follow-Up", "Retained & Onboarding", "Lost"];
 const CASE_TYPES: CaseType[] = ["DA", "SIJS", "AOS", "AO", "K1/K2", "U-Visa", "Green Card", "BIA", "Other"];
@@ -137,6 +138,11 @@ export default function Leads() {
   const [filterStage, setFilterStage] = useState<LeadStage | "All">("All");
   const [filterCaseType, setFilterCaseType] = useState<string>("All");
   const [filterSource, setFilterSource] = useState<string>("All");
+  const [pipelineRangeMode, setPipelineRangeMode] = useState<"month" | "week" | "custom">("month");
+  const [pipelineBoardScope, setPipelineBoardScope] = useState<"selected" | "all">("selected");
+  const [pipelineWeekStart, setPipelineWeekStart] = useState(() => todayPST());
+  const [pipelineCustomStart, setPipelineCustomStart] = useState(() => todayPST());
+  const [pipelineCustomEnd, setPipelineCustomEnd] = useState(() => todayPST());
   const [expandedSourceBucket, setExpandedSourceBucket] = useState<string | null>(null);
   const [lostLeadPending, setLostLeadPending] = useState<Lead | null>(null);
   const [lostReasonFilter, setLostReasonFilter] = useState("All Reasons");
@@ -269,21 +275,14 @@ export default function Leads() {
   const allTimeTotal = allTimeActive + allTimeConverted + allTimeLost;
   const allTimeConvRate = allTimeTotal > 0 ? Math.round((allTimeConverted / allTimeTotal) * 100) : 0;
 
-  const monthLeadsIn = useMemo(() => leads.filter(l => {
-    const d = new Date(l.date + "T12:00:00");
-    return d.getFullYear() === summaryYear && d.getMonth() + 1 === summaryMonth;
-  }), [leads, summaryYear, summaryMonth]);
-  const monthConverted = useMemo(() => leads.filter(l => {
-    if (!isConvertedStage(l.stage)) return false;
-    const dateToCheck = l.convertedDate || l.date;
-    const d = new Date(dateToCheck + "T12:00:00");
-    return d.getFullYear() === summaryYear && d.getMonth() + 1 === summaryMonth;
-  }), [leads, summaryYear, summaryMonth]);
-  const monthLost = useMemo(() => leads.filter(l => {
-    if (l.stage !== "Lost") return false;
-    const d = new Date((l.lostDate || l.date) + "T12:00:00");
-    return d.getFullYear() === summaryYear && d.getMonth() + 1 === summaryMonth;
-  }), [leads, summaryYear, summaryMonth]);
+  const pipelineRange = useMemo(() => {
+    const range = getPipelineRange({ mode: pipelineRangeMode, year: summaryYear, month: summaryMonth, weekDate: pipelineWeekStart, customStart: pipelineCustomStart, customEnd: pipelineCustomEnd });
+    return pipelineRangeMode === "month" ? { ...range, label: `${MONTHS_SHORT[summaryMonth - 1]} ${summaryYear}` } : range;
+  }, [pipelineRangeMode, pipelineWeekStart, pipelineCustomStart, pipelineCustomEnd, summaryYear, summaryMonth]);
+
+  const monthLeadsIn = useMemo(() => leads.filter(l => l.date >= pipelineRange.start && l.date <= pipelineRange.end), [leads, pipelineRange]);
+  const monthConverted = useMemo(() => monthLeadsIn.filter(l => isConvertedStage(l.stage)), [monthLeadsIn]);
+  const monthLost = useMemo(() => monthLeadsIn.filter(l => l.stage === "Lost"), [monthLeadsIn]);
   const monthConvRate = monthLeadsIn.length > 0 ? Math.round((monthConverted.length / monthLeadsIn.length) * 100) : 0;
 
   const filtered = useMemo(() => {
@@ -293,9 +292,10 @@ export default function Leads() {
       const matchStage = filterStage === "All" || l.stage === filterStage;
       const matchCase = filterCaseType === "All" || l.caseType === filterCaseType;
       const matchSource = filterSource === "All" || canonicalizeLeadSource(l.source) === filterSource;
-      return matchSearch && matchStage && matchCase && matchSource;
+      const matchRange = pipelineBoardScope === "all" || (l.date >= pipelineRange.start && l.date <= pipelineRange.end);
+      return matchSearch && matchStage && matchCase && matchSource && matchRange;
     });
-  }, [leads, search, filterStage, filterCaseType, filterSource]);
+  }, [leads, search, filterStage, filterCaseType, filterSource, pipelineBoardScope, pipelineRange]);
 
   const leadSourceFilters = useMemo(() => {
     const values = new Set(leads.map(lead => canonicalizeLeadSource(lead.source)));
@@ -305,7 +305,7 @@ export default function Leads() {
     return [...ordered, ...custom];
   }, [leads]);
 
-  const sourceOverviewLeads = useMemo(() => filterSource === "All" ? leads : leads.filter(lead => canonicalizeLeadSource(lead.source) === filterSource), [leads, filterSource]);
+  const sourceOverviewLeads = useMemo(() => leads.filter(lead => (filterSource === "All" || canonicalizeLeadSource(lead.source) === filterSource) && lead.date >= pipelineRange.start && lead.date <= pipelineRange.end), [leads, filterSource, pipelineRange]);
   const sourceOverviewBuckets = useMemo(() => {
     const buckets = pipelineStageNames.map(stage => ({ key: stage, label: stage, leads: sourceOverviewLeads.filter(lead => lead.stage === stage) }));
     const converted = sourceOverviewLeads.filter(lead => isConvertedStage(lead.stage));
@@ -673,7 +673,7 @@ export default function Leads() {
             Leads Pipeline
           </h1>
           <p className="text-sm mt-1" style={{ color: "oklch(0.55 0.01 250)" }}>
-            {allTimeTotal} total · {allTimeActive} active · {allTimeConverted} converted · {allTimeLost} lost
+            {monthLeadsIn.length} leads in {pipelineRange.label} · {monthConverted.length} converted · {monthLost.length} lost · {allTimeTotal} all-time
           </p>
         </div>
         <Button onClick={() => { setEditLead(null); setForm(emptyLead); setShowAdd(true); }}
@@ -716,7 +716,7 @@ export default function Leads() {
             {ct === "All" ? "All Cases" : ct}
             {ct !== "All" && (
               <span className="ml-1 opacity-60">
-                ({leads.filter(l => l.caseType === ct).length})
+                ({monthLeadsIn.filter(l => l.caseType === ct).length})
               </span>
             )}
           </button>
@@ -742,7 +742,7 @@ export default function Leads() {
               }}
             >
               {source === "All" ? "All Sources" : source}
-              {source !== "All" && <span className="ml-1 opacity-60">({leads.filter(lead => canonicalizeLeadSource(lead.source) === source).length})</span>}
+              {source !== "All" && <span className="ml-1 opacity-60">({monthLeadsIn.filter(lead => canonicalizeLeadSource(lead.source) === source).length})</span>}
             </button>
           ))}
         </div>
@@ -754,7 +754,7 @@ export default function Leads() {
           <div className="flex items-center justify-between gap-3 mb-3">
             <div>
               <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "oklch(0.72 0.15 250)" }}>Pipeline Overview · {filterSource}</h2>
-              <p className="text-xs mt-1" style={{ color: "oklch(0.50 0.01 250)" }}>Click any bucket to filter the Kanban or inspect its leads.</p>
+              <p className="text-xs mt-1" style={{ color: "oklch(0.50 0.01 250)" }}>Showing {pipelineRange.label}. Click any bucket to filter the Kanban or inspect its leads.</p>
             </div>
             <span className="text-xs font-semibold" style={{ color: "oklch(0.80 0.005 250)" }}>{sourceOverviewLeads.length} leads</span>
           </div>
@@ -796,40 +796,38 @@ export default function Leads() {
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "oklch(0.72 0.12 75)" }}>Pipeline Overview</span>
           </div>
-          {/* Month navigator */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => {
-                if (summaryMonth === 1) { setSummaryMonth(12); setSummaryYear(y => y - 1); }
-                else setSummaryMonth(m => m - 1);
-              }}
-              className="p-1 rounded hover:bg-white/8 transition-colors"
-              style={{ color: "oklch(0.55 0.01 250)" }}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg>
-            </button>
-            <span className="text-xs font-medium w-20 text-center" style={{ color: "oklch(0.75 0.01 250)" }}>
-              {MONTHS_SHORT[summaryMonth - 1]} {summaryYear}
-            </span>
-            <button
-              onClick={() => {
-                if (summaryMonth === 12) { setSummaryMonth(1); setSummaryYear(y => y + 1); }
-                else setSummaryMonth(m => m + 1);
-              }}
-              className="p-1 rounded hover:bg-white/8 transition-colors"
-              style={{ color: "oklch(0.55 0.01 250)" }}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
-            </button>
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            <div className="flex rounded-md overflow-hidden border" style={{ borderColor: "oklch(1 0 0 / 12%)" }} role="group" aria-label="Pipeline date scope">
+              {([['month', 'Month'], ['week', 'Week'], ['custom', 'Custom']] as const).map(([mode, label]) => (
+                <button key={mode} onClick={() => setPipelineRangeMode(mode)} aria-pressed={pipelineRangeMode === mode}
+                  className="px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide transition-colors"
+                  style={{ background: pipelineRangeMode === mode ? "oklch(0.72 0.12 75 / 22%)" : "transparent", color: pipelineRangeMode === mode ? "oklch(0.78 0.12 75)" : "oklch(0.55 0.01 250)" }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            {pipelineRangeMode === "month" && <>
+              <button aria-label="Previous month" onClick={() => { if (summaryMonth === 1) { setSummaryMonth(12); setSummaryYear(y => y - 1); } else setSummaryMonth(m => m - 1); }} className="p-1 rounded hover:bg-white/8" style={{ color: "oklch(0.55 0.01 250)" }}><ChevronLeft className="w-3.5 h-3.5" /></button>
+              <span className="text-xs font-medium min-w-20 text-center" style={{ color: "oklch(0.75 0.01 250)" }}>{MONTHS_SHORT[summaryMonth - 1]} {summaryYear}</span>
+              <button aria-label="Next month" onClick={() => { if (summaryMonth === 12) { setSummaryMonth(1); setSummaryYear(y => y + 1); } else setSummaryMonth(m => m + 1); }} className="p-1 rounded hover:bg-white/8" style={{ color: "oklch(0.55 0.01 250)" }}><ChevronRight className="w-3.5 h-3.5" /></button>
+            </>}
+            {pipelineRangeMode === "week" && <Input aria-label="Week containing" type="date" value={pipelineWeekStart} onChange={e => setPipelineWeekStart(e.target.value)} className="h-7 w-32 text-[11px]" style={{ background: "oklch(0.18 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.80 0.01 250)" }} />}
+            {pipelineRangeMode === "custom" && <div className="flex items-center gap-1"><Input aria-label="Range start" type="date" value={pipelineCustomStart} onChange={e => setPipelineCustomStart(e.target.value)} className="h-7 w-32 text-[11px]" style={{ background: "oklch(0.18 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.80 0.01 250)" }} /><span className="text-[10px]" style={{ color: "oklch(0.45 0.01 250)" }}>to</span><Input aria-label="Range end" type="date" min={pipelineCustomStart} value={pipelineCustomEnd} onChange={e => setPipelineCustomEnd(e.target.value)} className="h-7 w-32 text-[11px]" style={{ background: "oklch(0.18 0.025 250)", borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.80 0.01 250)" }} /></div>}
+            <div className="flex rounded-md overflow-hidden border" style={{ borderColor: "oklch(1 0 0 / 12%)" }} role="group" aria-label="Kanban board scope">
+              {([['selected', 'Scoped board'], ['all', 'All-time board']] as const).map(([scope, label]) => (
+                <button key={scope} onClick={() => setPipelineBoardScope(scope)} aria-pressed={pipelineBoardScope === scope} className="px-2 py-1 text-[10px] transition-colors"
+                  style={{ background: pipelineBoardScope === scope ? "oklch(0.65 0.15 250 / 22%)" : "transparent", color: pipelineBoardScope === scope ? "oklch(0.75 0.12 250)" : "oklch(0.55 0.01 250)" }}>{label}</button>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Two-column layout: Monthly | All-Time */}
+        {/* Two-column layout: Selected scope | All-Time */}
         <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
           {/* Monthly column */}
           <div className="px-5 py-4" style={{ borderRight: "1px solid oklch(1 0 0 / 8%)" }}>
             <div className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "oklch(0.55 0.01 250)" }}>
-              {MONTHS_SHORT[summaryMonth - 1]} {summaryYear} — This Month
+              {pipelineRange.label} — Selected scope
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div className="rounded-lg px-3 py-2.5" style={{ background: "oklch(0.65 0.15 250 / 10%)", border: "1px solid oklch(0.65 0.15 250 / 20%)" }}>

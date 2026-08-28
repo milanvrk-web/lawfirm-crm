@@ -839,3 +839,19 @@ All items in this section must be completed before delivery.
 - [x] Keep source filtering compatible with stage, case type, search, and Kanban interactions
 - [x] Add regression and browser coverage for source-specific pipeline drill-downs
 - [x] Save a checkpoint for the complete source pipeline overview
+
+## Dashboard Pipeline Revenue Mismatch — New Report
+
+- [ ] Review the attached screen recording and document the exact mismatch shown
+- [ ] Audit every month’s lead cohort, pipeline outcomes, and payment classifications against raw CRM data
+- [ ] Identify and correct the definition or calculation causing pipeline data not to reconcile with New Client Revenue
+- [ ] Add regression and browser coverage for month switching and revenue reconciliation
+- [ ] Save a corrected checkpoint after validation
+
+## Leads Pipeline Date Scope — New Request
+
+- [x] Add monthly, weekly, and custom date-range controls to the Leads Pipeline overview
+- [x] Recalculate overall and source-specific bucket counts for the selected date scope
+- [x] Preserve clickable bucket lead lists and compatibility with source, stage, case-type, and search filters
+- [x] Add regression and browser coverage for monthly, weekly, and custom ranges
+- [x] Save a checkpoint for the date-scoped Leads Pipeline overview

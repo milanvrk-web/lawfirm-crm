@@ -1,0 +1,3 @@
+# Leads date-scope verification
+
+The authenticated Leads preview was checked after the server restart. The Pipeline Overview displays Month, Week, and Custom controls. Week mode rendered a date input and computed a Monday-to-Sunday label. Custom mode rendered inclusive start and end date inputs. The initial implementation exposed an inconsistency where Lost used lostDate rather than the selected lead-entry cohort; this was corrected so Converted and Lost are subsets of leads entered in the selected range. The August preview showed 69 leads in the selected cohort, 5 converted, and 35 lost after the correction. No CRM records were mutated during testing.
