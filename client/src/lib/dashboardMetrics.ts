@@ -17,8 +17,9 @@ export function getMonthlyPaymentCohort(payments: Payment[], year: number, month
 }
 
 export function getMonthlyLifecycleLeads(leads: Lead[], year: number, month: number) {
-  const converted = leads.filter(lead => isConvertedStage(lead.stage) && isDateInMonth(lead.convertedDate || lead.date, year, month));
-  const lost = leads.filter(lead => lead.stage === "Lost" && isDateInMonth(lead.lostDate || lead.date, year, month));
+  const cohort = getMonthlyLeadCohort(leads, year, month);
+  const converted = cohort.filter(lead => isConvertedStage(lead.stage));
+  const lost = cohort.filter(lead => lead.stage === "Lost");
   return { converted, lost };
 }
 

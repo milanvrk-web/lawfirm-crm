@@ -842,11 +842,11 @@ All items in this section must be completed before delivery.
 
 ## Dashboard Pipeline Revenue Mismatch — New Report
 
-- [ ] Review the attached screen recording and document the exact mismatch shown
-- [ ] Audit every month’s lead cohort, pipeline outcomes, and payment classifications against raw CRM data
-- [ ] Identify and correct the definition or calculation causing pipeline data not to reconcile with New Client Revenue
-- [ ] Add regression and browser coverage for month switching and revenue reconciliation
-- [ ] Save a corrected checkpoint after validation
+- [x] Review the attached screen recording and document the exact mismatch shown
+- [x] Audit every month’s lead cohort, pipeline outcomes, and payment classifications against raw CRM data
+- [x] Identify and correct the definition or calculation causing pipeline data not to reconcile with New Client Revenue
+- [x] Add regression and browser coverage for month switching and revenue reconciliation
+- [x] Save a corrected checkpoint after validation
 
 ## Leads Pipeline Date Scope — New Request
 

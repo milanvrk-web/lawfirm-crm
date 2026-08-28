@@ -28,16 +28,17 @@ describe("dashboard monthly metrics", () => {
     expect(getMonthlyLeadCohort(leads, 2026, 8).map(item => item.id)).toEqual(["aug"]);
   });
 
-  it("uses lifecycle dates for selected-month conversion and lost cohorts", () => {
+  it("keeps conversion and loss outcomes inside the selected lead-entry cohort", () => {
     const leads = [
-      lead({ id: "converted", date: "2026-07-01", convertedDate: "2026-08-03", stage: "Retained & Onboarding" }),
-      lead({ id: "lost", date: "2026-07-05", lostDate: "2026-08-06", stage: "Lost", lostReason: "Client doesn’t need the service" }),
-      lead({ id: "open", date: "2026-08-07", stage: "Follow-Up" }),
+      lead({ id: "july-converted", date: "2026-07-01", convertedDate: "2026-08-03", stage: "Retained & Onboarding" }),
+      lead({ id: "july-lost", date: "2026-07-05", lostDate: "2026-08-06", stage: "Lost", lostReason: "Client doesn’t need the service" }),
+      lead({ id: "aug-converted", date: "2026-08-07", stage: "Retained & Onboarding" }),
+      lead({ id: "aug-lost", date: "2026-08-08", stage: "Lost", lostReason: "Client CNC not reachable" }),
     ];
     const lifecycle = getMonthlyLifecycleLeads(leads, 2026, 8);
-    expect(lifecycle.converted.map(item => item.id)).toEqual(["converted"]);
-    expect(lifecycle.lost.map(item => item.id)).toEqual(["lost"]);
-    expect(getLostReasonRows(leads, 2026, 8)).toEqual([{ reason: "Client doesn’t need the service", leadIds: ["lost"], count: 1 }]);
+    expect(lifecycle.converted.map(item => item.id)).toEqual(["aug-converted"]);
+    expect(lifecycle.lost.map(item => item.id)).toEqual(["aug-lost"]);
+    expect(getLostReasonRows(leads, 2026, 8)).toEqual([{ reason: "Client CNC not reachable", leadIds: ["aug-lost"], count: 1 }]);
   });
 
   it("attributes linked monthly payments to canonical source rows without retainer double-counting", () => {

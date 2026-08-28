@@ -1491,10 +1491,21 @@ export default function Dashboard() {
             const rows = Object.entries(sourceMap)
               .map(([src, d]) => ({ src, ...d, convRate: d.leads > 0 ? Math.round((d.converted / d.leads) * 100) : 0 }))
               .sort((a, b) => b.revenue - a.revenue || b.leads - a.leads);
+            const linkedNewRevenue = rows.reduce((sum, row) => sum + row.newRevenue, 0);
+            const linkedExistingRevenue = rows.reduce((sum, row) => sum + row.existingRevenue, 0);
+            const unallocatedNewRevenue = Math.max(0, newClientRev - linkedNewRevenue);
+            const unallocatedExistingRevenue = Math.max(0, existingClientRev - linkedExistingRevenue);
             if (rows.length === 0) return <p className="text-sm text-center py-6" style={{ color: "oklch(0.45 0.01 250)" }}>No lead source data for this month.</p>;
             return (
               <div>
-                <p className="text-xs mb-2" style={{ color: "oklch(0.45 0.01 250)" }}>Selected-month lead cohort and its current lifecycle outcomes.</p>
+                <p className="text-xs mb-2" style={{ color: "oklch(0.45 0.01 250)" }}>Selected-month lead cohort and its current lifecycle outcomes. Payment totals reconcile to all payments received in the selected month.</p>
+                <div className="rounded px-3 py-2 mb-2 border" style={{ background: "oklch(0.72 0.12 75 / 8%)", borderColor: "oklch(0.72 0.12 75 / 22%)" }}>
+                  <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs">
+                    <span style={{ color: "oklch(0.80 0.005 250)" }}>Funnel total: <strong style={{ color: "oklch(0.72 0.12 75)" }}>{formatCurrency(newClientRev + existingClientRev)}</strong></span>
+                    <span style={{ color: "oklch(0.55 0.01 250)" }}>New {formatCurrency(newClientRev)} · Existing {formatCurrency(existingClientRev)}</span>
+                  </div>
+                  {(unallocatedNewRevenue > 0 || unallocatedExistingRevenue > 0) && <div className="text-[10px] mt-1" style={{ color: "oklch(0.70 0.18 45)" }}>Unallocated to this month’s lead cohort: New {formatCurrency(unallocatedNewRevenue)} · Existing {formatCurrency(unallocatedExistingRevenue)}. These payments remain included in the authoritative monthly total.</div>}
+                </div>
                 <div className="space-y-1.5">
                   {rows.map(row => (
                     <div key={row.src} className="rounded px-3 py-2" style={{ background: "oklch(0.20 0.025 250)" }}>
