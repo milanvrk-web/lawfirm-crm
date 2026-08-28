@@ -855,3 +855,17 @@ All items in this section must be completed before delivery.
 - [x] Preserve clickable bucket lead lists and compatibility with source, stage, case-type, and search filters
 - [x] Add regression and browser coverage for monthly, weekly, and custom ranges
 - [x] Save a checkpoint for the date-scoped Leads Pipeline overview
+
+## CRM Migration to Claude — New Request
+
+- [x] Confirm the GitHub repository contains the latest application code without secrets
+- [x] Confirm the database export and schema/migration files are available for handoff
+- [x] Document the complete Claude migration sequence, including storage, environment variables, authentication, and validation
+- [x] Provide the user with the GitHub sync and database transfer steps
+
+## Transfer Package to Claude Code — New Request
+
+- [x] Create a fresh read-only database dump and verify its contents
+- [x] Verify the latest GitHub code state and package the migration documentation
+- [x] Create a Claude Code initiation prompt covering code, database, storage, secrets, authentication, and validation
+- [x] Deliver the verified backup files and transfer instructions
