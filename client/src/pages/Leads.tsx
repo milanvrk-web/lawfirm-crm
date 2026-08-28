@@ -30,6 +30,7 @@ import { useActiveMember } from "@/contexts/ActiveMemberContext";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { trpc } from "@/lib/trpc";
 import { isConvertedStage, isActiveLeadStage } from "@shared/const";
+import { persistLeadConversion } from "@/lib/leadConversion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -133,6 +134,8 @@ export default function Leads() {
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [customSource, setCustomSource] = useState("");
   const [convertForm, setConvertForm] = useState({ retainerBooked: "", downpayment: "", caseNumber: "", notes: "", applyConsultationFee: false });
+  const [isConverting, setIsConverting] = useState(false);
+  const convertInFlightRef = useRef(false);
   const [consultationForm, setConsultationForm] = useState({ fee: 150 as 150 | 200, scheduledFor: todayPST(), notes: "" });
   const [search, setSearch] = useState("");
   const [filterStage, setFilterStage] = useState<LeadStage | "All">("All");
@@ -607,36 +610,33 @@ export default function Leads() {
     setForm(emptyLead);
   };
 
-  const handleConvert = () => {
-    if (!convertLead) return;
+  const handleConvert = async () => {
+    if (!convertLead || convertInFlightRef.current) return;
     const retainer = parseFloat(convertForm.retainerBooked) || 0;
-    const dp = parseFloat(convertForm.downpayment) || 0;
     if (retainer <= 0) { toast.error("Enter retainer amount"); return; }
-    updateLead(convertLead.id, {
-      stage: "Retained & Onboarding",
-      retainerBooked: retainer,
-      downpayment: dp,
-      caseNumber: convertForm.caseNumber || convertLead.caseNumber,
-      convertedDate: todayPST(),
-      consultationFeeAppliedToRetainer: convertForm.applyConsultationFee,
-      actorName: activeMember?.name ?? "Team",
-    });
-    if (dp > 0) {
-      addPayment({
-        date: todayPST(),
-        clientName: convertLead.name,
-        leadId: convertLead.id,
-        caseType: convertLead.caseType,
-        caseNumber: convertForm.caseNumber || convertLead.caseNumber,
-        paymentType: "New Client",
-        amount: dp,
-        receivedFor: "Retainer downpayment",
-        notes: convertForm.notes,
+    convertInFlightRef.current = true;
+    setIsConverting(true);
+    try {
+      await persistLeadConversion({
+        lead: convertLead,
+        form: convertForm,
+        today: todayPST(),
+        actorName: activeMember?.name ?? "Team",
+        updateLead,
+        addPayment,
       });
+      // Context invalidates on mutation success; await a direct refresh as well so
+      // the converted card cannot remain in its old Kanban column.
+      await pipelineUtils.leads.list.invalidate();
+      toast.success(`${convertLead.name} converted to Retained`);
+      setConvertLead(null);
+      setConvertForm({ retainerBooked: "", downpayment: "", caseNumber: "", notes: "", applyConsultationFee: false });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Conversion failed. No changes were confirmed.");
+    } finally {
+      convertInFlightRef.current = false;
+      setIsConverting(false);
     }
-    toast.success(`${convertLead.name} converted to Retained`);
-    setConvertLead(null);
-    setConvertForm({ retainerBooked: "", downpayment: "", caseNumber: "", notes: "", applyConsultationFee: false });
   };
 
   const openEdit = (lead: Lead) => {
@@ -1430,8 +1430,8 @@ export default function Leads() {
             </div>
           </div>
           <div className="flex gap-3 mt-4">
-            <Button onClick={handleConvert} style={{ background: "oklch(0.55 0.18 145)", color: "oklch(0.98 0 0)" }}>
-              <CheckCircle className="w-4 h-4 mr-2" /> Confirm Conversion
+            <Button onClick={handleConvert} disabled={isConverting} style={{ background: "oklch(0.55 0.18 145)", color: "oklch(0.98 0 0)" }}>
+              <CheckCircle className="w-4 h-4 mr-2" /> {isConverting ? "Saving…" : "Confirm Conversion"}
             </Button>
             <Button variant="outline" onClick={() => setConvertLead(null)}
               style={{ borderColor: "oklch(1 0 0 / 20%)", color: "oklch(0.65 0.01 250)" }}>

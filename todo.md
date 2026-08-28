@@ -869,3 +869,11 @@ All items in this section must be completed before delivery.
 - [x] Verify the latest GitHub code state and package the migration documentation
 - [x] Create a Claude Code initiation prompt covering code, database, storage, secrets, authentication, and validation
 - [x] Deliver the verified backup files and transfer instructions
+
+## Retained Conversion Stage Bug — New Request
+
+- [x] Trace why conversion can leave the lead in the New Lead bucket
+- [x] Persist the selected Retained stage and refresh the Kanban board after conversion
+- [x] Prevent duplicate payment creation during the corrected conversion flow
+- [x] Add regression coverage and authenticated browser validation
+- [x] Save a checkpoint for the Retained conversion fix
