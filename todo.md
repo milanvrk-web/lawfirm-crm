@@ -884,3 +884,12 @@ All items in this section must be completed before delivery.
 - [x] Retry the confirmed Devinder Pal Singh conversion with $2,500 retainer and $1,000 downpayment
 - [x] Verify Retained-stage board placement and exactly one newly created payment
 - [x] Document the pre-existing separate Devinder payment visible in Payments
+
+## WhatsApp Contact Shortcuts — New Request
+
+- [x] Add a shared WhatsApp URL helper that normalizes CRM phone numbers safely
+- [x] Add WhatsApp chat buttons to lead cards and lead detail contacts
+- [x] Add WhatsApp chat buttons to Follow-Ups contact cards
+- [x] Handle missing or unusable phone numbers without creating broken links
+- [x] Add regression tests and browser verification without sending a message
+- [x] Save a checkpoint for the WhatsApp shortcuts

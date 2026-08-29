@@ -40,6 +40,7 @@ import LostLeadDialog from "@/components/LostLeadDialog";
 import LeadDeleteDialog from "@/components/LeadDeleteDialog";
 import ClientPicker from "@/components/ClientPicker";
 import LeadSourceField from "@/components/LeadSourceField";
+import WhatsAppButton from "@/components/WhatsAppButton";
 import { getChangedClientFields } from "@/lib/clientRecord";
 import { LEAD_SOURCE_OPTIONS, canonicalizeLeadSource } from "@/lib/leadSources";
 import { getPipelineRange } from "@/lib/leadPipelineRange";
@@ -1566,9 +1567,12 @@ function LeadCard({
               {lead.name}
             </span>
             {lead.phone && (
-              <a href={`tel:${lead.phone}`} className="flex items-center gap-1 text-xs hover:underline" style={{ color: "oklch(0.65 0.01 250)" }} onClick={e => { e.stopPropagation(); }}>
-                <Phone className="w-3 h-3" />{lead.phone}
-              </a>
+              <>
+                <a href={`tel:${lead.phone}`} className="flex items-center gap-1 text-xs hover:underline" style={{ color: "oklch(0.65 0.01 250)" }} onClick={e => { e.stopPropagation(); }}>
+                  <Phone className="w-3 h-3" />{lead.phone}
+                </a>
+                <WhatsAppButton phone={lead.phone} compact onClick={e => e.stopPropagation()} />
+              </>
             )}
           </div>
           <div className="flex items-center gap-2 mt-1 flex-wrap">

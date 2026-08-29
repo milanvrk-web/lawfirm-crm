@@ -21,6 +21,7 @@ import {
 import { toast } from "sonner";
 import { PSTDatePicker } from "@/components/PSTDatePicker";
 import LeadDetailPanel from "@/components/LeadDetailPanel";
+import WhatsAppButton from "@/components/WhatsAppButton";
 
 // ── Helpers ────────────────────────────────────────────────
 
@@ -708,10 +709,13 @@ function LeadFollowUpRow({
           {/* Phone + case type + assignee */}
           <div className="flex items-center gap-3 mt-0.5 flex-wrap">
             {lead.phone && (
-              <span className="flex items-center gap-1 text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>
-                <Phone className="w-3 h-3" />
-                {lead.phone}
-              </span>
+              <>
+                <a href={`tel:${lead.phone}`} onClick={e => e.stopPropagation()} className="flex items-center gap-1 text-xs hover:underline" style={{ color: "oklch(0.55 0.01 250)" }}>
+                  <Phone className="w-3 h-3" />
+                  {lead.phone}
+                </a>
+                <WhatsAppButton phone={lead.phone} compact onClick={e => e.stopPropagation()} />
+              </>
             )}
             <span className="text-xs" style={{ color: "oklch(0.45 0.01 250)" }}>{lead.caseType}</span>
             {lead.assignedTo && (
