@@ -5,6 +5,7 @@
    ============================================================ */
 import React, { createContext, useCallback, useContext, useState } from "react";
 import { trpc } from "@/lib/trpc";
+import { normalizeLeadUpdateForApi } from "@/lib/leadConversion";
 import { targetsEqual } from "@/lib/targetUtils";
 import {
   type Lead,
@@ -272,7 +273,8 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
   }, [createLeadMut]);
 
   const handleUpdateLead = useCallback(async (id: string, updates: Partial<Lead> & { actorName?: string }) => {
-    await updateLeadMut.mutateAsync({ id, data: updates as Parameters<typeof updateLeadMut.mutateAsync>[0]["data"] });
+    const normalizedUpdates = normalizeLeadUpdateForApi({ ...updates });
+    await updateLeadMut.mutateAsync({ id, data: normalizedUpdates as Parameters<typeof updateLeadMut.mutateAsync>[0]["data"] });
   }, [updateLeadMut]);
 
   const handleDeleteLead = useCallback(async (id: string, paymentIdsToDelete: string[] = []) => {

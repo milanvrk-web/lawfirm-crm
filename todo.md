@@ -877,3 +877,10 @@ All items in this section must be completed before delivery.
 - [x] Prevent duplicate payment creation during the corrected conversion flow
 - [x] Add regression coverage and authenticated browser validation
 - [x] Save a checkpoint for the Retained conversion fix
+
+## Confirmed Devinder Conversion — Follow-up
+
+- [x] Correct numeric consultation-fee adjustment flag serialization
+- [x] Retry the confirmed Devinder Pal Singh conversion with $2,500 retainer and $1,000 downpayment
+- [x] Verify Retained-stage board placement and exactly one newly created payment
+- [x] Document the pre-existing separate Devinder payment visible in Payments

@@ -27,6 +27,15 @@ export function buildConversionLeadUpdate(
   };
 }
 
+export function normalizeLeadUpdateForApi<T extends Record<string, unknown>>(updates: T): T {
+  const normalized = { ...updates };
+  const flag = normalized.consultationFeeAppliedToRetainer;
+  if (typeof flag === "boolean") {
+    (normalized as Record<string, unknown>).consultationFeeAppliedToRetainer = flag ? 1 : 0;
+  }
+  return normalized as T;
+}
+
 export function buildConversionPayment(lead: Lead, form: ConversionForm, today: string): Omit<Payment, "id"> | null {
   const downpayment = parseFloat(form.downpayment) || 0;
   if (downpayment <= 0) return null;

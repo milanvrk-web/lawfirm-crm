@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Lead } from "@/lib/store";
-import { persistLeadConversion } from "@/lib/leadConversion";
+import { normalizeLeadUpdateForApi, persistLeadConversion } from "@/lib/leadConversion";
 
 const lead: Lead = {
   id: "lead-1",
@@ -34,7 +34,11 @@ const lead: Lead = {
   assignedTo: null,
 };
 
-describe("persistLeadConversion", () => {
+describe("lead conversion persistence", () => {
+  it("normalizes the consultation-fee adjustment flag for the numeric API field", () => {
+    expect(normalizeLeadUpdateForApi({ consultationFeeAppliedToRetainer: true, stage: "Retained & Onboarding" })).toMatchObject({ consultationFeeAppliedToRetainer: 1 });
+    expect(normalizeLeadUpdateForApi({ consultationFeeAppliedToRetainer: false, stage: "Retained & Onboarding" })).toMatchObject({ consultationFeeAppliedToRetainer: 0 });
+  });
   it("awaits the Retained stage update before creating the downpayment", async () => {
     const events: string[] = [];
     const updateLead = vi.fn(async () => {
