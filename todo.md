@@ -926,3 +926,12 @@ All items in this section must be completed before delivery.
 - [x] Update comparison and drill-down surfaces to use the same all-conversions rate definition
 - [x] Add regression coverage for 18 conversions divided by 72 received leads
 - [x] Validate Dashboard totals and save a checkpoint
+
+## Latest GitHub and Claude/Render Handoff — New Request
+
+- [ ] Verify the latest application checkpoint and repository state
+- [ ] Create a fresh read-only database export for the current handoff
+- [ ] Verify schema/migrations and identify storage assets and secret requirements
+- [ ] Sync the latest code to the connected GitHub repository
+- [ ] Prepare current Claude Code and Render handoff instructions
+- [ ] Deliver the latest data package and repository status securely
