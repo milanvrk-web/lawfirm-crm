@@ -68,7 +68,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { isConvertedStage, isActiveLeadStage } from "@shared/const";
-import { getMonthlyLeadCohort, getMonthlyPaymentCohort, getMonthlyLifecycleLeads, getMonthlyRevenue, getMonthlyTotalConversions, getCalendarWeeksInMonth, getProratedTargetStatus } from "@/lib/dashboardMetrics";
+import { getMonthlyLeadCohort, getMonthlyPaymentCohort, getMonthlyLifecycleLeads, getMonthlyRevenue, getMonthlyTotalConversions, getMonthlyConversionRate, getCalendarWeeksInMonth, getProratedTargetStatus } from "@/lib/dashboardMetrics";
 
 
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
@@ -119,7 +119,9 @@ export default function Dashboard() {
   // Converted: leads that were converted in this month (by convertedDate or date).
   // Both Retained AND Onboarding are converted clients — include both.
   const converted = monthlyLifecycle.converted.length;
-  const convRate = totalLeads > 0 ? Math.round((converted / totalLeads) * 100) : 0;
+  const totalConversions = totalMonthlyConversions.length;
+  const cohortConvRate = getMonthlyConversionRate(totalLeads, converted);
+  const convRate = getMonthlyConversionRate(totalLeads, totalConversions);
   // Revenue Booked: sum retainerBooked for leads converted in the selected month.
   // Both Retained AND Onboarding are converted clients — include both.
   const revenueBooked = monthlyLifecycle.converted.reduce((sum, lead) => sum + Number(lead.retainerBooked || 0), 0);
@@ -141,7 +143,7 @@ export default function Dashboard() {
   // Leads added this month = monthLeads (already computed above)
   // Converted this month = leads whose convertedDate (or date) falls in selected month AND are converted stage
   const monthConverted = monthlyLifecycle.converted.length;
-  const monthTotalConversions = totalMonthlyConversions.length;
+  const monthTotalConversions = totalConversions;
   // Lost this month = leads whose lostDate (or date) falls in selected month AND stage is Lost
   const monthLost = monthlyLifecycle.lost.length;
   const monthConsultationsBooked = useMemo(
@@ -154,7 +156,8 @@ export default function Dashboard() {
     return d.getFullYear() === selectedYear && d.getMonth() + 1 === selectedMonth;
   }).length, [leads, selectedYear, selectedMonth]);
   const monthLeadsIn = monthLeads.length;
-  const monthConvRate = monthLeadsIn > 0 ? Math.round((monthConverted / monthLeadsIn) * 100) : 0;
+  const monthCohortConvRate = getMonthlyConversionRate(monthLeadsIn, monthConverted);
+  const monthConvRate = getMonthlyConversionRate(monthLeadsIn, monthTotalConversions);
 
   // Weekly data
   const weeks = useMemo(() => getCalendarWeeksInMonth(selectedYear, selectedMonth, targets.monthly.green, targets.monthly.yellow), [selectedYear, selectedMonth, targets.monthly.green, targets.monthly.yellow]);
@@ -448,7 +451,8 @@ export default function Dashboard() {
       ["Leads In", String(totalLeads)],
       ["Converted — Lead Cohort", String(converted)],
       ["Total Converted During Month", String(monthTotalConversions)],
-      ["Cohort Conversion Rate", `${convRate}%`],
+      ["Total Conversion Rate", `${convRate}%`],
+      ["Cohort Conversion Rate", `${cohortConvRate}%`],
       ["Revenue Booked", String(revenueBooked)],
       ["New Client Revenue Received", String(newClientRev)],
       ["Existing Client Revenue Received", String(existingClientRev)],
@@ -948,7 +952,7 @@ export default function Dashboard() {
             </div>
             <div className="text-3xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.93 0.005 250)" }}>{monthConverted}</div>
             <div className="text-xs" style={{ color: "oklch(0.45 0.01 250)" }}>
-              {monthConvRate}% of leads in · signed retainer
+              {monthCohortConvRate}% of leads in · signed retainer
             </div>
             <div className="text-xs mt-1 font-medium" style={{ color: "oklch(0.55 0.01 250)" }}>
               All-time converted: <span style={{ color: "oklch(0.55 0.18 145)" }}>{allTimeConverted}</span> ({allTimeConvRate}%)
@@ -1000,9 +1004,9 @@ export default function Dashboard() {
         <StatCard icon={<CalendarCheck className="w-4 h-4" />} label="Consultations" value={monthConsultationsBooked} sub="fee paid & booked" />
         <StatCard icon={<UserCheck className="w-4 h-4" />} label="Consults → Won" value={monthConsultationsConverted} sub="booked consultations converted" />
         <StatCard icon={<DollarSign className="w-4 h-4" />} label="Consult. Fees" value={formatCurrency(consultationFeeRevenue)} sub="included in new revenue" />
-        <StatCard icon={<UserCheck className="w-4 h-4" />} label="Converted (Cohort)" value={converted} sub={`${convRate}% of leads in`} onClick={() => setDrillDown("converted")} />
+        <StatCard icon={<UserCheck className="w-4 h-4" />} label="Converted (Cohort)" value={converted} sub={`${cohortConvRate}% of leads in`} onClick={() => setDrillDown("converted")} />
         <StatCard icon={<UserCheck className="w-4 h-4" />} label="Total Converted" value={monthTotalConversions} sub={`during ${MONTHS[selectedMonth - 1]}`} onClick={() => setDrillDown("totalConversions")} />
-        <StatCard icon={<TrendingUp className="w-4 h-4" />} label="Cohort Conv. Rate" value={`${convRate}%`} sub={`${converted} of ${totalLeads} leads`} onClick={() => setDrillDown("converted")} />
+        <StatCard icon={<TrendingUp className="w-4 h-4" />} label="Total Conv. Rate" value={`${convRate}%`} sub={`${monthTotalConversions} total conversions / ${totalLeads} leads`} onClick={() => setDrillDown("converted")} />
         <StatCard icon={<BookOpen className="w-4 h-4" />} label="Rev. Booked" value={formatCurrency(revenueBooked)} sub={`${converted} retainers signed`} gold onClick={() => setDrillDown("revBooked")} />
         <StatCard icon={<DollarSign className="w-4 h-4" />} label="New Client $" value={formatCurrency(newClientRev)} sub="from new clients" onClick={() => setDrillDown("newClient")} />
         <StatCard icon={<DollarSign className="w-4 h-4" />} label="Existing Client $" value={formatCurrency(existingClientRev)} sub="from ongoing cases" onClick={() => setDrillDown("existingClient")} />

@@ -63,6 +63,10 @@ export function getProratedTargetStatus(actual: number, target: number, yellowTa
   return "red";
 }
 
+export function getMonthlyConversionRate(totalLeads: number, totalConversions: number): number {
+  return totalLeads > 0 ? Math.round((totalConversions / totalLeads) * 100) : 0;
+}
+
 export function getMonthlyPaymentCohort(payments: Payment[], year: number, month: number): Payment[] {
   return payments.filter(payment => isDateInMonth(payment.date, year, month));
 }

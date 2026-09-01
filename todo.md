@@ -918,3 +918,11 @@ All items in this section must be completed before delivery.
 - [x] Include in-month calendar days for Monday-Sunday weeks, including partial opening and closing weeks
 - [x] Add regression coverage for prior-month leads converting in the selected month and September-style partial weeks
 - [x] Validate all Dashboard pipeline, source, and revenue totals and save a checkpoint
+
+## Dashboard All-Conversions Rate — New Request
+
+- [x] Calculate selected-month conversion rate as all conversions completed in the month divided by all leads received in the month
+- [x] Preserve separate cohort conversion counts and label both measures clearly
+- [x] Update comparison and drill-down surfaces to use the same all-conversions rate definition
+- [x] Add regression coverage for 18 conversions divided by 72 received leads
+- [x] Validate Dashboard totals and save a checkpoint

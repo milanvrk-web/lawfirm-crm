@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getMonthlyLeadCohort, getMonthlyLifecycleLeads, getMonthlyRevenue, getLostReasonRows, getSourceFunnelRows, getMonthlyTotalConversions, getCalendarWeeksInMonth, getProratedTargetStatus } from "./dashboardMetrics";
+import { getMonthlyLeadCohort, getMonthlyLifecycleLeads, getMonthlyRevenue, getLostReasonRows, getSourceFunnelRows, getMonthlyTotalConversions, getMonthlyConversionRate, getCalendarWeeksInMonth, getProratedTargetStatus } from "./dashboardMetrics";
 import type { Lead, Payment } from "./store";
 
 const lead = (overrides: Partial<Lead>): Lead => ({
@@ -26,6 +26,11 @@ describe("dashboard monthly metrics", () => {
     const leads = [lead({ id: "july", date: "2026-07-31" }), lead({ id: "aug", date: "2026-08-01" })];
     expect(getMonthlyLeadCohort(leads, 2026, 7).map(item => item.id)).toEqual(["july"]);
     expect(getMonthlyLeadCohort(leads, 2026, 8).map(item => item.id)).toEqual(["aug"]);
+  });
+
+  it("uses all monthly conversions over all monthly leads for the requested conversion rate", () => {
+    expect(getMonthlyConversionRate(72, 18)).toBe(25);
+    expect(getMonthlyConversionRate(0, 18)).toBe(0);
   });
 
   it("counts all conversions completed in the month separately from the lead-entry cohort", () => {
