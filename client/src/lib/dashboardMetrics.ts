@@ -12,6 +12,57 @@ export function getMonthlyLeadCohort(leads: Lead[], year: number, month: number)
   return leads.filter(lead => isDateInMonth(lead.date, year, month));
 }
 
+/** Converted during the selected month, regardless of when the lead entered. */
+export function getMonthlyTotalConversions(leads: Lead[], year: number, month: number): Lead[] {
+  return leads.filter(lead => isConvertedStage(lead.stage) && isDateInMonth(lead.convertedDate || lead.date, year, month));
+}
+
+export type CalendarWeek = {
+  label: string;
+  startStr: string;
+  endStr: string;
+  inMonthDays: number;
+  target: number;
+  yellowTarget: number;
+};
+
+/**
+ * Monday-to-Sunday calendar weeks clipped to the selected month. Targets are
+ * prorated by the number of calendar days belonging to the month.
+ */
+export function getCalendarWeeksInMonth(year: number, month: number, monthlyTarget: number, monthlyYellowTarget: number): CalendarWeek[] {
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const toStr = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  const weeks: CalendarWeek[] = [];
+  for (let day = 1; day <= daysInMonth;) {
+    const start = new Date(year, month - 1, day, 12);
+    const mondayOffset = (start.getDay() + 6) % 7;
+    const weekStart = new Date(start);
+    weekStart.setDate(start.getDate() - mondayOffset);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    const clippedStartDay = Math.max(1, weekStart.getMonth() === month - 1 ? weekStart.getDate() : 1);
+    const clippedEndDay = Math.min(daysInMonth, weekEnd.getMonth() === month - 1 ? weekEnd.getDate() : daysInMonth);
+    const inMonthDays = clippedEndDay - clippedStartDay + 1;
+    weeks.push({
+      label: `Week ${weeks.length + 1}`,
+      startStr: toStr(new Date(year, month - 1, clippedStartDay, 12)),
+      endStr: toStr(new Date(year, month - 1, clippedEndDay, 12)),
+      inMonthDays,
+      target: monthlyTarget * inMonthDays / daysInMonth,
+      yellowTarget: monthlyYellowTarget * inMonthDays / daysInMonth,
+    });
+    day = clippedEndDay + 1;
+  }
+  return weeks;
+}
+
+export function getProratedTargetStatus(actual: number, target: number, yellowTarget: number): "green" | "yellow" | "red" {
+  if (actual >= target) return "green";
+  if (actual >= yellowTarget) return "yellow";
+  return "red";
+}
+
 export function getMonthlyPaymentCohort(payments: Payment[], year: number, month: number): Payment[] {
   return payments.filter(payment => isDateInMonth(payment.date, year, month));
 }

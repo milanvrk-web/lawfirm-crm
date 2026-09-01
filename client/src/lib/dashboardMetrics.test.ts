@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getMonthlyLeadCohort, getMonthlyLifecycleLeads, getMonthlyRevenue, getLostReasonRows, getSourceFunnelRows } from "./dashboardMetrics";
+import { getMonthlyLeadCohort, getMonthlyLifecycleLeads, getMonthlyRevenue, getLostReasonRows, getSourceFunnelRows, getMonthlyTotalConversions, getCalendarWeeksInMonth, getProratedTargetStatus } from "./dashboardMetrics";
 import type { Lead, Payment } from "./store";
 
 const lead = (overrides: Partial<Lead>): Lead => ({
@@ -28,6 +28,15 @@ describe("dashboard monthly metrics", () => {
     expect(getMonthlyLeadCohort(leads, 2026, 8).map(item => item.id)).toEqual(["aug"]);
   });
 
+  it("counts all conversions completed in the month separately from the lead-entry cohort", () => {
+    const leads = [
+      lead({ id: "july-converted", date: "2026-07-01", convertedDate: "2026-08-03", stage: "Retained & Onboarding" }),
+      lead({ id: "aug-converted", date: "2026-08-07", convertedDate: "2026-08-20", stage: "Retained & Onboarding" }),
+      lead({ id: "july-retained", date: "2026-07-02", convertedDate: "2026-07-20", stage: "Retained & Onboarding" }),
+    ];
+    expect(getMonthlyTotalConversions(leads, 2026, 8).map(item => item.id)).toEqual(["july-converted", "aug-converted"]);
+  });
+
   it("keeps conversion and loss outcomes inside the selected lead-entry cohort", () => {
     const leads = [
       lead({ id: "july-converted", date: "2026-07-01", convertedDate: "2026-08-03", stage: "Retained & Onboarding" }),
@@ -39,6 +48,20 @@ describe("dashboard monthly metrics", () => {
     expect(lifecycle.converted.map(item => item.id)).toEqual(["aug-converted"]);
     expect(lifecycle.lost.map(item => item.id)).toEqual(["aug-lost"]);
     expect(getLostReasonRows(leads, 2026, 8)).toEqual([{ reason: "Client CNC not reachable", leadIds: ["aug-lost"], count: 1 }]);
+  });
+
+  it("prorates weekly targets by in-month Monday-to-Sunday calendar days", () => {
+    const weeks = getCalendarWeeksInMonth(2026, 9, 125000, 100000);
+    expect(weeks.map(week => [week.startStr, week.endStr, week.inMonthDays])).toEqual([
+      ["2026-09-01", "2026-09-06", 6],
+      ["2026-09-07", "2026-09-13", 7],
+      ["2026-09-14", "2026-09-20", 7],
+      ["2026-09-21", "2026-09-27", 7],
+      ["2026-09-28", "2026-09-30", 3],
+    ]);
+    expect(weeks.reduce((sum, week) => sum + week.target, 0)).toBeCloseTo(125000);
+    expect(weeks[0].target).toBeCloseTo(125000 * 6 / 30);
+    expect(getProratedTargetStatus(25000, weeks[0].target, weeks[0].yellowTarget)).toBe("green");
   });
 
   it("attributes linked monthly payments to canonical source rows without retainer double-counting", () => {

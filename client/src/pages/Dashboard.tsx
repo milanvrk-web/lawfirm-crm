@@ -12,7 +12,6 @@ import { todayPST, addDaysPST, formatDate as fmtDate } from "@/lib/timezone";
 import { PSTDatePicker } from "@/components/PSTDatePicker";
 import {
   formatCurrency,
-  getWeeksInMonth,
   getTargetStatus,
   type Lead, type Payment, type CaseType, type PaymentType, type LeadStage,
 } from "@/lib/store";
@@ -69,7 +68,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { isConvertedStage, isActiveLeadStage } from "@shared/const";
-import { getMonthlyLeadCohort, getMonthlyPaymentCohort, getMonthlyLifecycleLeads, getMonthlyRevenue } from "@/lib/dashboardMetrics";
+import { getMonthlyLeadCohort, getMonthlyPaymentCohort, getMonthlyLifecycleLeads, getMonthlyRevenue, getMonthlyTotalConversions, getCalendarWeeksInMonth, getProratedTargetStatus } from "@/lib/dashboardMetrics";
 
 
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
@@ -105,13 +104,14 @@ export default function Dashboard() {
   const [panelInitialTab, setPanelInitialTab] = useState<"followups" | "notes" | "info" | "installments">("installments");
   const [expandedSourceOutcome, setExpandedSourceOutcome] = useState<string | null>(null);
   // Drill-down drawer
-  type DrillKey = "leads" | "converted" | "revBooked" | "newClient" | "existingClient" | "totalReceived" | null;
+  type DrillKey = "leads" | "converted" | "totalConversions" | "revBooked" | "newClient" | "existingClient" | "totalReceived" | null;
   const [drillDown, setDrillDown] = useState<DrillKey>(null); // current month
   const [staleDrawerOpen, setStaleDrawerOpen] = useState(false);
 
   const monthLeads = useMemo(() => getMonthlyLeadCohort(leads, selectedYear, selectedMonth), [leads, selectedYear, selectedMonth]);
   const monthPayments = useMemo(() => getMonthlyPaymentCohort(payments, selectedYear, selectedMonth), [payments, selectedYear, selectedMonth]);
   const monthlyLifecycle = useMemo(() => getMonthlyLifecycleLeads(leads, selectedYear, selectedMonth), [leads, selectedYear, selectedMonth]);
+  const totalMonthlyConversions = useMemo(() => getMonthlyTotalConversions(leads, selectedYear, selectedMonth), [leads, selectedYear, selectedMonth]);
   const monthlyRevenue = useMemo(() => getMonthlyRevenue(monthPayments), [monthPayments]);
 
   // Stats
@@ -141,6 +141,7 @@ export default function Dashboard() {
   // Leads added this month = monthLeads (already computed above)
   // Converted this month = leads whose convertedDate (or date) falls in selected month AND are converted stage
   const monthConverted = monthlyLifecycle.converted.length;
+  const monthTotalConversions = totalMonthlyConversions.length;
   // Lost this month = leads whose lostDate (or date) falls in selected month AND stage is Lost
   const monthLost = monthlyLifecycle.lost.length;
   const monthConsultationsBooked = useMemo(
@@ -156,13 +157,13 @@ export default function Dashboard() {
   const monthConvRate = monthLeadsIn > 0 ? Math.round((monthConverted / monthLeadsIn) * 100) : 0;
 
   // Weekly data
-  const weeks = useMemo(() => getWeeksInMonth(selectedYear, selectedMonth), [selectedYear, selectedMonth]);
+  const weeks = useMemo(() => getCalendarWeeksInMonth(selectedYear, selectedMonth, targets.monthly.green, targets.monthly.yellow), [selectedYear, selectedMonth, targets.monthly.green, targets.monthly.yellow]);
   const weeklyData = useMemo(() => weeks.map(w => {
     // Pure YYYY-MM-DD string comparison — no Date objects, no timezone issues
     const wPayments = payments.filter(p => p.date >= w.startStr && p.date <= w.endStr);
     const newRev = wPayments.filter(p => p.paymentType === "New Client").reduce((s, p) => s + p.amount, 0);
     const existRev = wPayments.filter(p => p.paymentType === "Existing Client").reduce((s, p) => s + p.amount, 0);
-    return { name: w.label, "New Client": newRev, "Existing Client": existRev, total: newRev + existRev };
+    return { name: w.label, "New Client": newRev, "Existing Client": existRev, total: newRev + existRev, target: w.target, yellowTarget: w.yellowTarget, inMonthDays: w.inMonthDays };
   }), [payments, weeks]);
 
   // Monthly target status
@@ -417,6 +418,7 @@ export default function Dashboard() {
     const d = new Date(dateToCheck + "T12:00:00");
     return d.getFullYear() === selectedYear && d.getMonth() + 1 === selectedMonth;
   }), [leads, selectedYear, selectedMonth]);
+  const drillTotalConversions = totalMonthlyConversions;
   const drillRevBooked = drillConverted;
   const drillNewClient = useMemo(() => monthPayments.filter(p => p.paymentType === "New Client"), [monthPayments]);
   const drillExisting = useMemo(() => monthPayments.filter(p => p.paymentType === "Existing Client"), [monthPayments]);
@@ -444,8 +446,9 @@ export default function Dashboard() {
       ["SUMMARY"],
       ["Metric", "Value"],
       ["Leads In", String(totalLeads)],
-      ["Converted", String(converted)],
-      ["Conversion Rate", `${convRate}%`],
+      ["Converted — Lead Cohort", String(converted)],
+      ["Total Converted During Month", String(monthTotalConversions)],
+      ["Cohort Conversion Rate", `${convRate}%`],
       ["Revenue Booked", String(revenueBooked)],
       ["New Client Revenue Received", String(newClientRev)],
       ["Existing Client Revenue Received", String(existingClientRev)],
@@ -924,7 +927,7 @@ export default function Dashboard() {
         </div>
 
         {/* Monthly stats — primary row */}
-        <div className="grid grid-cols-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4">
           {/* Leads In this month */}
           <div className="px-5 py-4 flex flex-col gap-1" style={{ borderRight: "1px solid oklch(1 0 0 / 8%)" }}>
             <div className="flex items-center gap-2 mb-1">
@@ -950,6 +953,16 @@ export default function Dashboard() {
             <div className="text-xs mt-1 font-medium" style={{ color: "oklch(0.55 0.01 250)" }}>
               All-time converted: <span style={{ color: "oklch(0.55 0.18 145)" }}>{allTimeConverted}</span> ({allTimeConvRate}%)
             </div>
+          </div>
+          {/* Total conversions during this month, independent of lead-entry month */}
+          <div className="px-5 py-4 flex flex-col gap-1" style={{ borderRight: "1px solid oklch(1 0 0 / 8%)" }}>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-2 h-2 rounded-full" style={{ background: "oklch(0.72 0.12 75)" }} />
+              <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "oklch(0.72 0.12 75)" }}>Total Converted</span>
+            </div>
+            <div className="text-3xl font-bold" style={{ fontFamily: "'Playfair Display', serif", color: "oklch(0.93 0.005 250)" }}>{monthTotalConversions}</div>
+            <div className="text-xs" style={{ color: "oklch(0.45 0.01 250)" }}>Converted during {MONTHS[selectedMonth - 1]}</div>
+            <div className="text-xs mt-1 font-medium" style={{ color: "oklch(0.55 0.01 250)" }}>Includes earlier-month leads</div>
           </div>
           {/* Lost this month */}
           <div className="px-5 py-4 flex flex-col gap-1">
@@ -987,8 +1000,9 @@ export default function Dashboard() {
         <StatCard icon={<CalendarCheck className="w-4 h-4" />} label="Consultations" value={monthConsultationsBooked} sub="fee paid & booked" />
         <StatCard icon={<UserCheck className="w-4 h-4" />} label="Consults → Won" value={monthConsultationsConverted} sub="booked consultations converted" />
         <StatCard icon={<DollarSign className="w-4 h-4" />} label="Consult. Fees" value={formatCurrency(consultationFeeRevenue)} sub="included in new revenue" />
-        <StatCard icon={<UserCheck className="w-4 h-4" />} label="Converted" value={converted} sub={`${convRate}% conv. rate`} onClick={() => setDrillDown("converted")} />
-        <StatCard icon={<TrendingUp className="w-4 h-4" />} label="Conv. Rate" value={`${convRate}%`} sub={`${converted} of ${totalLeads}`} onClick={() => setDrillDown("converted")} />
+        <StatCard icon={<UserCheck className="w-4 h-4" />} label="Converted (Cohort)" value={converted} sub={`${convRate}% of leads in`} onClick={() => setDrillDown("converted")} />
+        <StatCard icon={<UserCheck className="w-4 h-4" />} label="Total Converted" value={monthTotalConversions} sub={`during ${MONTHS[selectedMonth - 1]}`} onClick={() => setDrillDown("totalConversions")} />
+        <StatCard icon={<TrendingUp className="w-4 h-4" />} label="Cohort Conv. Rate" value={`${convRate}%`} sub={`${converted} of ${totalLeads} leads`} onClick={() => setDrillDown("converted")} />
         <StatCard icon={<BookOpen className="w-4 h-4" />} label="Rev. Booked" value={formatCurrency(revenueBooked)} sub={`${converted} retainers signed`} gold onClick={() => setDrillDown("revBooked")} />
         <StatCard icon={<DollarSign className="w-4 h-4" />} label="New Client $" value={formatCurrency(newClientRev)} sub="from new clients" onClick={() => setDrillDown("newClient")} />
         <StatCard icon={<DollarSign className="w-4 h-4" />} label="Existing Client $" value={formatCurrency(existingClientRev)} sub="from ongoing cases" onClick={() => setDrillDown("existingClient")} />
@@ -1057,26 +1071,25 @@ export default function Dashboard() {
           <div>
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-medium" style={{ color: "oklch(0.65 0.01 250)" }}>Weekly Breakdown</span>
-              <div className="flex items-center gap-3 text-xs" style={{ color: "oklch(0.50 0.01 250)" }}>
-                <span>🟢 {formatCurrency(targets.weekly.green)}</span>
-                <span>🟡 {formatCurrency(targets.weekly.yellow)}</span>
+              <div className="text-xs" style={{ color: "oklch(0.50 0.01 250)" }}>
+                Prorated by in-month calendar days · monthly target {formatCurrency(targets.monthly.green)}
               </div>
             </div>
             <div className="space-y-2">
               {weeklyData.map((w, i) => {
-                const wStatus = getTargetStatus(w.total, "weekly", targets);
+                const wStatus = getProratedTargetStatus(w.total, w.target, w.yellowTarget);
                 const wSc = statusColors[wStatus];
-                const weekScale = targets.weekly.green * 1.3; // show a bit past green
+                const weekScale = Math.max(w.target * 1.3, 1); // show a bit past this week’s target
                 const pct = Math.min(100, (w.total / weekScale) * 100);
                 return (
                   <div key={i} className="flex items-center gap-3">
-                    <span className="text-xs w-14 flex-shrink-0" style={{ color: "oklch(0.55 0.01 250)" }}>{w.name}</span>
+                      <span className="text-xs w-20 flex-shrink-0" style={{ color: "oklch(0.55 0.01 250)" }}>{w.name} <span className="block text-[10px]" style={{ color: "oklch(0.40 0.01 250)" }}>{w.inMonthDays}d · {formatCurrency(w.target)}</span></span>
                     <div className="flex-1 h-3 rounded-full overflow-hidden relative" style={{ background: "oklch(0.22 0.025 250)" }}>
                       <div className="absolute inset-y-0 left-0 rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: wSc.text }} />
                       {/* Yellow tick */}
-                      <div className="absolute inset-y-0 w-px" style={{ left: `${Math.min(98, (targets.weekly.yellow / weekScale) * 100)}%`, background: "oklch(0.72 0.15 80 / 60%)" }} />
+                        <div className="absolute inset-y-0 w-px" style={{ left: `${Math.min(98, (w.yellowTarget / weekScale) * 100)}%`, background: "oklch(0.72 0.15 80 / 60%)" }} />
                       {/* Green tick */}
-                      <div className="absolute inset-y-0 w-px" style={{ left: `${Math.min(98, (targets.weekly.green / weekScale) * 100)}%`, background: "oklch(0.55 0.18 145 / 60%)" }} />
+                      <div className="absolute inset-y-0 w-px" style={{ left: `${Math.min(98, (w.target / weekScale) * 100)}%`, background: "oklch(0.55 0.18 145 / 60%)" }} />
                     </div>
                     <span className="text-xs w-16 text-right font-medium" style={{ color: wSc.text }}>{formatCurrency(w.total)}</span>
                   </div>
@@ -1096,8 +1109,8 @@ export default function Dashboard() {
           <div className="flex items-center gap-4 text-xs" style={{ color: "oklch(0.55 0.01 250)" }}>
             <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm inline-block" style={{ background: "oklch(0.72 0.12 75)" }} />New Client</span>
             <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm inline-block" style={{ background: "oklch(0.35 0.05 250)" }} />Existing Client</span>
-            <span className="flex items-center gap-1.5"><span className="w-4 border-t-2 border-dashed inline-block" style={{ borderColor: "oklch(0.55 0.18 145)" }} />{formatCurrency(targets.weekly.green)}</span>
-            <span className="flex items-center gap-1.5"><span className="w-4 border-t-2 border-dashed inline-block" style={{ borderColor: "oklch(0.72 0.15 80)" }} />{formatCurrency(targets.weekly.yellow)}</span>
+            <span className="flex items-center gap-1.5"><span className="w-4 border-t-2 border-dashed inline-block" style={{ borderColor: "oklch(0.55 0.18 145)" }} />Prorated target</span>
+            <span className="flex items-center gap-1.5"><span className="w-4 border-t-2 border-dashed inline-block" style={{ borderColor: "oklch(0.72 0.15 80)" }} />Prorated yellow threshold</span>
           </div>
         </div>
         <ResponsiveContainer width="100%" height={260}>
@@ -1109,8 +1122,8 @@ export default function Dashboard() {
               contentStyle={{ background: "oklch(0.22 0.025 250)", border: "1px solid oklch(1 0 0 / 12%)", borderRadius: "8px", color: "oklch(0.93 0.005 250)" }}
               formatter={(v: number, name: string) => [formatCurrency(v), name]}
             />
-            <ReferenceLine y={targets.weekly.green} stroke="oklch(0.55 0.18 145)" strokeDasharray="6 3" strokeWidth={1.5} />
-            <ReferenceLine y={targets.weekly.yellow} stroke="oklch(0.72 0.15 80)" strokeDasharray="6 3" strokeWidth={1.5} />
+            <Line type="monotone" dataKey="target" stroke="oklch(0.55 0.18 145)" strokeDasharray="6 3" strokeWidth={1.5} dot={false} name="Prorated target" />
+            <Line type="monotone" dataKey="yellowTarget" stroke="oklch(0.72 0.15 80)" strokeDasharray="6 3" strokeWidth={1.5} dot={false} name="Prorated yellow threshold" />
             <Bar dataKey="New Client" stackId="a" fill="oklch(0.72 0.12 75)" radius={[0, 0, 0, 0]} />
             <Bar dataKey="Existing Client" stackId="a" fill="oklch(0.35 0.05 250)" radius={[4, 4, 0, 0]} />
           </BarChart>
@@ -1210,10 +1223,16 @@ export default function Dashboard() {
               change: momComparison.leadsChange,
             },
             {
-              label: "Conversions",
+              label: "Cohort Conversions",
               current: String(converted),
               prev: String(momComparison.prevConverted),
               change: momComparison.prevConverted > 0 ? Math.round(((converted - momComparison.prevConverted) / momComparison.prevConverted) * 100) : null,
+            },
+            {
+              label: "Total Conversions",
+              current: String(monthTotalConversions),
+              prev: "See monthly total",
+              change: null,
             },
           ].map(({ label, current, prev, change }) => (
             <div key={label} className="rounded-lg p-3" style={{ background: "oklch(0.22 0.025 250)" }}>
@@ -1656,10 +1675,11 @@ export default function Dashboard() {
         type PaymentRow = { date: string; clientName: string; caseType: string; caseNumber?: string; paymentType: string; amount: number; receivedFor: string; notes?: string; leadId?: string; };
         type LeadRow = { id: string; name: string; phone?: string; caseType: string; caseNumber?: string; stage: string; date: string; convertedDate?: string; retainerBooked: number; source?: string; notes?: string; };
         const isPaymentDrill = drillDown === "newClient" || drillDown === "existingClient" || drillDown === "totalReceived";
-        const isLeadDrill = drillDown === "leads" || drillDown === "converted" || drillDown === "revBooked";
+        const isLeadDrill = drillDown === "leads" || drillDown === "converted" || drillDown === "totalConversions" || drillDown === "revBooked";
         const titleMap: Record<string, string> = {
           leads: "All Leads This Month",
-          converted: "Converted Leads This Month",
+          converted: "Converted Leads in Lead Cohort",
+          totalConversions: "All Leads Converted During Month",
           revBooked: "Revenue Booked — Converted Leads",
           newClient: "New Client Payments",
           existingClient: "Existing Client Payments",
@@ -1669,7 +1689,7 @@ export default function Dashboard() {
           ? (drillDown === "newClient" ? drillNewClient : drillDown === "existingClient" ? drillExisting : drillTotal)
           : [];
         const leads: LeadRow[] = isLeadDrill
-          ? (drillDown === "leads" ? drillLeads : drillConverted)
+          ? (drillDown === "leads" ? drillLeads : drillDown === "totalConversions" ? drillTotalConversions : drillConverted)
           : [];
         const totalAmt = payments.reduce((s, p) => s + p.amount, 0);
         return (

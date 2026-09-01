@@ -893,3 +893,28 @@ All items in this section must be completed before delivery.
 - [x] Handle missing or unusable phone numbers without creating broken links
 - [x] Add regression tests and browser verification without sending a message
 - [x] Save a checkpoint for the WhatsApp shortcuts
+
+## Lead Name Persistence Bug — New Request
+
+- [ ] Trace why renaming a lead reports success but leaves the old name visible
+- [ ] Persist the edited name and refresh lead detail, Kanban, search, and related views
+- [ ] Ensure failed name updates do not show a success message
+- [ ] Add regression coverage and authenticated browser validation
+- [ ] Save a checkpoint for the lead-name fix
+
+## Missing Leads Data Audit — New Request
+
+- [x] Compare current live lead count with the latest verified database backup
+- [x] Search current data and backup for Jimmy Rivers/Rivas and Rana Masood
+- [x] Check whether filters, date scope, stage scope, or renamed records explain the apparent disappearance
+- [x] Check deletion/audit evidence without modifying CRM data
+- [x] Document and deliver read-only findings
+
+## Dashboard Conversion and Prorated Weekly Targets — New Request
+
+- [x] Add a clearly labeled total-conversions-during-selected-month metric independent of lead-entry cohort
+- [x] Preserve cohort lead volume and cohort conversion-rate definitions
+- [x] Replace equal five-week target allocation with calendar-week prorated targets from the $125,000 monthly target
+- [x] Include in-month calendar days for Monday-Sunday weeks, including partial opening and closing weeks
+- [x] Add regression coverage for prior-month leads converting in the selected month and September-style partial weeks
+- [x] Validate all Dashboard pipeline, source, and revenue totals and save a checkpoint
