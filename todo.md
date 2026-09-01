@@ -896,11 +896,11 @@ All items in this section must be completed before delivery.
 
 ## Lead Name Persistence Bug — New Request
 
-- [ ] Trace why renaming a lead reports success but leaves the old name visible
-- [ ] Persist the edited name and refresh lead detail, Kanban, search, and related views
-- [ ] Ensure failed name updates do not show a success message
-- [ ] Add regression coverage and authenticated browser validation
-- [ ] Save a checkpoint for the lead-name fix
+- [x] Trace why renaming a lead reports success but leaves the old name visible
+- [x] Persist the edited name and refresh lead detail, Kanban, search, and related views
+- [x] Ensure failed name updates do not show a success message
+- [x] Add regression coverage and authenticated browser validation
+- [x] Save a checkpoint for the lead-name fix
 
 ## Missing Leads Data Audit — New Request
 

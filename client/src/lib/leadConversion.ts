@@ -36,6 +36,19 @@ export function normalizeLeadUpdateForApi<T extends Record<string, unknown>>(upd
   return normalized as T;
 }
 
+export async function persistLeadUpdate<T extends Record<string, unknown>>({
+  leadId,
+  updates,
+  updateLead,
+}: {
+  leadId: string;
+  updates: T;
+  updateLead: (id: string, updates: T) => Promise<void>;
+}): Promise<T> {
+  await updateLead(leadId, updates);
+  return updates;
+}
+
 export function buildConversionPayment(lead: Lead, form: ConversionForm, today: string): Omit<Payment, "id"> | null {
   const downpayment = parseFloat(form.downpayment) || 0;
   if (downpayment <= 0) return null;

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Lead } from "@/lib/store";
-import { normalizeLeadUpdateForApi, persistLeadConversion } from "@/lib/leadConversion";
+import { normalizeLeadUpdateForApi, persistLeadConversion, persistLeadUpdate } from "@/lib/leadConversion";
 
 const lead: Lead = {
   id: "lead-1",
@@ -35,6 +35,25 @@ const lead: Lead = {
 };
 
 describe("lead conversion persistence", () => {
+  it("awaits a renamed lead update and preserves the exact name payload", async () => {
+    const events: string[] = [];
+    const updates = { name: "Jimmy Rivas", phone: "+1 555 0100" };
+    const updateLead = vi.fn(async (id: string, payload: typeof updates) => {
+      events.push(`saved:${id}:${payload.name}`);
+    });
+
+    const result = await persistLeadUpdate({ leadId: "lead-rename", updates, updateLead });
+
+    expect(result).toEqual(updates);
+    expect(events).toEqual(["saved:lead-rename:Jimmy Rivas"]);
+  });
+
+  it("propagates rename failures so the UI cannot show false success", async () => {
+    const failure = new Error("database unavailable");
+    const updateLead = vi.fn(async () => { throw failure; });
+
+    await expect(persistLeadUpdate({ leadId: "lead-rename", updates: { name: "Jimmy Rivas" }, updateLead })).rejects.toBe(failure);
+  });
   it("normalizes the consultation-fee adjustment flag for the numeric API field", () => {
     expect(normalizeLeadUpdateForApi({ consultationFeeAppliedToRetainer: true, stage: "Retained & Onboarding" })).toMatchObject({ consultationFeeAppliedToRetainer: 1 });
     expect(normalizeLeadUpdateForApi({ consultationFeeAppliedToRetainer: false, stage: "Retained & Onboarding" })).toMatchObject({ consultationFeeAppliedToRetainer: 0 });

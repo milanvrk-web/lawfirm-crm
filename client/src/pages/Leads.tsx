@@ -30,7 +30,7 @@ import { useActiveMember } from "@/contexts/ActiveMemberContext";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { trpc } from "@/lib/trpc";
 import { isConvertedStage, isActiveLeadStage } from "@shared/const";
-import { persistLeadConversion } from "@/lib/leadConversion";
+import { persistLeadConversion, persistLeadUpdate } from "@/lib/leadConversion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -578,24 +578,37 @@ export default function Leads() {
       // Exclude 'notes' from edit dialog updates — case notes are only editable
       // from the LeadDetailPanel dedicated notes editor to prevent accidental wipes.
       const { notes: _notes, ...formWithoutNotes } = form;
-      updateLead(editLead.id, { ...formWithoutNotes, source: sourceForSave, actorName: activeMember?.name ?? "Team" });
+      try {
+        await persistLeadUpdate({
+          leadId: editLead.id,
+          updates: { ...formWithoutNotes, source: sourceForSave, actorName: activeMember?.name ?? "Team" },
+          updateLead,
+        });
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Unable to update lead.");
+        return;
+      }
       toast.success("Lead updated");
       // Auto-log consultation fee when stage changes to Consultation via edit form
       if (form.stage === "Consultation" && editLead.stage !== "Consultation" && (form.consultationFee ?? 0) > 0) {
         const alreadyLogged = payments.some(p => p.leadId === editLead.id && p.receivedFor === "Consultation Fee");
         if (!alreadyLogged) {
-          addPayment({
-            date: todayPST(),
-            clientName: form.name,
-            leadId: editLead.id,
-            caseType: form.caseType,
-            caseNumber: form.caseNumber,
-            paymentType: "New Client",
-            amount: form.consultationFee!,
-            receivedFor: "Consultation Fee",
-            notes: "",
-          });
-          toast.info(`Consultation fee $${form.consultationFee} logged as payment`);
+          try {
+            await addPayment({
+              date: todayPST(),
+              clientName: form.name,
+              leadId: editLead.id,
+              caseType: form.caseType,
+              caseNumber: form.caseNumber,
+              paymentType: "New Client",
+              amount: form.consultationFee!,
+              receivedFor: "Consultation Fee",
+              notes: "",
+            });
+            toast.info(`Consultation fee $${form.consultationFee} logged as payment`);
+          } catch (error) {
+            toast.error(error instanceof Error ? error.message : "Lead updated, but consultation fee could not be logged.");
+          }
         }
       }
       setEditLead(null);
